@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#101310">
+  <title>Crear torneo — Prove.it Club</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="styles.css">
+</head>
+<body class="create-page">
+  <!-- La página de creación es una segunda página independiente, tal como pide el flujo inicial. -->
+  <header class="topbar"><a class="brand" href="index.html" aria-label="Prove.it Club, inicio"><span class="brand-mark"><i></i><i></i><i></i></span><span>prove<span class="brand-dot">.</span>it<span class="brand-club">CLUB</span></span></a><nav class="top-actions"><a class="back-link" href="index.html">← Volver al inicio</a><button class="login-button" data-login>Ingresar <span>↗</span></button></nav></header>
+  <main class="create-main">
+    <div class="create-heading"><p class="eyebrow"><span class="live-dot"></span> EL PRIMER PASO DEL PIQUE</p><h1>¿Qué vamos<br>a <span>competir?</span></h1><p>Elegí un formato para arrancar. Después vas a poder ponerle tus reglas y convocar a tu gente.</p></div>
+    <div class="format-grid">
+      <button class="format-card selected" data-format="Round Robin"><span class="format-number">01 / FORMATO</span><span class="format-icon">↻</span><h2>Round Robin</h2><p>Todos juegan contra todos. Ideal para que nadie se quede con una sola partida.</p><span class="format-foot">TODOS CONTRA TODOS <b>↗</b></span></button>
+      <button class="format-card" data-format="Eliminación directa"><span class="format-number">02 / FORMATO</span><span class="format-icon">⌁</span><h2>Eliminación directa</h2><p>Ganás y avanzás. Una llave rápida, con una final para definir al campeón.</p><span class="format-foot">LLAVE CLÁSICA <b>↗</b></span></button>
+      <button class="format-card" data-format="Por definir"><span class="format-number">03 / FORMATO</span><span class="format-icon">＋</span><h2>Algo distinto</h2><p>Tenés una idea propia. Elegí esto y armamos un formato que le quede bien.</p><span class="format-foot">PROPONÉ TU FORMATO <b>↗</b></span></button>
+    </div>
+    <div class="create-bottom"><span><i class="live-dot"></i> MÁS FORMATOS, PRÓXIMAMENTE</span><button class="primary-button" id="continueCreate">Continuar <span>→</span></button></div>
+    <p class="create-hint">Al continuar, te pediremos iniciar sesión para guardar el torneo. El registro real todavía está en construcción.</p>
+  </main>
+  <footer class="site-footer"><a class="footer-brand" href="index.html">prove.it <span>CLUB</span></a><span>COMPETÍ · DISFRUTÁ · VOLVÉ A INTENTARLO</span><span>© 2026 PROVE.IT CLUB</span></footer>
+  <div class="modal-backdrop" id="loginModal" hidden><section class="login-modal" role="dialog" aria-modal="true" aria-labelledby="loginTitle"><button class="modal-close" id="closeLogin" aria-label="Cerrar">×</button><div class="modal-brand"><span class="brand-mark"><i></i><i></i><i></i></span><span>prove<span class="brand-dot">.</span>it</span></div><p class="eyebrow">GUARDÁ TU TORNEO</p><h2 id="loginTitle">Entrá al club.</h2><p class="modal-copy">Iniciá sesión o creá tu cuenta para seguir con <strong id="selectedFormatName">Round Robin</strong>.</p><button class="auth-option" data-demo-auth><span class="google-g">G</span> Continuar con Google</button><button class="auth-option" data-demo-auth><span class="discord-mark">◉</span> Continuar con Discord</button><button class="auth-option email-option" data-demo-auth>✉ <span>Continuar con email</span></button><p class="fine-print">Prototipo visual: el registro todavía no está conectado.</p></section></div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div><script src="app.js"></script>
+</body>
+</html>

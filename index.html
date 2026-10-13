@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101310">
+  <meta name="description" content="Prove.it Club: desafíos, torneos y competencias entre amigos.">
+  <title>Prove.it Club — Que empiece el desafío</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Barra superior: logo vuelve al inicio; lupa abre el buscador; el botón muestra el acceso de demostración. -->
+  <header class="topbar">
+    <a class="brand" href="index.html" aria-label="Prove.it Club, inicio">
+      <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span>prove<span class="brand-dot">.</span>it<span class="brand-club">CLUB</span></span>
+    </a>
+    <nav class="top-actions" aria-label="Navegación principal">
+      <button class="icon-button" id="searchToggle" aria-label="Buscar torneos" title="Buscar torneos">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 5 5"></path></svg>
+      </button>
+      <button class="login-button" data-login>Ingresar <span aria-hidden="true">↗</span></button>
+    </nav>
+  </header>
+
+  <!-- Buscador desplegable. La demo filtra torneos de ejemplo definidos en app.js. -->
+  <section class="search-panel" id="searchPanel" hidden>
+    <label for="tournamentSearch">BUSCAR TORNEOS</label>
+    <div class="search-input-wrap"><span aria-hidden="true">⌕</span><input id="tournamentSearch" type="search" placeholder="Probá con LoL, fútbol, trivia…"><button id="closeSearch" aria-label="Cerrar búsqueda">×</button></div>
+    <div id="searchResults" class="search-results"><p class="muted">Escribí para explorar los torneos.</p></div>
+  </section>
+
+  <main>
+    <!-- Hero: uno de estos mensajes se elige al azar al cargar la página. Editá las frases en app.js. -->
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow"><span class="live-dot"></span> COMPETÍ A TU MANERA</p>
+        <h1 id="heroTitle">Un desafío.<br><span>Todo por demostrar.</span></h1>
+        <p class="hero-text" id="heroText">La próxima gran historia puede empezar con una partida, un reto o una apuesta entre amigos. Prepará tu mejor versión: hay algo en juego.</p>
+        <div class="hero-actions">
+          <a class="primary-button" href="crear-torneo.html">Crear un torneo <span aria-hidden="true">↗</span></a>
+          <a class="text-link" href="#explore">Explorar desafíos <span aria-hidden="true">↓</span></a>
+        </div>
+        <div class="hero-note"><span class="note-icon">✳</span><span>De una partida de LoL a cualquier reto entre amigos.</span></div>
+      </div>
+      <!-- Gráfico decorativo hecho en CSS: podés cambiar colores y números desde styles.css. -->
+      <div class="arena-art" aria-label="Ilustración decorativa de una llave de torneo">
+        <div class="art-top"><span>PIQUE DE LA SEMANA</span><span class="art-live"><i></i> EN JUEGO</span></div>
+        <div class="art-score"><div><small>DESAFÍO 01</small><strong>¿Quién se lleva<br>la final?</strong></div><div class="score-badge">1<span>—</span>0</div></div>
+        <div class="bracket-mini">
+          <div class="bracket-col"><div class="player-card"><b>RAYO</b><span>12 pts</span></div><div class="player-card"><b>PIXEL</b><span>08 pts</span></div><div class="player-card"><b>LOBO</b><span>11 pts</span></div><div class="player-card"><b>NEON</b><span>06 pts</span></div></div>
+          <div class="bracket-lines"><i></i><i></i><i></i></div>
+          <div class="bracket-col semi"><div class="player-card winner"><b>RAYO</b><span>VS</span></div><div class="player-card"><b>LOBO</b><span>—</span></div></div>
+          <div class="bracket-lines final-line"><i></i></div>
+          <div class="bracket-col final"><div class="champion"><span>CAMPEÓN</span><b>?</b><small>EL PRÓXIMO PODÉS SER VOS</small></div></div>
+        </div>
+        <div class="art-footer"><span>ROUND ROBIN · 8 PARTICIPANTES</span><span>01 / 04</span></div>
+        <div class="art-glow"></div>
+      </div>
+      <div class="hero-index">01 <span>/</span> 04</div>
+    </section>
+
+    <!-- Atajos de categoría: por ahora llevan a la búsqueda con la categoría escrita. -->
+    <section class="quick-categories" id="explore">
+      <div class="section-kicker">UN CLUB, MIL FORMAS DE COMPETIR</div>
+      <div class="category-row">
+        <button class="category-chip" data-query="Videojuegos"><span>▦</span> Videojuegos <b>↗</b></button>
+        <button class="category-chip" data-query="Deportes"><span>◉</span> Deportes <b>↗</b></button>
+        <button class="category-chip" data-query="Retos"><span>✳</span> Retos y desafíos <b>↗</b></button>
+        <button class="category-chip" data-query="Trivia"><span>◇</span> Trivia y talento <b>↗</b></button>
+        <a class="all-categories" href="crear-torneo.html">Proponer algo nuevo <span>＋</span></a>
+      </div>
+    </section>
+
+    <!-- Banda de patrocinadores de muestra: son nombres de ejemplo, sin afiliación real. -->
+    <section class="sponsors" aria-label="Patrocinadores de ejemplo">
+      <div class="sponsor-intro"><span>LOS QUE HACEN<br>POSIBLE EL PIQUE</span><small>ESPACIO PARA PATROCINADORES</small></div>
+      <div class="sponsor-logo sponsor-one">NORTH<span>STAR</span><b>®</b></div>
+      <div class="sponsor-logo sponsor-two">FUEL<span>UP</span><b>®</b></div>
+      <div class="sponsor-logo sponsor-black"><span class="slash-mark">//</span> BLACK LINE</div>
+      <div class="sponsor-logo sponsor-four">LEVEL<span>UP</span><b>®</b></div>
+    </section>
+  </main>
+
+  <footer class="site-footer"><a class="footer-brand" href="index.html">prove.it <span>CLUB</span></a><span>COMPETÍ · DISFRUTÁ · VOLVÉ A INTENTARLO</span><span>© 2026 PROVE.IT CLUB</span></footer>
+
+  <!-- Ventana demostrativa de acceso. El proveedor real se conecta en una etapa posterior. -->
+  <div class="modal-backdrop" id="loginModal" hidden>
+    <section class="login-modal" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+      <button class="modal-close" id="closeLogin" aria-label="Cerrar">×</button>
+      <div class="modal-brand"><span class="brand-mark"><i></i><i></i><i></i></span><span>prove<span class="brand-dot">.</span>it</span></div>
+      <p class="eyebrow">TU PRÓXIMO PIQUE TE ESPERA</p>
+      <h2 id="loginTitle">Entrá al club.</h2>
+      <p class="modal-copy">Guardá tus torneos, anotate a desafíos y seguí tus resultados.</p>
+      <button class="auth-option" data-demo-auth><span class="google-g">G</span> Continuar con Google</button>
+      <button class="auth-option" data-demo-auth><span class="discord-mark">◉</span> Continuar con Discord</button>
+      <button class="auth-option email-option" data-demo-auth>✉ <span>Continuar con email</span></button>
+      <p class="fine-print">Prototipo visual: el registro todavía no está conectado.</p>
+    </section>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="app.js"></script>
+</body>
+</html>

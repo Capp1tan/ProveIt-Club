@@ -1,0 +1,30 @@
+PROVE.IT CLUB — PROTOTIPO LOCAL
+================================
+
+ABRIR EL SITIO
+1. Extraé la carpeta del archivo comprimido.
+2. Abrí index.html con doble clic en un navegador moderno.
+3. Para probar la página de creación, seleccioná «Crear un torneo».
+
+ARCHIVOS
+- index.html: página de inicio y contenido visible.
+- crear-torneo.html: selección del formato del torneo.
+- styles.css: colores, tipografía, distribución y diseño adaptable.
+- app.js: textos del hero, búsqueda de muestra, selector y ventanas de acceso.
+
+NOTAS
+- Es un prototipo visual: Google, Discord y el correo no crean cuentas todavía.
+- El buscador usa torneos ficticios definidos en app.js.
+- Los patrocinadores son ejemplos decorativos.
+- Las fuentes se cargan de Google Fonts cuando hay conexión; sin internet se usan
+  fuentes de sistema como alternativa.
+
+HACER VERSIONES
+Duplicá la carpeta proveit-club y agregá una fecha o número a la copia, por
+ejemplo: proveit-club-v02. Trabajá sobre la copia nueva y conservá la anterior.
+
+EDITAR CONTENIDO
+- Colores: variables al principio de styles.css.
+- Mensajes aleatorios del inicio: arreglo heroMessages en app.js.
+- Torneos de ejemplo del buscador: arreglo sampleTournaments en app.js.
+- Textos y estructura de las páginas: index.html y crear-torneo.html.
