@@ -31,6 +31,10 @@ export const handler = async (event: { identity?: { sub?: string }; arguments: {
   }
   const {invitationId,accept}=event.arguments;
   if(!sub || typeof invitationId!=='string' || invitationId.length>200 || typeof accept!=='boolean') throw new Error('Respuesta inválida.');
+  if (accept) {
+    const account = (await db.send(new GetCommand({ TableName: process.env.ACCOUNT_TABLE_NAME!, Key: { id: sub }, ConsistentRead: true }))).Item;
+    if (!account?.phoneNumber) throw new Error('Completá tu teléfono en Mi perfil antes de aceptar.');
+  }
   const TableName=process.env.INVITATION_TABLE_NAME!, tournamentTable=process.env.TOURNAMENT_TABLE_NAME!;
   const read=()=>db.send(new GetCommand({TableName,Key:{id:invitationId},ConsistentRead:true}));
   const status=accept?'ACCEPTED':'REJECTED';
