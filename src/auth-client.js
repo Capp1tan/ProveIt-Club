@@ -18,22 +18,34 @@ import { generateClient } from 'aws-amplify/data';
 import { getUrl, uploadData } from 'aws-amplify/storage';
 
 let configured = false;
+let configurationPromise;
 let dataClient;
 
 export async function configureAmplify() {
   if (configured) return true;
-  try {
-    const response = await fetch('/amplify_outputs.json', { cache: 'no-store' });
-    if (!response.ok) return false;
-    const outputs = await response.json();
-    Amplify.configure(outputs);
-    dataClient = generateClient();
-    configured = true;
-    return true;
-  } catch (error) {
-    console.error('No se pudo cargar la configuración de Amplify:', error);
-    return false;
+  // Las páginas pueden cargar el perfil y la navegación a la vez:
+  // comparten una sola configuración para no reiniciar la sesión OAuth.
+  if (!configurationPromise) {
+    configurationPromise = (async () => {
+      try {
+        const response = await fetch('/amplify_outputs.json', { cache: 'no-store' });
+        if (!response.ok) return false;
+        const outputs = await response.json();
+        // Dominio propio de Cognito; AWS sigue generando los demás identificadores.
+        if (outputs.auth?.oauth) outputs.auth.oauth.domain = 'auth.proveitclub.win';
+        Amplify.configure(outputs);
+        dataClient = generateClient();
+        configured = true;
+        return true;
+      } catch (error) {
+        console.error('No se pudo cargar la configuración de Amplify:', error);
+        return false;
+      }
+    })();
   }
+  const ready = await configurationPromise;
+  if (!ready) configurationPromise = undefined;
+  return ready;
 }
 
 function requireBackend() {
