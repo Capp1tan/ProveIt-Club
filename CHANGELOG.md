@@ -1,5 +1,15 @@
 # Historial de versiones
 
+## 2.3.0 - 2026-10-15
+
+- Corrección de la lectura de perfiles: paginación completa en lugar de límite 1 antes del filtro. No se interpreta una página vacía como perfil inexistente.
+- Renovación de sesión con Amplify y actualización del encabezado al volver a la pestaña. Un fallo al cargar el perfil no redirige ni permite sobrescribirlo como vacío.
+- Sala de espera con avatares y estados, actualizada cada 15 segundos con la página visible.
+- Sorteo aleatorio del servidor al aceptar todos los roles, guardado una sola vez con control transaccional de revisiones concurrentes.
+- Cuadros con nombres para duelo, eliminación simple y doble, calendario Round Robin y prueba compartida. Suizo sortea la primera ronda: las siguientes dependen de resultados todavía no implementados.
+- Un rechazo detiene el sorteo; los torneos anteriores conservan el comportamiento histórico. No se implementa aún reemplazo de invitados ni registro de resultados.
+
+
 ## 2.2.0 - 2026-10-15
 
 - Invitaciones para participantes, jueces y tesorero, con aceptación o rechazo personal.
