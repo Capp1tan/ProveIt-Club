@@ -64,3 +64,8 @@ export async function respondInvitation(invitationId, accept) {
   if (!result?.id) throw new Error('No se pudo confirmar la respuesta. Actualizá para revisar su estado.');
   return result;
 }
+
+export async function ensureClubTournamentDraw(tournamentId) {
+  const client = await tournamentClient();
+  return resultData(await client.mutations.prepareTournamentDraw({ tournamentId }));
+}
