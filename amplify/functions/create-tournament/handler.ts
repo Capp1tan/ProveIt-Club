@@ -57,7 +57,7 @@ export const handler = async (event: { arguments: Arguments; identity?: { sub?: 
     participantIds, participantNames: participantIds.map(id => names.get(id)),
     judgeIds, judgeNames: judgeIds.map(id => names.get(id)),
     treasurerId, treasurerName: treasurerId ? names.get(treasurerId) : null,
-    createdBySub: sub, status: 'AWAITING_RESPONSES',
+    createdBySub: sub, status: 'AWAITING_RESPONSES', membershipRevision: 0,
     rosterStatuses: owners.map(recipient => recipient === sub ? 'ACCEPTED' : 'PENDING'), createdAt: now, updatedAt: now,
     __typename: 'Tournament',
   };
