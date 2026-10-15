@@ -1,5 +1,11 @@
 # Historial de versiones
 
+## 2.1.2 - 2026-10-15
+
+- Corrección de la carga inicial del diagrama y la conexión de cuenta en creación de torneos.
+- Incluye Duelo 1v1 y contacto de sugerencias de 2.1.1.
+
+
 ## 2.1.1 - 2026-10-15
 
 - Duelo 1v1 como opción inicial, con diagrama, explicación y exactamente dos participantes, validado en el navegador y AWS.
