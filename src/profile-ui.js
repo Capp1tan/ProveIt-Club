@@ -87,7 +87,7 @@ if (!ready) {
       await loadBadges();
       document.getElementById('profileBadges').replaceChildren(badgeElements(user.userId));
       if (access.isCreator) await mountBadgeAdmin();
-    } catch { document.getElementById('badgeNotice').textContent = 'No pudimos cargar las insignias. Recargá para reintentar.'; } })();
+    } catch { showNotice('No pudimos cargar las insignias. Podés editar tu perfil y recargar para reintentar.', true); } })();
     if (profile) {
       profileId = profile.id;
       currentAvatarPath = profile.avatarPath || '';
