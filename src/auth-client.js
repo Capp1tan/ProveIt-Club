@@ -21,7 +21,7 @@ let dataClientPromise;
 
 // Data y Storage se descargan sólo cuando se necesita leer el perfil o una foto.
 // La promesa compartida evita crear clientes duplicados con peticiones simultáneas.
-function profileClient() {
+export function profileClient() {
   if (!dataClientPromise) {
     dataClientPromise = import('aws-amplify/data').then(({ generateClient }) => generateClient());
     dataClientPromise.catch(() => { dataClientPromise = undefined; });
@@ -118,4 +118,5 @@ export async function avatarUrl(path) {
   const result = await getUrl({ path, options: { expiresIn: 3600 } });
   return result.url.toString();
 }
+
 
