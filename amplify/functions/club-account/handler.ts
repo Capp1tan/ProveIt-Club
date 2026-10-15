@@ -33,7 +33,7 @@ export const handler = async (event: Event) => {
       claim = await get('CLAIM_TABLE_NAME', 'creator');
     }
     const isCreator = claim?.accountSub === sub;
-    if (isCreator) await db.send(new PutCommand({ TableName: table('BADGE_TABLE_NAME'), Item: { id: 'CREATOR:' + sub, accountSub: sub, code: 'CREATOR', createdAt: now, updatedAt: now, __typename: 'ClubBadge' } }));
+    if (isCreator) await db.send(new PutCommand({ TableName: table('BADGE_TABLE_NAME'), Item: { id: 'CREATOR:' + sub, accountSub: sub, accountUsername: event.identity!.username || event.identity!.claims?.['cognito:username'] || sub, code: 'CREATOR', createdAt: now, updatedAt: now, __typename: 'ClubBadge' } }));
     return { isCreator };
   }
   if (operation === 'manageClubBadge') {
@@ -43,7 +43,10 @@ export const handler = async (event: Event) => {
     const profile = await get('PROFILE_TABLE_NAME', args.profileId);
     const accountSub = profile?.owner?.split('::')[0];
     if (!accountSub) throw new Error('Perfil no encontrado.');
-    const item = { id: 'BETA_TESTER:' + accountSub, accountSub, code: 'BETA_TESTER', createdAt: now, updatedAt: now, __typename: 'ClubBadge' };
+    // AppSync devuelve owner como username; el permiso de administración usa
+    // siempre el sub de Cognito. El alias sólo sirve para mostrar la insignia.
+    const accountUsername = profile.owner.split('::')[1] || accountSub;
+    const item = { id: 'BETA_TESTER:' + accountSub, accountSub, accountUsername, code: 'BETA_TESTER', createdAt: now, updatedAt: now, __typename: 'ClubBadge' };
     if (args.enabled) await db.send(new PutCommand({ TableName: table('BADGE_TABLE_NAME'), Item: item }));
     else await db.send(new DeleteCommand({ TableName: table('BADGE_TABLE_NAME'), Key: { id: item.id } }));
     return { isCreator: true };
