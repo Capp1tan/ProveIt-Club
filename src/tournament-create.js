@@ -1,3 +1,4 @@
+import { loadBadges, badgeElements } from './badges.js';
 import { Hub } from 'aws-amplify/utils';
 import { avatarUrl, configureAmplify, getCurrentUser } from './auth-client.js';
 import { formats, formatImage } from './tournament-formats.js';
@@ -98,7 +99,7 @@ function renderPeople() {
         renderPeople();
       });
       const name = document.createElement('span'); name.textContent = profile.nickname;
-      label.append(input,personAvatar(profile),name,selectionState(input.checked)); list.append(label);
+      label.append(input,personAvatar(profile),name,badgeElements(owner(profile)),selectionState(input.checked)); list.append(label);
     }
     if (!filtered.length) { const empty = document.createElement('p'); empty.textContent = profiles.length ? 'No hay perfiles con ese nick.' : 'Todavía no hay perfiles para seleccionar.'; list.append(empty); }
   }
@@ -115,7 +116,7 @@ function renderPeople() {
     const name = document.createElement('span'); name.textContent = profile?.nickname || 'Sin tesorero';
     const avatar = profile ? personAvatar(profile) : document.createElement('span');
     if (!profile) { avatar.className = 'person-avatar'; avatar.textContent = '—'; avatar.setAttribute('aria-hidden','true'); }
-    label.append(input,avatar,name,selectionState(input.checked)); treasuryList.append(label);
+    label.append(input,avatar,name,badgeElements(profile ? owner(profile) : ''),selectionState(input.checked)); treasuryList.append(label);
   }
   updateSummary();
 }
@@ -124,10 +125,11 @@ async function refreshPeople() {
   loading = true; submit.disabled = true;
   const status = document.getElementById('peopleStatus'); status.textContent = 'Cargando cuentas del club…';
   try {
-    profiles = await registeredProfiles();
+    await loadBadges().catch(() => {});
+    profiles = (await registeredProfiles()).filter(profile => profile.accountComplete);
     for (const selected of [participants,judges]) for (const id of selected) if (!profiles.some(profile => profile.id === id)) selected.delete(id);
     if (treasurer.value && !profiles.some(profile => profile.id === treasurer.value)) treasurer.value = '';
-    renderPeople(); status.textContent = `${profiles.length} perfiles disponibles. Para aparecer aquí, cada persona debe ingresar y guardar su nick en Mi perfil.`;
+    renderPeople(); status.textContent = `${profiles.length} perfiles disponibles. Para aparecer aquí, cada persona debe ingresar y guardar su nick y teléfono en Mi perfil.`;
   } catch (error) { status.textContent = 'No pudimos cargar la lista. Usá «Actualizar lista» para reintentar.'; show(error.message, true); }
   finally { loading = false; submit.disabled = false; }
 }
