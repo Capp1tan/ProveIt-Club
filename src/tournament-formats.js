@@ -1,5 +1,7 @@
 // Catálogo compartido por el formulario y la ficha. Las imágenes son SVG locales.
 export const formats = [
+  // Duelo simple: exactamente dos cuentas; no requiere varias rondas ni una llave.
+  { id: 'DUEL', name: 'Duelo 1v1', tag: 'Vos contra tu rival', description: 'Dos personas compiten cara a cara en un desafío. El juez verifica que se cumplan las reglas acordadas.', example: 'Una partida de LoL, un duelo de penales o una trivia entre dos amigos.', detail: 'Exactamente 2 participantes y al menos un juez. Acordá en las reglas si se decide en una sola prueba o al mejor de varias.' },
   { id: 'ROUND_ROBIN', name: 'Round Robin', tag: 'Todos contra todos', description: 'Cada participante se enfrenta a todos los demás. La clasificación se decide por los resultados acumulados.', example: 'Con 4 participantes se disputan 6 encuentros; cada persona juega 3 veces.', detail: 'Ideal para grupos pequeños que quieren jugar varias veces. Las reglas de puntuación y desempate se acuerdan antes de empezar.' },
   { id: 'SINGLE_ELIMINATION', name: 'Eliminación directa', tag: 'Ganás y avanzás', description: 'Quien gana avanza a la siguiente ronda. Quien pierde queda eliminado hasta que la final define al campeón.', example: 'Con 8 participantes hay 7 encuentros: cuartos, semifinales y final.', detail: 'Rápido y fácil de seguir. Si el número no completa una llave, algunas personas pasan la primera ronda sin jugar.' },
   { id: 'DOUBLE_ELIMINATION', name: 'Doble eliminación', tag: 'Una segunda oportunidad', description: 'La primera derrota te envía a la llave de perdedores. La segunda te elimina. Los ganadores de ambas llaves llegan a la gran final.', example: 'Podés perder un encuentro y todavía llegar al primer puesto.', detail: 'Da más oportunidades y requiere más encuentros. La regla de reinicio de la gran final debe acordarse antes de competir.' },
@@ -10,7 +12,9 @@ export const formats = [
 export function formatImage(id) {
   const box = (x,y,label,w=110) => `<rect x="${x}" y="${y}" width="${w}" height="38" rx="8"/><text x="${x+w/2}" y="${y+24}">${label}</text>`;
   let content = '';
-  if (id === 'ROUND_ROBIN') {
+  if (id === 'DUEL') {
+    content = box(35,76,'Participante A',160)+box(285,76,'Participante B',160)+'<text x="240" y="101">VS</text><path d="M115 114V160H365V114"/>'+box(165,160,'Juez',150)+'<text x="240" y="42">Un desafío cara a cara</text>';
+  } else if (id === 'ROUND_ROBIN') {
     content = '<text x="240" y="30">A · B · C · D</text>' + [ ['Ronda 1','A vs B · C vs D'],['Ronda 2','A vs C · B vs D'],['Ronda 3','A vs D · B vs C'] ].map((r,i)=>box(60,50+i*56,r[0],115)+box(190,50+i*56,r[1],230)).join('');
   } else if (id === 'SINGLE_ELIMINATION') {
     content = '<path d="M145 55H190V100H230 M145 155H190V100 M340 100H365"/>'+box(35,36,'A vs B')+box(35,136,'C vs D')+box(230,81,'Final')+box(365,81,'1.º',75);
