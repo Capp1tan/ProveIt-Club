@@ -7,7 +7,7 @@ import {
   confirmSignIn,
   confirmSignUp,
   fetchAuthSession,
-  getCurrentUser,
+  getCurrentUser as amplifyGetCurrentUser,
   resetPassword,
   signIn,
   signInWithRedirect,
@@ -18,6 +18,21 @@ import {
 let configured = false;
 let configurationPromise;
 let dataClientPromise;
+let sessionPromise;
+// Amplify conserva sus tokens en el almacenamiento persistente del navegador.
+// Comprobamos y renovamos la sesión antes de usarla, sin guardar contraseñas.
+export async function getCurrentUser() {
+  const user = await amplifyGetCurrentUser();
+  if (!sessionPromise) {
+    sessionPromise = fetchAuthSession().then(session => {
+      if (!session.tokens) throw new Error('Tu sesión venció. Volvé a ingresar.');
+      return session;
+    }).finally(() => { sessionPromise = undefined; });
+  }
+  await sessionPromise;
+  return user;
+}
+
 
 // Data y Storage se descargan sólo cuando se necesita leer el perfil o una foto.
 // La promesa compartida evita crear clientes duplicados con peticiones simultáneas.
@@ -59,23 +74,28 @@ function requireBackend() {
   if (!configured) throw new Error('El backend de Amplify todavía no está conectado.');
 }
 
-export { confirmResetPassword, confirmSignIn, confirmSignUp, fetchAuthSession, getCurrentUser, resetPassword, signIn, signInWithRedirect, signOut, signUp };
+export { confirmResetPassword, confirmSignIn, confirmSignUp, fetchAuthSession, resetPassword, signIn, signInWithRedirect, signOut, signUp };
 
 export async function loadProfile() {
   requireBackend();
   const dataClient = await profileClient();
   const user = await getCurrentUser();
-  const { data, errors } = await dataClient.models.Profile.list({
-    filter: { owner: { contains: user.userId } },
-    limit: 1,
-  });
-  if (errors?.length) throw new Error(errors[0].message);
-  return { user, profile: data?.[0] ?? null };
+  const profiles = [];
+  let nextToken;
+  do {
+    // El límite se aplica antes del filtro en DynamoDB: hay que seguir todas las páginas.
+    const result = await dataClient.models.Profile.list({ filter: { owner: { contains: user.userId } }, limit: 100, nextToken });
+    if (result.errors?.length) throw new Error(result.errors[0].message);
+    profiles.push(...(result.data || [])); nextToken = result.nextToken;
+  } while (nextToken);
+  profiles.sort((a,b) => (b.updatedAt || '').localeCompare(a.updatedAt || '') || a.id.localeCompare(b.id));
+  return { user, profile: profiles[0] ?? null };
 }
 
 export async function saveProfile(profileId, values) {
   requireBackend();
   const dataClient = await profileClient();
+  if (!profileId) profileId = (await loadProfile()).profile?.id || null;
   const nickname = values.nickname.trim();
   const { data: profiles, errors: listErrors } = await dataClient.models.Profile.list({ limit: 1000 });
   if (listErrors?.length) throw new Error(listErrors[0].message);
