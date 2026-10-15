@@ -21,22 +21,38 @@ function showToast(message) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => toast.classList.remove('visible'), 2800);
 }
-// Catálogo ficticio de ejemplo para mostrar cómo se comportaría la búsqueda.
-const sampleTournaments = [
-  { name: 'LoL 1v1 — Round Robin', category: 'Videojuegos', status: 'Inscripciones abiertas' },
-  { name: 'Copa de penales del viernes', category: 'Deportes', status: 'Próximamente' },
-  { name: 'Trivia relámpago: cultura pop', category: 'Trivia', status: 'Inscripciones abiertas' },
-  { name: 'Reto de la hamburguesa', category: 'Retos', status: 'Borrador de ejemplo' }
-];
+// La búsqueda consulta torneos guardados sólo al abrirse, sin cargar datos en el inicio.
+let tournamentCatalog;
+let searchRequest = 0;
 const searchPanel = document.getElementById('searchPanel');
 const searchInput = document.getElementById('tournamentSearch');
 const searchResults = document.getElementById('searchResults');
-function renderResults(query = '') {
+async function renderResults(query = '') {
   if (!searchResults) return;
-  const matches = sampleTournaments.filter(item => `${item.name} ${item.category}`.toLowerCase().includes(query.toLowerCase()));
-  searchResults.innerHTML = matches.length
-    ? matches.map(item => `<div class="result-item"><span><b>${item.name}</b><small>${item.category}</small></span><em>${item.status}</em></div>`).join('')
-    : '<p class="muted">No encontramos torneos con ese nombre.</p>';
+  const request = ++searchRequest;
+  searchResults.textContent = 'Buscando torneos…';
+  try {
+    if (!tournamentCatalog) {
+      tournamentCatalog = import('./src/tournaments-api.js').then(api => api.listClubTournaments());
+      tournamentCatalog.catch(() => { tournamentCatalog = undefined; });
+    }
+    const tournaments = await tournamentCatalog;
+    if (request !== searchRequest) return;
+    const matches = tournaments.filter(item => (item.name + ' ' + item.activity).toLocaleLowerCase('es').includes(query.toLocaleLowerCase('es')));
+    searchResults.replaceChildren();
+    for (const item of matches) {
+      const link = document.createElement('a'); link.className = 'result-item'; link.href = '/torneo.html?id=' + encodeURIComponent(item.id);
+      const name = document.createElement('b'); name.textContent = item.name;
+      const activity = document.createElement('small'); activity.textContent = item.activity;
+      link.append(name,activity); searchResults.append(link);
+    }
+    if (!matches.length) searchResults.textContent = 'No encontramos torneos con ese nombre.';
+  } catch {
+    if (request === searchRequest) {
+      searchResults.textContent = 'Ingresá con tu cuenta para buscar torneos. ';
+      const link = document.createElement('a'); link.href = '/torneos.html'; link.textContent = 'Ver torneos del club'; searchResults.append(link);
+    }
+  }
 }
 function openSearchPanel(query = '') {
   if (!searchPanel) return;
@@ -49,16 +65,4 @@ document.getElementById('closeSearch')?.addEventListener('click', closeSearchPan
 searchInput?.addEventListener('input', event => renderResults(event.target.value));
 document.querySelectorAll('[data-query]').forEach(button => button.addEventListener('click', () => openSearchPanel(button.dataset.query)));
 
-// En la página de creación, la selección visual se guarda hasta abrir el modal de acceso.
-let selectedFormat = 'Round Robin';
-document.querySelectorAll('[data-format]').forEach(card => card.addEventListener('click', () => {
-  document.querySelectorAll('[data-format]').forEach(item => item.classList.remove('selected'));
-  card.classList.add('selected');
-  selectedFormat = card.dataset.format;
-}));
-document.getElementById('continueCreate')?.addEventListener('click', () => {
-  const formatName = document.getElementById('selectedFormatName');
-  if (formatName) formatName.textContent = selectedFormat;
-  showModal();
-});
 
