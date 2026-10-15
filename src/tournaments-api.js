@@ -15,7 +15,7 @@ export async function registeredProfiles() {
   const profiles = [];
   let nextToken;
   do {
-    const result = await client.models.Profile.list({ limit: 100, nextToken, selectionSet: ['id', 'nickname', 'owner'] });
+    const result = await client.models.Profile.list({ limit: 100, nextToken, selectionSet: ['id', 'nickname', 'owner', 'avatarPath'] });
     profiles.push(...(resultData(result) || []));
     nextToken = result.nextToken;
   } while (nextToken);
