@@ -1,5 +1,21 @@
 # Historial de versiones
 
+## 2.0.1 - 2026-10-15
+
+### Corregido
+- El inicio conserva siempre «Un desafío. Todo por demostrar.»; se elimina la selección aleatoria al recargar.
+
+### Rendimiento
+- Fuentes externas sin bloqueo del primer dibujo del contenido, con respaldo para JavaScript desactivado.
+- Amplify Data y Storage se cargan bajo demanda en lugar de incluirse en el arranque de acceso.
+- Los controles de acceso ya no esperan la lectura remota del perfil para registrar sus acciones.
+- La configuración de Amplify permite revalidación HTTP sin reutilizar silenciosamente una configuración obsoleta.
+- Compilación local completada. No se garantiza un tiempo universal de 0,5 segundos.
+
+### Pendiente de activación
+- Restricción por IP a Latinoamérica y el Caribe, incluido Brasil. Requiere autorización del costo recurrente de AWS WAF; no está activada en esta entrega.
+
+
 ## 2.0.0 - 2026-10-15
 
 Primera versión de ProveIt Club que conecta la web con cuentas y perfiles persistentes en AWS. La versión inicial del sitio estático se conserva en el historial del repositorio; esta entrega se identifica con la etiqueta `v2.0.0`.
