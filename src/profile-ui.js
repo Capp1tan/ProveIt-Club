@@ -85,9 +85,9 @@ if (!ready) {
       if (currentAvatarPath) setAvatar(await avatarUrl(currentAvatarPath), profile.nickname?.slice(0, 1).toUpperCase());
     } else setAvatar('', user.username?.slice(0, 1).toUpperCase() || '?');
     bioCount.textContent = String(bio.value.length);
-  } catch {
-    showNotice('Iniciá sesión para editar tu perfil.', true);
-    setTimeout(() => { location.href = '/'; }, 1200);
+  } catch (error) {
+    showNotice(error.name === 'UserUnAuthenticatedException' ? 'Iniciá sesión para editar tu perfil.' : 'No pudimos cargar tu perfil. Tus datos siguen guardados: recargá para reintentar.', true);
+    form.querySelectorAll('input,textarea,button[type="submit"]').forEach(control => { control.disabled = true; });
   }
 }
 
