@@ -1,3 +1,4 @@
+import { loadBadges, badgeElements } from './badges.js';
 // Sala de espera y cuadro: las confirmaciones y el sorteo provienen de AWS.
 import { formats, formatImage } from './tournament-formats.js';
 import { avatarUrl, getCurrentUser } from './auth-client.js';
@@ -25,7 +26,7 @@ function roster(title,ids,names,statuses) {
   names.forEach((name,i)=>{
     const state=statuses[i] || 'PENDING';
     const row=element('li','','waiting-person');row.dataset.state=state;
-    row.append(avatar(ids[i],name),element('strong',name),element('span',stateNames[state] || 'Pendiente','waiting-state'));rows.append(row);
+    row.append(avatar(ids[i],name),element('strong',name),badgeElements(profiles.get(ids[i])?.owner?.split('::')[0]),element('span',stateNames[state] || 'Pendiente','waiting-state'));rows.append(row);
   });
   if(!names.length) rows.append(element('li','Sin tesorero'));
   section.append(rows);return section;
@@ -41,7 +42,7 @@ function drawBoard(t) {
     const row=element('div','','draw-player');
     if(!slot) {row.append(element('span','Descanso / pase libre'));return row;}
     const player=slot.playerId?players.get(slot.playerId):slot.name?slot:null;
-    if(player) row.append(avatar(player.id,player.name),element('span',player.name));
+    if(player) row.append(avatar(player.id,player.name),element('span',player.name),badgeElements(profiles.get(player.id)?.owner?.split('::')[0]));
     else row.append(element('span',(slot.outcome==='loser'?'Perdedor de ':'Ganador de ')+slot.source));
     return row;
   };
@@ -92,7 +93,7 @@ async function refreshTournament(force=false) {
 }
 try {
   if(detail) {
-    try {profiles=new Map((await registeredProfiles()).map(profile=>[profile.id,profile]));}catch{}
+    try {await loadBadges();profiles=new Map((await registeredProfiles()).map(profile=>[profile.id,profile]));}catch{}
     await refreshTournament();
     setInterval(()=>void refreshTournament(),15000);
     document.addEventListener('visibilitychange',()=>{if(!document.hidden)void refreshTournament();});
