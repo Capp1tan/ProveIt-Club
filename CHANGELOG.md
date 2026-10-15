@@ -1,5 +1,12 @@
 # Historial de versiones
 
+## 2.1.1 - 2026-10-15
+
+- Duelo 1v1 como opción inicial, con diagrama, explicación y exactamente dos participantes, validado en el navegador y AWS.
+- Se mantiene al menos un juez obligatorio y tesorero opcional.
+- «Sugerir cambios» abre el correo del usuario dirigido a leorivero744@gmail.com con asunto precargado.
+
+
 ## 2.1.0 - 2026-10-15
 
 ### Incorporado
