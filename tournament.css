@@ -17,3 +17,12 @@
 .person-choice:has(input:disabled) .person-selection{font-size:0}
 .person-choice:has(input:disabled) .person-selection::after{content:'Otro rol';font-size:11px}
 @media(max-width:420px){.person-choice{gap:8px;padding:10px}.person-selection{font-size:10px}}
+
+/* Sala de espera: la foto y el estado de cada invitación siempre se muestran juntos. */
+.waiting-roster{list-style:none;padding:0;display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.waiting-person{display:flex;align-items:center;gap:12px;padding:14px;border:1px solid #586038;border-radius:10px;background:#242719;flex-wrap:wrap}
+.waiting-person[data-state=ACCEPTED]{border-color:#779f42;background:#1e2d18}.waiting-person[data-state=REJECTED]{border-color:#a75d51;background:#30201c}
+.waiting-state{font-size:12px;color:#e6d689;margin-left:auto}.waiting-person[data-state=ACCEPTED] .waiting-state{color:#c4ff79}.waiting-person[data-state=REJECTED] .waiting-state{color:#ffc6b9}
+.draw-board{display:flex;align-items:stretch;gap:28px;overflow-x:auto;padding:12px 4px 24px}.draw-round{flex:0 0 245px;display:flex;flex-direction:column;justify-content:space-around;gap:16px}.draw-round h3{margin:0}.draw-round>.eyebrow{margin:0}
+.draw-match{position:relative;background:#10180e;border:1px solid #526b3b;border-radius:12px;padding:12px;margin:auto 0}.draw-round:not(:last-child) .draw-match:after{content:'';position:absolute;right:-29px;top:50%;width:28px;border-top:2px solid #769e45}
+.draw-player{display:flex;align-items:center;gap:9px;min-height:38px;font-size:14px;overflow-wrap:anywhere}.draw-player>span:last-child{min-width:0}.draw-match small{color:#99af87}.draw-versus{display:block;color:#8fa280;font-size:10px;margin:5px 0}
