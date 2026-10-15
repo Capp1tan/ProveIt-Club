@@ -83,9 +83,13 @@ Hub.listen('auth', ({ payload }) => {
     void syncAccountControl();
   }
 });
-backendReady = await configureAmplify().catch(() => false);
-if (hint && backendReady) hint.textContent = 'Tu cuenta se protege con AWS Cognito.';
-await syncAccountControl();
+// Inicializamos en paralelo: la lectura remota del perfil no bloquea los botones.
+const backendInitialization = configureAmplify().catch(() => false).then(ready => {
+  backendReady = ready;
+  if (hint && ready) hint.textContent = 'Tu cuenta se protege con AWS Cognito.';
+  void syncAccountControl();
+  return ready;
+});
 window.addEventListener('proveit:profile-updated', syncAccountControl);
 
 function setStep(nextStep) {
@@ -132,7 +136,7 @@ modal?.querySelectorAll('[data-auth-mode]').forEach(button => button.addEventLis
 
 googleButton?.addEventListener('click', async () => {
   clearMessage();
-  if (!backendReady) return showMessage('El sitio todavía no recibió la configuración de Amplify. AWS debe generar amplify_outputs.json.', true);
+  if (!await backendInitialization) return showMessage('El sitio todavía no recibió la configuración de Amplify. AWS debe generar amplify_outputs.json.', true);
   try { await signInWithRedirect({ provider: 'Google' }); }
   catch (error) { showMessage(error.message || 'No se pudo iniciar sesión con Google.', true); }
 });
@@ -140,7 +144,7 @@ googleButton?.addEventListener('click', async () => {
 form?.addEventListener('submit', async event => {
   event.preventDefault();
   clearMessage();
-  if (!backendReady) return showMessage('El sitio todavía no recibió la configuración de Amplify. Primero hay que desplegar el backend en AWS.', true);
+  if (!await backendInitialization) return showMessage('El sitio todavía no recibió la configuración de Amplify. Primero hay que desplegar el backend en AWS.', true);
   const emailValue = email.value.trim().toLowerCase();
   const passwordValue = form.elements.password.value;
   submit.disabled = true;
