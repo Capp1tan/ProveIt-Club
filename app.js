@@ -1,18 +1,6 @@
 /* Interacciones pequeñas del prototipo. Los comentarios indican dónde editar el contenido. */
 
-// Cambiá o sumá textos aquí: cada visita muestra uno al azar en el hero de inicio.
-const heroMessages = [
-  { title: 'Un desafío.<br><span>Todo por demostrar.</span>', text: 'La próxima gran historia puede empezar con una partida, un reto o una apuesta entre amigos. Prepará tu mejor versión: hay algo en juego.' },
-  { title: 'Venís a jugar.<br><span>Te vas con una historia.</span>', text: 'Juntá a tu gente, elegí el desafío y descubrí quién tiene lo necesario para llevarse el primer puesto.' },
-  { title: 'La gloria no se regala.<br><span>Se gana en la ronda.</span>', text: 'De una partida de LoL a cualquier reto entre amigos: armá la competencia y que hablen los resultados.' },
-  { title: 'Un pique amistoso.<br><span>Una victoria para recordar.</span>', text: 'Elegí cómo competir, invitá a tus amigos y poné a prueba quién se lleva el derecho a presumir.' }
-];
-const title = document.getElementById('heroTitle');
-if (title) {
-  const message = heroMessages[Math.floor(Math.random() * heroMessages.length)];
-  title.innerHTML = message.title;
-  document.getElementById('heroText').textContent = message.text;
-}
+// El título y la descripción se editan en index.html; permanecen iguales al recargar.
 
 // Apertura del modal de acceso; src/auth-ui.js atiende Google y los formularios de email.
 const modal = document.getElementById('loginModal');
