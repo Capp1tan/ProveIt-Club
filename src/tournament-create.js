@@ -125,7 +125,7 @@ form.addEventListener('submit', async event => {
   } catch (error) { show(error.message || 'No se pudo guardar. Podés reintentar.', true); }
   finally { saving = false; submit.disabled = false; }
 });
-Hub.listen('auth', ({payload}) => { if (['signedIn','signedOut'].includes(payload.event)) selectFormat(selectedFormat);
-void connectAccount(); });
+Hub.listen('auth', ({payload}) => { if (['signedIn','signedOut'].includes(payload.event)) void connectAccount(); });
+selectFormat(selectedFormat);
 void connectAccount();
 
