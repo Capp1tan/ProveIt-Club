@@ -1,4 +1,5 @@
 // Acceso y estado de cuenta en la navegación.
+import { Hub } from 'aws-amplify/utils';
 import {
   avatarUrl,
   configureAmplify,
@@ -75,6 +76,13 @@ async function syncAccountControl() {
   }
 }
 
+// Google regresa al sitio antes de que finalice el intercambio de la sesión.
+// Hub actualiza el encabezado apenas Amplify termina de iniciar o cerrar sesión.
+Hub.listen('auth', ({ payload }) => {
+  if (payload.event === 'signedIn' || payload.event === 'signedOut') {
+    void syncAccountControl();
+  }
+});
 backendReady = await configureAmplify().catch(() => false);
 if (hint && backendReady) hint.textContent = 'Tu cuenta se protege con AWS Cognito.';
 await syncAccountControl();
