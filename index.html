@@ -10,6 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="profile.css">
 </head>
 <body>
   <!-- Barra superior: logo vuelve al inicio; lupa abre el buscador; el botón muestra el acceso de demostración. -->
@@ -87,7 +88,7 @@
 
   <footer class="site-footer"><a class="footer-brand" href="index.html">prove.it <span>CLUB</span></a><span>COMPETÍ · DISFRUTÁ · VOLVÉ A INTENTARLO</span><span>© 2026 PROVE.IT CLUB</span></footer>
 
-  <!-- Ventana demostrativa de acceso. El proveedor real se conecta en una etapa posterior. -->
+  <!-- Modal de acceso. Los controles de auth-ui.js se conectan con Cognito cuando Amplify está configurado. -->
   <div class="modal-backdrop" id="loginModal" hidden>
     <section class="login-modal" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
       <button class="modal-close" id="closeLogin" aria-label="Cerrar">×</button>
@@ -95,13 +96,24 @@
       <p class="eyebrow">TU PRÓXIMO PIQUE TE ESPERA</p>
       <h2 id="loginTitle">Entrá al club.</h2>
       <p class="modal-copy">Guardá tus torneos, anotate a desafíos y seguí tus resultados.</p>
-      <button class="auth-option" data-demo-auth><span class="google-g">G</span> Continuar con Google</button>
-      <button class="auth-option" data-demo-auth><span class="discord-mark">◉</span> Continuar con Discord</button>
-      <button class="auth-option email-option" data-demo-auth>✉ <span>Continuar con email</span></button>
-      <p class="fine-print">Prototipo visual: el registro todavía no está conectado.</p>
+      <button class="auth-option" data-auth-google><span class="google-g">G</span> Continuar con Google</button>
+      <button class="auth-option email-option" data-auth-email>✉ <span>Continuar con email</span></button>
+      <form class="auth-form" data-auth-form hidden>
+        <div class="auth-tabs"><button type="button" data-auth-mode="signin" class="active">Ingresar</button><button type="button" data-auth-mode="signup">Crear cuenta</button></div>
+        <label>Email<input name="email" type="email" autocomplete="email" required maxlength="254" placeholder="vos@ejemplo.com"></label>
+        <label data-password-label>Contraseña<input name="password" type="password" autocomplete="current-password" minlength="8" required placeholder="Mínimo 8 caracteres"></label>
+        <label data-code-label hidden>Código de verificación<input name="code" inputmode="numeric" autocomplete="one-time-code" placeholder="El código que te llegó por email"></label>
+        <label data-new-password-label hidden>Nueva contraseña<input name="newPassword" type="password" minlength="8" autocomplete="new-password" placeholder="Mínimo 8 caracteres"></label>
+        <button class="auth-option auth-submit" type="submit">Ingresar con email</button>
+        <button class="auth-text-button" type="button" data-auth-reset>Olvidé mi contraseña</button>
+      </form>
+      <p class="auth-message" data-auth-message role="status" aria-live="polite" hidden></p>
+      <p class="fine-print" data-auth-hint>El backend todavía debe conectarse desde AWS Amplify.</p>
     </section>
   </div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="app.js"></script>
+  <script type="module" src="/app.js"></script>
+  <script type="module" src="/src/auth-ui.js"></script>
 </body>
 </html>
+

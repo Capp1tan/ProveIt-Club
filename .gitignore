@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.amplify/
+.pnpm-store/
+amplify_outputs.json
+amplify_outputs.*.json
+

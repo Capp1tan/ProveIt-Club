@@ -14,7 +14,7 @@ if (title) {
   document.getElementById('heroText').textContent = message.text;
 }
 
-// Modal de acceso de muestra. Aquí se conectará Google, Discord o el registro real.
+// Apertura del modal de acceso; src/auth-ui.js atiende Google y los formularios de email.
 const modal = document.getElementById('loginModal');
 const showModal = () => { if (modal) { modal.hidden = false; document.body.classList.add('modal-open'); } };
 const hideModal = () => { if (modal) { modal.hidden = true; document.body.classList.remove('modal-open'); } };
@@ -33,8 +33,6 @@ function showToast(message) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => toast.classList.remove('visible'), 2800);
 }
-document.querySelectorAll('[data-demo-auth]').forEach(button => button.addEventListener('click', () => showToast('El acceso real se conecta en la siguiente etapa.')));
-
 // Catálogo ficticio de ejemplo para mostrar cómo se comportaría la búsqueda.
 const sampleTournaments = [
   { name: 'LoL 1v1 — Round Robin', category: 'Videojuegos', status: 'Inscripciones abiertas' },
@@ -75,3 +73,4 @@ document.getElementById('continueCreate')?.addEventListener('click', () => {
   if (formatName) formatName.textContent = selectedFormat;
   showModal();
 });
+
