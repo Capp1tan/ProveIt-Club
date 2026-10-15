@@ -33,6 +33,8 @@ const schema = a.schema({
     status: a.string().required(),
     // Estados alineados con participantes, jueces y tesorero. Ausente en torneos anteriores.
     rosterStatuses: a.string().required().array(),
+    membershipRevision: a.integer(),
+    draw: a.string(),
   }).authorization(allow => [allow.authenticated().to(['read'])]),
   TournamentInvitation: a.model({
     tournamentId: a.id().required(),
@@ -44,6 +46,9 @@ const schema = a.schema({
     status: a.string().required(),
     invitedBySub: a.string().required(),
   }).authorization(allow => [allow.ownerDefinedIn('recipientSub').identityClaim('sub').to(['read'])]),
+  prepareTournamentDraw: a.mutation().arguments({ tournamentId: a.id().required() })
+    .returns(a.ref('Tournament')).authorization(allow => [allow.authenticated()])
+    .handler(a.handler.function(respondInvitation)),
   respondToTournamentInvitation: a.mutation().arguments({
     invitationId: a.id().required(),
     accept: a.boolean().required(),
