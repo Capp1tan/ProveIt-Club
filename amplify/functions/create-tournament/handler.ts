@@ -4,7 +4,7 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
 
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
-const formats = new Set(['ROUND_ROBIN', 'SINGLE_ELIMINATION', 'DOUBLE_ELIMINATION', 'SWISS', 'FREE_FOR_ALL']);
+const formats = new Set(['DUEL', 'ROUND_ROBIN', 'SINGLE_ELIMINATION', 'DOUBLE_ELIMINATION', 'SWISS', 'FREE_FOR_ALL']);
 type Arguments = {
   tournamentId: string; name: string; activity: string; format: string;
   description?: string | null; participantIds: string[]; judgeIds: string[];
@@ -34,6 +34,7 @@ export const handler = async (event: { arguments: Arguments; identity?: { sub?: 
     return value;
   };
   const participantIds = ids(args.participantIds, 2, 64, 'Participantes');
+  if (args.format === 'DUEL' && participantIds.length !== 2) throw new Error('El Duelo 1v1 requiere exactamente dos participantes.');
   const judgeIds = ids(args.judgeIds, 1, 16, 'Jueces');
   const treasurerId = args.treasurerId || null;
   const allIds = [...participantIds, ...judgeIds, ...(treasurerId ? ids([treasurerId], 1, 1, 'Tesorero') : [])];
