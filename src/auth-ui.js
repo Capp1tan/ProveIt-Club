@@ -147,7 +147,12 @@ modal?.querySelectorAll('[data-auth-mode]').forEach(button => button.addEventLis
 googleButton?.addEventListener('click', async () => {
   clearMessage();
   if (!await backendInitialization) return showMessage('El sitio todavía no recibió la configuración de Amplify. AWS debe generar amplify_outputs.json.', true);
-  try { await signInWithRedirect({ provider: 'Google' }); }
+  try {
+    if (location.pathname === '/crear-torneo.html') {
+      try { sessionStorage.setItem('proveit:tournament-resume', '1'); } catch {}
+    }
+    await signInWithRedirect({ provider: 'Google' });
+  }
   catch (error) { showMessage(error.message || 'No se pudo iniciar sesión con Google.', true); }
 });
 
