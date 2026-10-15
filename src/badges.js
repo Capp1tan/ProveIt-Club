@@ -20,7 +20,8 @@ export async function loadBadges() {
 }
 export function badgeElements(sub) {
   const wrapper = document.createElement('span'); wrapper.className = 'club-badges';
-  for (const badge of badges.filter(item => item.accountSub === sub)) {
+  if (!sub) return wrapper;
+  for (const badge of badges.filter(item => item.accountSub === sub || item.accountUsername === sub)) {
     const text = { CREATOR: '★ Creador', BETA_TESTER: '✦ Betatester' }[badge.code];
     if (!text) continue;
     const node = document.createElement('span'); node.className = 'club-badge'; node.dataset.code = badge.code; node.textContent = text;
@@ -43,7 +44,7 @@ export async function mountBadgeAdmin() {
       if (!profile.nickname.toLocaleLowerCase('es').includes(query)) continue;
       const row = document.createElement('div'); row.className = 'badge-admin-person';
       const name = document.createElement('strong'); name.textContent = profile.nickname;
-      const enabled = badges.some(item => item.accountSub === sub && item.code === 'BETA_TESTER');
+      const enabled = badges.some(item => (item.accountSub === sub || item.accountUsername === sub) && item.code === 'BETA_TESTER');
       const button = document.createElement('button'); button.type = 'button'; button.textContent = enabled ? 'Quitar Betatester' : 'Dar Betatester'; button.setAttribute('aria-pressed', String(enabled));
       button.addEventListener('click', async () => {
         button.disabled = true; notice.textContent = 'Guardando insignia…';
