@@ -1,5 +1,5 @@
 import { Hub } from 'aws-amplify/utils';
-import { configureAmplify, getCurrentUser } from './auth-client.js';
+import { avatarUrl, configureAmplify, getCurrentUser } from './auth-client.js';
 import { formats, formatImage } from './tournament-formats.js';
 import { registeredProfiles, createClubTournament } from './tournaments-api.js';
 
@@ -56,6 +56,33 @@ function usedByOtherRole(profile, role) {
   const otherIds = [...(role !== 'participant' ? participants : []), ...(role !== 'judge' ? judges : []), ...(role !== 'treasurer' && treasurer.value ? [treasurer.value] : [])];
   return profiles.some(other => otherIds.includes(other.id) && owner(other) === owner(profile));
 }
+// Las fotos se cargan una vez por ruta. Sin foto (o si falla) usamos la inicial.
+const avatarRequests = new Map();
+function personAvatar(profile) {
+  const avatar = document.createElement('span');
+  avatar.className = 'person-avatar'; avatar.setAttribute('aria-hidden', 'true');
+  const initial = Array.from(profile.nickname.trim())[0]?.toLocaleUpperCase('es') || '?';
+  avatar.textContent = initial;
+  if (profile.avatarPath?.startsWith('profile-pictures/')) {
+    if (!avatarRequests.has(profile.avatarPath)) {
+      avatarRequests.set(profile.avatarPath, avatarUrl(profile.avatarPath).catch(() => ''));
+    }
+    void avatarRequests.get(profile.avatarPath).then(url => {
+      if (!url) return;
+      const image = document.createElement('img');
+      image.alt = ''; image.loading = 'lazy'; image.decoding = 'async';
+      image.addEventListener('error', () => { avatar.textContent = initial; }, { once: true });
+      image.src = url; avatar.replaceChildren(image);
+    });
+  }
+  return avatar;
+}
+function selectionState(selected) {
+  const state = document.createElement('span');
+  state.className = 'person-selection'; state.setAttribute('aria-hidden', 'true');
+  state.textContent = selected ? '✓ Seleccionado' : 'Elegir';
+  return state;
+}
 function renderPeople() {
   const query = search.value.trim().toLocaleLowerCase('es');
   const filtered = profiles.filter(profile => profile.nickname.toLocaleLowerCase('es').includes(query));
@@ -71,16 +98,25 @@ function renderPeople() {
         renderPeople();
       });
       const name = document.createElement('span'); name.textContent = profile.nickname;
-      label.append(input,name); list.append(label);
+      label.append(input,personAvatar(profile),name,selectionState(input.checked)); list.append(label);
     }
     if (!filtered.length) { const empty = document.createElement('p'); empty.textContent = profiles.length ? 'No hay perfiles con ese nick.' : 'Todavía no hay perfiles para seleccionar.'; list.append(empty); }
   }
-  const current = treasurer.value;
-  treasurer.replaceChildren(new Option('Sin tesorero', ''));
-  for (const profile of profiles) {
-    const option = new Option(profile.nickname, profile.id); option.disabled = usedByOtherRole(profile, 'treasurer'); treasurer.append(option);
+  // El tesorero usa tarjetas con radio: permite elegir una sola cuenta o ninguna.
+  const treasuryList = document.getElementById('treasurerList');
+  treasuryList.replaceChildren();
+  for (const profile of [null, ...filtered]) {
+    const id = profile?.id || '';
+    const label = document.createElement('label'); label.className = 'person-choice';
+    const input = document.createElement('input'); input.type = 'radio';
+    input.name = 'treasurerChoice'; input.value = id; input.checked = treasurer.value === id;
+    input.disabled = Boolean(profile && usedByOtherRole(profile, 'treasurer'));
+    input.addEventListener('change', () => { treasurer.value = id; renderPeople(); });
+    const name = document.createElement('span'); name.textContent = profile?.nickname || 'Sin tesorero';
+    const avatar = profile ? personAvatar(profile) : document.createElement('span');
+    if (!profile) { avatar.className = 'person-avatar'; avatar.textContent = '—'; avatar.setAttribute('aria-hidden','true'); }
+    label.append(input,avatar,name,selectionState(input.checked)); treasuryList.append(label);
   }
-  treasurer.value = current;
   updateSummary();
 }
 async function refreshPeople() {
@@ -90,6 +126,7 @@ async function refreshPeople() {
   try {
     profiles = await registeredProfiles();
     for (const selected of [participants,judges]) for (const id of selected) if (!profiles.some(profile => profile.id === id)) selected.delete(id);
+    if (treasurer.value && !profiles.some(profile => profile.id === treasurer.value)) treasurer.value = '';
     renderPeople(); status.textContent = `${profiles.length} perfiles disponibles. Para aparecer aquí, cada persona debe ingresar y guardar su nick en Mi perfil.`;
   } catch (error) { status.textContent = 'No pudimos cargar la lista. Usá «Actualizar lista» para reintentar.'; show(error.message, true); }
   finally { loading = false; submit.disabled = false; }
