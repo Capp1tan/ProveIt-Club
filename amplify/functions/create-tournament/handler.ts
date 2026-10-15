@@ -50,6 +50,10 @@ export const handler = async (event: { arguments: Arguments; identity?: { sub?: 
   }));
   const owners = profiles.map(profile => profile.owner.split('::')[0]);
   if (new Set(owners).size !== owners.length) throw new Error('Una misma cuenta no puede ocupar varios lugares ni roles.');
+  for (const accountSub of new Set([sub, ...owners])) {
+    const account = (await db.send(new GetCommand({ TableName: process.env.ACCOUNT_TABLE_NAME!, Key: { id: accountSub }, ConsistentRead: true }))).Item;
+    if (!account?.phoneNumber) throw new Error('Todos los integrantes y el organizador deben completar su teléfono en Mi perfil.');
+  }
   const names = new Map(profiles.map(profile => [profile.id, profile.nickname]));
   const now = new Date().toISOString();
   const item = {
