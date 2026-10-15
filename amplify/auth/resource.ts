@@ -13,7 +13,7 @@ export const auth = defineAuth({
         clientSecret: secret('GOOGLE_CLIENT_SECRET'),
         // El correo es obligatorio en Cognito: Google debe enviarlo y mapearlo.
         scopes: ['openid', 'email', 'profile'],
-        attributeMapping: { email: 'email' },
+        attributeMapping: { email: 'email', emailVerified: 'email_verified' },
       },
       callbackUrls: [
         'http://localhost:5173/',
