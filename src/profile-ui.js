@@ -65,6 +65,7 @@ form.addEventListener('submit', async event => {
     if (currentAvatarPath) setAvatar(await avatarUrl(currentAvatarPath), form.elements.nickname.value.trim().slice(0, 1).toUpperCase());
     selectedAvatar = null;
     showNotice('Perfil guardado.');
+    window.dispatchEvent(new Event('proveit:profile-updated'));
   } catch (error) { showNotice(error.message || 'No se pudo guardar el perfil.', true); }
   finally { button.disabled = false; }
 });
