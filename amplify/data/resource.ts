@@ -24,7 +24,7 @@ const schema = a.schema({
     .authorization(allow => [allow.ownerDefinedIn('accountSub').identityClaim('sub').to(['read'])]),
   UniqueClaim: a.model({ accountSub: a.string().required() })
     .authorization(allow => [allow.ownerDefinedIn('accountSub').identityClaim('sub').to(['read'])]),
-  ClubBadge: a.model({ accountSub: a.string().required(), code: a.string().required() })
+  ClubBadge: a.model({ accountSub: a.string().required(), accountUsername: a.string(), code: a.string().required() })
     .authorization(allow => [allow.authenticated().to(['read'])]),
   ClubAccess: a.customType({ isCreator: a.boolean().required() }),
   initializeClubAccess: a.mutation().returns(a.ref('ClubAccess')).authorization(allow => [allow.authenticated()]).handler(a.handler.function(clubAccount)),
