@@ -1,5 +1,15 @@
 # Historial de versiones
 
+## 2.2.0 - 2026-10-15
+
+- Invitaciones para participantes, jueces y tesorero, con aceptación o rechazo personal.
+- Campana con contador en las páginas con sesión y actualización cada 20 segundos mientras la pestaña está visible.
+- Sonido sintetizado y control para silenciarlo; requiere interacción por las restricciones del navegador.
+- Creación e invitaciones atómicas y respuestas validadas en AWS por la identidad del destinatario.
+- Ficha con estados pendientes, aceptados y rechazados. Elegirse a uno mismo confirma ese rol al crear.
+- Las invitaciones son dentro del sitio, sin email ni notificaciones push con la página cerrada. Los torneos anteriores conservan sus integrantes sin generar invitaciones retroactivas.
+
+
 ## 2.1.3 - 2026-10-15
 
 - Selección de participantes, jueces y tesorero mediante tarjetas con avatar y nick.
