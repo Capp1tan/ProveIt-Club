@@ -32,7 +32,7 @@ try {
   }
 } catch { /* Un borrador inválido no impide crear. */ }
 function updateSummary() {
-  document.getElementById('participantCount').textContent = `${participants.size} / mínimo 2`;
+  document.getElementById('participantCount').textContent = `${participants.size} / ${selectedFormat === 'DUEL' ? 'exactamente 2' : 'mínimo 2'}`;
   document.getElementById('judgeCount').textContent = `${judges.size} / mínimo 1`;
   const format = formats.find(item => item.id === selectedFormat);
   document.getElementById('tournamentSummary').textContent = `${format.name} · ${participants.size} participantes · ${judges.size} jueces · ${treasurer.value ? 'con tesorero' : 'sin tesorero'}`;
@@ -42,7 +42,8 @@ function selectFormat(id) {
   options.querySelectorAll('button').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.id === id)));
   const format = formats.find(item => item.id === id);
   preview.innerHTML = `${formatImage(id)}<div><p class="eyebrow">${format.tag}</p><h2>${format.name}</h2><p>${format.description}</p><p class="format-example">${format.example}</p><p>${format.detail}</p></div>`;
-  updateSummary();
+  // Conservamos las selecciones al cambiar de formato; si sobran rivales, se pueden quitar.
+  renderPeople();
 }
 formats.forEach(format => {
   const button = document.createElement('button');
@@ -50,7 +51,6 @@ formats.forEach(format => {
   button.addEventListener('click', () => { selectFormat(format.id); saveDraft(); });
   options.append(button);
 });
-selectFormat(selectedFormat);
 const owner = profile => profile.owner.split('::')[0];
 function usedByOtherRole(profile, role) {
   const otherIds = [...(role !== 'participant' ? participants : []), ...(role !== 'judge' ? judges : []), ...(role !== 'treasurer' && treasurer.value ? [treasurer.value] : [])];
@@ -64,9 +64,9 @@ function renderPeople() {
     for (const profile of filtered) {
       const label = document.createElement('label'); label.className = 'person-choice';
       const input = document.createElement('input'); input.type = 'checkbox'; input.value = profile.id; input.checked = selected.has(profile.id);
-      input.disabled = usedByOtherRole(profile, role) || profiles.some(other => other.id !== profile.id && selected.has(other.id) && owner(other) === owner(profile));
+      input.disabled = (role === 'participant' && selectedFormat === 'DUEL' && !input.checked && selected.size >= 2) || usedByOtherRole(profile, role) || profiles.some(other => other.id !== profile.id && selected.has(other.id) && owner(other) === owner(profile));
       input.addEventListener('change', () => {
-        if (input.checked && selected.size >= (role === 'participant' ? 64 : 16)) { input.checked = false; return show('Llegaste al máximo de personas para ese rol.', true); }
+        if (input.checked && selected.size >= (role === 'participant' ? (selectedFormat === 'DUEL' ? 2 : 64) : 16)) { input.checked = false; return show('Llegaste al máximo de personas para ese rol.', true); }
         input.checked ? selected.add(profile.id) : selected.delete(profile.id);
         renderPeople();
       });
@@ -115,6 +115,7 @@ form.addEventListener('input', saveDraft);
 form.addEventListener('submit', async event => {
   event.preventDefault(); if (saving || loading) return;
   if (participants.size < 2) return show('Seleccioná al menos dos participantes con cuenta en ProveIt.', true);
+  if (selectedFormat === 'DUEL' && participants.size !== 2) return show('El Duelo 1v1 requiere exactamente dos participantes. Quitá las personas sobrantes.', true);
   if (!judges.size) return show('Seleccioná al menos un juez.', true);
   saving = true; submit.disabled = true; show('Guardando tu torneo…');
   try {
@@ -124,6 +125,7 @@ form.addEventListener('submit', async event => {
   } catch (error) { show(error.message || 'No se pudo guardar. Podés reintentar.', true); }
   finally { saving = false; submit.disabled = false; }
 });
-Hub.listen('auth', ({payload}) => { if (['signedIn','signedOut'].includes(payload.event)) void connectAccount(); });
+Hub.listen('auth', ({payload}) => { if (['signedIn','signedOut'].includes(payload.event)) selectFormat(selectedFormat);
+void connectAccount(); });
 void connectAccount();
 
