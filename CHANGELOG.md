@@ -1,3 +1,10 @@
+# 2.4.0 — Identidad del club
+
+- Insignias Creador y Betatester, administradas exclusivamente por la cuenta autorizada.
+- Teléfono internacional obligatorio al guardar el perfil; privado y único mediante reserva transaccional en AWS.
+- Número sin verificación SMS: no demuestra posesión. Los perfiles anteriores se conservan y deben completarlo para participar en nuevos torneos.
+- Fotos y nombres conservados; insignias visibles en perfil, selección y cuadros.
+
 # Historial de versiones
 
 ## 2.3.0 - 2026-10-15
