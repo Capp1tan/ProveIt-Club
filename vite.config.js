@@ -1,11 +1,12 @@
 import { defineConfig } from 'vite';
 
-// El sitio usa tres páginas HTML independientes: inicio, creación y perfil.
+// Entradas HTML del sitio: inicio, cuenta y gestión de torneos.
 export default defineConfig({
   build: {
     rollupOptions: {
-      input: ['index.html', 'crear-torneo.html', 'perfil.html'],
+      input: ['index.html', 'crear-torneo.html', 'perfil.html', 'torneo.html', 'torneos.html'],
     },
   },
 });
+
 
