@@ -1,5 +1,13 @@
 # Historial de versiones
 
+## 2.1.3 - 2026-10-15
+
+- Selección de participantes, jueces y tesorero mediante tarjetas con avatar y nick.
+- Foto del perfil con inicial de respaldo si falta o no carga.
+- Borde verde, marca y texto de selección visibles; tesorero con selección única y opción «Sin tesorero».
+- La búsqueda por nick también filtra las opciones de tesorero. Se mantienen los límites y la separación de roles.
+
+
 ## 2.1.2 - 2026-10-15
 
 - Corrección de la carga inicial del diagrama y la conexión de cuenta en creación de torneos.
