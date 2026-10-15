@@ -1,4 +1,5 @@
 import { a, defineData, type ClientSchema } from '@aws-amplify/backend';
+import { clubAccount } from '../functions/club-account/resource';
 import { respondInvitation } from '../functions/respond-invitation/resource';
 import { createTournament } from '../functions/create-tournament/resource';
 
@@ -12,11 +13,25 @@ const schema = a.schema({
       nickname: a.string().required(),
       bio: a.string(),
       avatarPath: a.string(),
+      accountComplete: a.boolean(),
     })
     .authorization((allow) => [
-      allow.owner(),
+      allow.owner().to(['read']),
       allow.authenticated().to(['read']),
     ]),
+  // El teléfono nunca se publica en Profile. Sólo su dueño puede leerlo.
+  PrivateAccount: a.model({ accountSub: a.string().required(), phoneNumber: a.string().required(), phoneVerified: a.boolean().required(), revision: a.integer().required() })
+    .authorization(allow => [allow.ownerDefinedIn('accountSub').identityClaim('sub').to(['read'])]),
+  UniqueClaim: a.model({ accountSub: a.string().required() })
+    .authorization(allow => [allow.ownerDefinedIn('accountSub').identityClaim('sub').to(['read'])]),
+  ClubBadge: a.model({ accountSub: a.string().required(), code: a.string().required() })
+    .authorization(allow => [allow.authenticated().to(['read'])]),
+  ClubAccess: a.customType({ isCreator: a.boolean().required() }),
+  initializeClubAccess: a.mutation().returns(a.ref('ClubAccess')).authorization(allow => [allow.authenticated()]).handler(a.handler.function(clubAccount)),
+  manageClubBadge: a.mutation().arguments({ profileId: a.id().required(), code: a.string().required(), enabled: a.boolean().required() })
+    .returns(a.ref('ClubAccess')).authorization(allow => [allow.authenticated()]).handler(a.handler.function(clubAccount)),
+  saveClubProfile: a.mutation().arguments({ profileId: a.id(), nickname: a.string().required(), bio: a.string(), avatarPath: a.string(), phoneNumber: a.string().required() })
+    .returns(a.ref('Profile')).authorization(allow => [allow.authenticated()]).handler(a.handler.function(clubAccount)),
   // Las cuentas pueden consultar torneos. Sólo la función validada los escribe.
   Tournament: a.model({
     name: a.string().required(),
