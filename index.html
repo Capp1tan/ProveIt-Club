@@ -8,7 +8,9 @@
   <title>Prove.it Club — Que empiece el desafío</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <!-- Las fuentes no bloquean el primer dibujo; el texto aparece con la fuente de respaldo. -->
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet"></noscript>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="profile.css">
 </head>
@@ -36,7 +38,7 @@
   </section>
 
   <main>
-    <!-- Hero: uno de estos mensajes se elige al azar al cargar la página. Editá las frases en app.js. -->
+    <!-- Texto fijo del inicio: editá aquí el título y la descripción. -->
     <section class="hero">
       <div class="hero-copy">
         <p class="eyebrow"><span class="live-dot"></span> COMPETÍ A TU MANERA</p>
