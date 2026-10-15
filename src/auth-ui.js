@@ -208,3 +208,6 @@ form?.querySelector('[data-auth-reset]')?.addEventListener('click', () => {
   form.requestSubmit();
 });
 
+
+// La campana se comparte con todas las páginas que tienen acceso de cuenta.
+void import('./notifications.js').catch(() => { console.warn('No se pudo cargar la campana de invitaciones.'); });
