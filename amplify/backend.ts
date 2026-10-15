@@ -21,7 +21,7 @@ backend.createTournament.addEnvironment('TOURNAMENT_TABLE_NAME', tournaments.tab
 const invitations = backend.data.resources.tables['TournamentInvitation'];
 invitations.grant(backend.createTournament.resources.lambda, 'dynamodb:PutItem');
 invitations.grant(backend.respondInvitation.resources.lambda, 'dynamodb:GetItem', 'dynamodb:UpdateItem');
-tournaments.grant(backend.respondInvitation.resources.lambda, 'dynamodb:UpdateItem');
+tournaments.grant(backend.respondInvitation.resources.lambda, 'dynamodb:GetItem', 'dynamodb:UpdateItem');
 backend.createTournament.addEnvironment('INVITATION_TABLE_NAME', invitations.tableName);
 backend.respondInvitation.addEnvironment('INVITATION_TABLE_NAME', invitations.tableName);
 backend.respondInvitation.addEnvironment('TOURNAMENT_TABLE_NAME', tournaments.tableName);
