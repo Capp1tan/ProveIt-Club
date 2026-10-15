@@ -14,12 +14,20 @@ import {
   signOut,
   signUp,
 } from 'aws-amplify/auth';
-import { generateClient } from 'aws-amplify/data';
-import { getUrl, uploadData } from 'aws-amplify/storage';
 
 let configured = false;
 let configurationPromise;
-let dataClient;
+let dataClientPromise;
+
+// Data y Storage se descargan sólo cuando se necesita leer el perfil o una foto.
+// La promesa compartida evita crear clientes duplicados con peticiones simultáneas.
+function profileClient() {
+  if (!dataClientPromise) {
+    dataClientPromise = import('aws-amplify/data').then(({ generateClient }) => generateClient());
+    dataClientPromise.catch(() => { dataClientPromise = undefined; });
+  }
+  return dataClientPromise;
+}
 
 export async function configureAmplify() {
   if (configured) return true;
@@ -28,13 +36,12 @@ export async function configureAmplify() {
   if (!configurationPromise) {
     configurationPromise = (async () => {
       try {
-        const response = await fetch('/amplify_outputs.json', { cache: 'no-store' });
+        const response = await fetch('/amplify_outputs.json', { cache: 'no-cache' });
         if (!response.ok) return false;
         const outputs = await response.json();
         // Dominio propio de Cognito; AWS sigue generando los demás identificadores.
         if (outputs.auth?.oauth) outputs.auth.oauth.domain = 'auth.proveitclub.win';
         Amplify.configure(outputs);
-        dataClient = generateClient();
         configured = true;
         return true;
       } catch (error) {
@@ -56,6 +63,7 @@ export { confirmResetPassword, confirmSignIn, confirmSignUp, fetchAuthSession, g
 
 export async function loadProfile() {
   requireBackend();
+  const dataClient = await profileClient();
   const user = await getCurrentUser();
   const { data, errors } = await dataClient.models.Profile.list({
     filter: { owner: { contains: user.userId } },
@@ -67,6 +75,7 @@ export async function loadProfile() {
 
 export async function saveProfile(profileId, values) {
   requireBackend();
+  const dataClient = await profileClient();
   const nickname = values.nickname.trim();
   const { data: profiles, errors: listErrors } = await dataClient.models.Profile.list({ limit: 1000 });
   if (listErrors?.length) throw new Error(listErrors[0].message);
@@ -98,12 +107,14 @@ export async function saveAvatar(file) {
   if (!identityId) throw new Error('No se encontró la identidad de almacenamiento.');
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '-');
   const path = `profile-pictures/${identityId}/${Date.now()}-${safeName}`;
+  const { uploadData } = await import('aws-amplify/storage');
   await uploadData({ path, data: file, options: { contentType: file.type } }).result;
   return path;
 }
 
 export async function avatarUrl(path) {
   if (!path) return '';
+  const { getUrl } = await import('aws-amplify/storage');
   const result = await getUrl({ path, options: { expiresIn: 3600 } });
   return result.url.toString();
 }
