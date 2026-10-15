@@ -1,3 +1,4 @@
+import { loadBadges, badgeElements, initializeAccess, mountBadgeAdmin } from './badges.js';
 // Edición del perfil. El archivo no almacena imágenes ni datos en el navegador:
 // Amplify los envía a S3 y a la base de datos cuando el backend esté desplegado.
 import { avatarUrl, configureAmplify, loadProfile, saveAvatar, saveProfile, signOut } from './auth-client.js';
@@ -60,6 +61,7 @@ form.addEventListener('submit', async event => {
       nickname: form.elements.nickname.value,
       bio: bio.value,
       avatarPath: currentAvatarPath,
+      phoneNumber: form.elements.phoneNumber.value,
     });
     profileId = saved.id;
     if (currentAvatarPath) setAvatar(await avatarUrl(currentAvatarPath), form.elements.nickname.value.trim().slice(0, 1).toUpperCase());
@@ -76,7 +78,16 @@ if (!ready) {
   form.querySelectorAll('input,textarea,select,button').forEach(control => { control.disabled = true; });
 } else {
   try {
-    const { user, profile } = await loadProfile();
+    const { user, profile, account } = await loadProfile({ includePrivate: true });
+    form.elements.phoneNumber.value = account?.phoneNumber || '';
+    if (!account?.phoneNumber) showNotice('Completá tu teléfono para guardar el perfil y participar en nuevos torneos.');
+    // Las insignias se cargan aparte: un error no impide editar el perfil.
+    void (async () => { try {
+      const access = await initializeAccess();
+      await loadBadges();
+      document.getElementById('profileBadges').replaceChildren(badgeElements(user.userId));
+      if (access.isCreator) await mountBadgeAdmin();
+    } catch { document.getElementById('badgeNotice').textContent = 'No pudimos cargar las insignias. Recargá para reintentar.'; } })();
     if (profile) {
       profileId = profile.id;
       currentAvatarPath = profile.avatarPath || '';
