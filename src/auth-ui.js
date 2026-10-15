@@ -66,6 +66,16 @@ async function syncAccountControl() {
   try {
     const user = await getCurrentUser();
     displayAccount(user);
+    // Google vuelve al inicio: retomamos la creación sin perder el borrador.
+    try {
+      if (location.pathname === '/' || location.pathname === '/index.html') {
+        if (sessionStorage.getItem('proveit:tournament-resume') === '1') {
+          sessionStorage.removeItem('proveit:tournament-resume');
+          location.replace('/crear-torneo.html');
+          return;
+        }
+      }
+    } catch { /* La sesión funciona aunque el navegador no permita guardar el borrador. */ }
     try {
       const { profile } = await loadProfile();
       if (profile) displayAccount(user, profile);
@@ -160,7 +170,7 @@ form?.addEventListener('submit', async event => {
       }
     } else if (step === 'credentials') {
       const result = await signIn({ username: emailValue, password: passwordValue });
-      if (result.isSignedIn) location.href = '/perfil.html';
+      if (result.isSignedIn) location.href = location.pathname === '/crear-torneo.html' ? '/crear-torneo.html' : '/perfil.html';
       else if (result.nextStep.signInStep === 'CONFIRM_SIGN_UP') {
         setStep('confirm-signup');
         showMessage('Verificá tu email con el código que te enviamos.');
@@ -192,3 +202,4 @@ form?.querySelector('[data-auth-reset]')?.addEventListener('click', () => {
   showMessage('Te vamos a enviar un código para restablecer la contraseña.');
   form.requestSubmit();
 });
+
