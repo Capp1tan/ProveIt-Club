@@ -1,5 +1,24 @@
 # Historial de versiones
 
+## 2.1.0 - 2026-10-15
+
+### Incorporado
+- Creación persistente de torneos con nombre, actividad y reglas opcionales.
+- Cinco formatos con esquemas SVG y ejemplos: Round Robin, eliminación directa, doble eliminación, suizo y todos en una prueba.
+- Selección por nick de perfiles registrados: mínimo dos participantes y un juez; tesorero opcional.
+- Un único lugar y rol por cuenta, validado en el navegador y en AWS Lambda.
+- Escritura de torneos sólo mediante una operación autenticada y validada. El modelo no concede escritura directa a usuarios.
+- Reintentos de creación con identificador estable para evitar duplicados por cortes de conexión.
+- Listado, búsqueda real y ficha consultable mediante enlace para cuentas del club.
+- Retorno a la creación después de ingresar, con borrador de nombre, actividad, reglas y formato durante la sesión del navegador.
+
+### Alcance
+- Se guarda la organización inicial; todavía no se generan cruces, rondas, clasificaciones ni resultados.
+- El tesorero es una asignación de rol; no procesa pagos ni mueve dinero.
+- Las personas deben guardar su perfil y nick para aparecer en la selección. Los roles se asignan al crear, sin flujo de invitación o aceptación todavía.
+- El bloqueo geográfico sigue pendiente, sin activar WAF.
+
+
 ## 2.0.1 - 2026-10-15
 
 ### Corregido
@@ -49,3 +68,4 @@ Primera versión de ProveIt Club que conecta la web con cuentas y perfiles persi
 - `3.0.0`: otro cambio de etapa importante decidido para el proyecto.
 
 La numeración identifica entregas del proyecto; no es una certificación de que no existan errores.
+
