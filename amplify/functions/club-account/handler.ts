@@ -9,13 +9,18 @@ const cognito = new CognitoIdentityProviderClient({});
 const table = (key: string) => process.env[key]!;
 const get = async (key: string, id: string) => (await db.send(new GetCommand({ TableName: table(key), Key: { id }, ConsistentRead: true }))).Item;
 const phoneKey = (phone: string) => 'phone:' + createHash('sha256').update(phone).digest('hex');
-type Event = { arguments: Record<string, any>; info: { fieldName: string }; identity?: { sub?: string; username?: string; claims?: Record<string, any> } };
+type Event = { arguments?: Record<string, any> | null; fieldName?: string; info?: { fieldName: string }; identity?: { sub?: string; username?: string; claims?: Record<string, any> } };
 export const handler = async (event: Event) => {
   const sub = event.identity?.sub;
   if (!sub) throw new Error('Iniciá sesión para continuar.');
-  const args = event.arguments;
+  const args = event.arguments || {};
+  // Amplify puede enviar fieldName en el nivel superior, sin `info`.
+  // Los argumentos de las tres operaciones son distintos; el fallback también
+  // admite el formato reducido del resolver sin confiar en datos de identidad.
+  const operation = event.fieldName || event.info?.fieldName ||
+    ('phoneNumber' in args ? 'saveClubProfile' : 'enabled' in args ? 'manageClubBadge' : 'initializeClubAccess');
   const now = new Date().toISOString();
-  if (event.info.fieldName === 'initializeClubAccess') {
+  if (operation === 'initializeClubAccess') {
     let claim = await get('CLAIM_TABLE_NAME', 'creator');
     if (!claim) {
       // Consultamos Cognito: no confiamos en un correo enviado por el navegador.
@@ -31,7 +36,7 @@ export const handler = async (event: Event) => {
     if (isCreator) await db.send(new PutCommand({ TableName: table('BADGE_TABLE_NAME'), Item: { id: 'CREATOR:' + sub, accountSub: sub, code: 'CREATOR', createdAt: now, updatedAt: now, __typename: 'ClubBadge' } }));
     return { isCreator };
   }
-  if (event.info.fieldName === 'manageClubBadge') {
+  if (operation === 'manageClubBadge') {
     const creator = await get('CLAIM_TABLE_NAME', 'creator');
     if (creator?.accountSub !== sub) throw new Error('Sólo el Creador puede administrar insignias.');
     if (args.code !== 'BETA_TESTER') throw new Error('Esta insignia está reservada.');
@@ -43,7 +48,7 @@ export const handler = async (event: Event) => {
     else await db.send(new DeleteCommand({ TableName: table('BADGE_TABLE_NAME'), Key: { id: item.id } }));
     return { isCreator: true };
   }
-  if (event.info.fieldName !== 'saveClubProfile') throw new Error('Operación inválida.');
+  if (operation !== 'saveClubProfile') throw new Error('Operación inválida.');
   const nickname = String(args.nickname || '').trim();
   const bio = String(args.bio || '').trim();
   const avatarPath = String(args.avatarPath || '');
