@@ -2,6 +2,7 @@
 
 - Corregido el despacho de operaciones: el evento de Amplify no siempre incluye `info.fieldName`.
 - Los errores de carga de insignias ahora se muestran junto al perfil.
+- Compatibilidad de las insignias con el alias de propietario que devuelve AppSync; la autorización conserva el identificador permanente de Cognito.
 
 # 2.4.0 — Identidad del club
 
