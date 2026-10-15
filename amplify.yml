@@ -10,6 +10,7 @@ frontend:
     build:
       commands:
         - npm run build
+        - cp amplify_outputs.json dist/amplify_outputs.json
   artifacts:
     baseDirectory: dist
     files:
@@ -17,4 +18,3 @@ frontend:
   cache:
     paths:
       - node_modules/**/*
-
