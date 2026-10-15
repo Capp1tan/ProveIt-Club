@@ -76,7 +76,7 @@ function requireBackend() {
 
 export { confirmResetPassword, confirmSignIn, confirmSignUp, fetchAuthSession, resetPassword, signIn, signInWithRedirect, signOut, signUp };
 
-export async function loadProfile() {
+export async function loadProfile({ includePrivate = false } = {}) {
   requireBackend();
   const dataClient = await profileClient();
   const user = await getCurrentUser();
@@ -89,7 +89,9 @@ export async function loadProfile() {
     profiles.push(...(result.data || [])); nextToken = result.nextToken;
   } while (nextToken);
   profiles.sort((a,b) => (b.updatedAt || '').localeCompare(a.updatedAt || '') || a.id.localeCompare(b.id));
-  return { user, profile: profiles[0] ?? null };
+  const accountResult = includePrivate ? await dataClient.models.PrivateAccount.get({ id: user.userId }) : {};
+  if (accountResult.errors?.length) throw new Error(accountResult.errors[0].message);
+  return { user, profile: profiles[0] ?? null, account: accountResult.data };
 }
 
 export async function saveProfile(profileId, values) {
@@ -107,10 +109,9 @@ export async function saveProfile(profileId, values) {
     nickname,
     bio: values.bio.trim(),
     avatarPath: values.avatarPath || '',
+    phoneNumber: values.phoneNumber,
   };
-  const result = profileId
-    ? await dataClient.models.Profile.update({ id: profileId, ...payload })
-    : await dataClient.models.Profile.create(payload);
+  const result = await dataClient.mutations.saveClubProfile({ profileId, ...payload });
   if (result.errors?.length) throw new Error(result.errors[0].message);
   return result.data;
 }
