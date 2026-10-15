@@ -43,3 +43,24 @@ export async function getClubTournament(id) {
   return resultData(await client.models.Tournament.get({ id }));
 }
 
+
+// La autorización del modelo limita estas lecturas al destinatario de Cognito.
+export async function pendingInvitations() {
+  const client = await tournamentClient();
+  const user = await getCurrentUser();
+  const invitations = [];
+  let nextToken;
+  do {
+    const result = await client.models.TournamentInvitation.list({
+      filter: { recipientSub: { eq: user.userId }, status: { eq: 'PENDING' } }, limit: 100, nextToken,
+    });
+    invitations.push(...(resultData(result) || [])); nextToken = result.nextToken;
+  } while (nextToken);
+  return invitations.sort((a,b) => b.createdAt.localeCompare(a.createdAt));
+}
+export async function respondInvitation(invitationId, accept) {
+  const client = await tournamentClient();
+  const result = resultData(await client.mutations.respondToTournamentInvitation({ invitationId, accept }));
+  if (!result?.id) throw new Error('No se pudo confirmar la respuesta. Actualizá para revisar su estado.');
+  return result;
+}
