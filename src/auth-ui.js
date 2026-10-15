@@ -211,3 +211,7 @@ form?.querySelector('[data-auth-reset]')?.addEventListener('click', () => {
 
 // La campana se comparte con todas las páginas que tienen acceso de cuenta.
 void import('./notifications.js').catch(() => { console.warn('No se pudo cargar la campana de invitaciones.'); });
+
+// Al volver a una pestaña, renovamos el estado de acceso y el perfil guardado.
+window.addEventListener('pageshow', () => { void syncAccountControl(); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) void syncAccountControl(); });
