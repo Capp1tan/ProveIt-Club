@@ -1,7 +1,7 @@
 // Esta función es la puerta de escritura. Las reglas se comprueban en AWS,
 // aunque alguien intente saltarse el formulario del navegador.
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, GetCommand, TransactWriteCommand } from '@aws-sdk/lib-dynamodb';
 
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const formats = new Set(['DUEL', 'ROUND_ROBIN', 'SINGLE_ELIMINATION', 'DOUBLE_ELIMINATION', 'SWISS', 'FREE_FOR_ALL']);
@@ -57,15 +57,29 @@ export const handler = async (event: { arguments: Arguments; identity?: { sub?: 
     participantIds, participantNames: participantIds.map(id => names.get(id)),
     judgeIds, judgeNames: judgeIds.map(id => names.get(id)),
     treasurerId, treasurerName: treasurerId ? names.get(treasurerId) : null,
-    createdBySub: sub, status: 'CREATED', createdAt: now, updatedAt: now,
+    createdBySub: sub, status: 'AWAITING_RESPONSES',
+    rosterStatuses: owners.map(recipient => recipient === sub ? 'ACCEPTED' : 'PENDING'), createdAt: now, updatedAt: now,
     __typename: 'Tournament',
   };
   try {
     // El ID se conserva al reintentar: evita duplicados ante un corte de conexión.
-    await db.send(new PutCommand({ TableName: tournamentTable, Item: item, ConditionExpression: 'attribute_not_exists(id)' }));
+    const invitationTable = process.env.INVITATION_TABLE_NAME!;
+    // Torneo e invitaciones se guardan juntos: no se confirma a personas ajenas.
+    const invites = profiles.map((profile, index) => ({
+      id: args.tournamentId + ':' + profile.id,
+      tournamentId: args.tournamentId, tournamentName: name,
+      recipientSub: owners[index], profileId: profile.id, rosterIndex: index,
+      role: index < participantIds.length ? 'PARTICIPANT' : index < participantIds.length + judgeIds.length ? 'JUDGE' : 'TREASURER',
+      status: owners[index] === sub ? 'ACCEPTED' : 'PENDING',
+      invitedBySub: sub, createdAt: now, updatedAt: now, __typename: 'TournamentInvitation',
+    }));
+    await db.send(new TransactWriteCommand({ TransactItems: [
+      { Put: { TableName: tournamentTable, Item: item, ConditionExpression: 'attribute_not_exists(id)' } },
+      ...invites.map(invite => ({ Put: { TableName: invitationTable, Item: invite, ConditionExpression: 'attribute_not_exists(id)' } })),
+    ] }));
     return item;
   } catch (error) {
-    if ((error as Error).name !== 'ConditionalCheckFailedException') throw error;
+    if ((error as Error).name !== 'TransactionCanceledException') throw error;
     const existing = await db.send(new GetCommand({ TableName: tournamentTable, Key: { id: args.tournamentId }, ConsistentRead: true }));
     if (existing.Item?.createdBySub === sub) return existing.Item;
     throw new Error('No se pudo guardar el torneo. Volvé a cargar la página.');
