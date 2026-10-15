@@ -3,3 +3,10 @@
 @media(max-width:640px){.profile-main{padding:46px 0 54px}.profile-heading h1{font-size:44px}.profile-card{padding:22px 18px}.profile-divider{align-items:flex-start;flex-direction:column}}
 .auth-option[hidden],.auth-form>label[hidden],.auth-tabs[hidden],.auth-text-button[hidden]{display:none}
 
+
+/* El acceso se convierte en avatar cuando hay una sesión activa. */
+.profile-avatar-link[hidden],.login-button[hidden]{display:none}
+.profile-avatar-link{width:40px;height:40px;display:grid;place-items:center;overflow:hidden;border:1px solid #485348;border-radius:50%;background:#202621;color:var(--green);font:600 15px var(--display);transition:.2s}
+.profile-avatar-link:hover{border-color:var(--green);box-shadow:0 0 0 3px #b7f34a20}
+.profile-avatar-link img{width:100%;height:100%;object-fit:cover}
+@media(max-width:640px){.profile-avatar-link{width:36px;height:36px}}
