@@ -1,3 +1,8 @@
+# 2.4.1 — Compatibilidad del resolver de cuentas
+
+- Corregido el despacho de operaciones: el evento de Amplify no siempre incluye `info.fieldName`.
+- Los errores de carga de insignias ahora se muestran junto al perfil.
+
 # 2.4.0 — Identidad del club
 
 - Insignias Creador y Betatester, administradas exclusivamente por la cuenta autorizada.
