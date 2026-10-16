@@ -10,12 +10,12 @@ function resultData(result) {
   return result.data;
 }
 // Paginamos para no ocultar cuentas o torneos después de la primera página.
-export async function registeredProfiles() {
+export async function registeredProfiles({ includeBio = false } = {}) {
   const client = await tournamentClient();
   const profiles = [];
   let nextToken;
   do {
-    const result = await client.models.Profile.list({ limit: 100, nextToken, selectionSet: ['id', 'nickname', 'owner', 'avatarPath', 'accountComplete'] });
+    const result = await client.models.Profile.list({ limit: 100, nextToken, selectionSet: ['id', 'nickname', 'owner', 'avatarPath', 'accountComplete', ...(includeBio ? ['bio'] : [])] });
     profiles.push(...(resultData(result) || []));
     nextToken = result.nextToken;
   } while (nextToken);
