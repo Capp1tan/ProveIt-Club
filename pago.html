@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#101310">
+  <title>Pago del torneo — Prove.it Club</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <!-- Las fuentes no bloquean el primer dibujo; el texto aparece con la fuente de respaldo. -->
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet"></noscript><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="profile.css">
+<link rel="stylesheet" href="tournament.css">
+
+  <!-- Carga inicial: independiente de Amplify; nunca bloquea indefinidamente. -->
+  <style>
+    #siteLoader{display:none}html[data-site-loading] #siteLoader{display:grid}
+    html[data-site-loading]{overflow:hidden}html[data-site-loading] :is(body>header,body>main,body>footer){visibility:hidden}
+    #siteLoader{position:fixed;inset:0;z-index:10000;place-items:center;background:#101310;color:#edf2e8;font:14px system-ui,sans-serif;transition:opacity .18s ease}
+    #siteLoader.leaving{opacity:0;pointer-events:none}.loader-content{text-align:center;padding:24px}.loader-brand{font-size:30px;font-weight:700;letter-spacing:-1px}.loader-brand span{color:#c1f36b}.loader-brand small{display:block;font-size:10px;letter-spacing:4px;color:#a1aa99;margin-top:5px}
+    .loader-track{width:120px;height:2px;background:#293021;margin:25px auto 18px;overflow:hidden;border-radius:4px}.loader-track:after{content:'';display:block;width:45%;height:100%;background:#c1f36b;animation:loaderSweep 1.3s ease-in-out infinite}.loader-copy{color:#a1aa99;font-size:12px;letter-spacing:.3px}.loader-skip{margin-top:18px;border:1px solid #445039;border-radius:20px;background:transparent;color:#dce6d2;padding:9px 15px;cursor:pointer}.loader-skip:focus-visible{outline:2px solid #c1f36b;outline-offset:4px}
+    @keyframes loaderSweep{from{transform:translateX(-110%)}to{transform:translateX(330%)}}
+    @media(prefers-reduced-motion:reduce){#siteLoader{transition:none}.loader-track:after{animation:none;width:100%;opacity:.6}}
+  </style>
+  <script>
+    // Se oculta al terminar sesión + contenido; 10 s es el límite de seguridad.
+    (()=>{
+      const root=document.documentElement;
+      const pending=new Set(['account']);
+      if(!['/','/index.html'].includes(location.pathname))pending.add('page');
+      root.setAttribute('data-site-loading','');
+      let finished=false,slowTimer,deadline;
+      const finish=()=>{
+        if(finished)return;finished=true;clearTimeout(slowTimer);clearTimeout(deadline);
+        const overlay=document.getElementById('siteLoader');
+        // Mantener la capa durante el fundido mientras aparece el contenido.
+        if(overlay){overlay.style.display='grid';overlay.classList.add('leaving');}
+        root.removeAttribute('data-site-loading');
+        document.querySelector('main')?.removeAttribute('aria-busy');
+        setTimeout(()=>overlay?.remove(),200);
+      };
+      window.proveitLoadingDone=part=>{pending.delete(part);if(!pending.size)finish();};
+      document.addEventListener('DOMContentLoaded',()=>{
+        if(finished){document.getElementById('siteLoader')?.remove();return;}
+        document.querySelector('main')?.setAttribute('aria-busy','true');
+        const skip=document.getElementById('loaderSkip');skip?.addEventListener('click',finish);
+        slowTimer=setTimeout(()=>{if(skip)skip.hidden=false;const text=document.getElementById('loaderCopy');if(text)text.textContent='La conexión está tardando un poco…';},4000);
+      },{once:true});
+      deadline=setTimeout(finish,10000);
+      window.addEventListener('pageshow',event=>{if(event.persisted)finish();});
+    })();
+  </script>
+</head>
+<body>
+  <div id="siteLoader" role="status" aria-live="polite" aria-label="Cargando Prove.it Club"><div class="loader-content"><div class="loader-brand" aria-hidden="true">prove<span>.</span>it<small>CLUB</small></div><div class="loader-track" aria-hidden="true"></div><div class="loader-copy" id="loaderCopy">Preparando el desafío…</div><button class="loader-skip" id="loaderSkip" type="button" hidden>Entrar ahora</button></div></div><header class="topbar"><a class="brand" href="index.html" aria-label="Prove.it Club, inicio"><span class="brand-mark"><i></i><i></i><i></i></span><span>prove<span class="brand-dot">.</span>it<span class="brand-club">CLUB</span></span></a><nav class="top-actions"><a class="back-link" href="index.html">← Volver al inicio</a><a class="profile-avatar-link" data-profile-link href="/perfil.html" aria-label="Ir a mi perfil" title="Mi perfil" hidden></a><button class="login-button" data-login>Ingresar <span>↗</span></button></nav></header><main class="tournament-main"><a class="back-link" href="torneos.html">← Torneos del club</a><section id="paymentPanel" class="tournament-panel"><h1>Preparando tu pago…</h1></section><p id="paymentNotice" class="tournament-notice" role="status" hidden></p><button id="refreshPayment" class="format-choice" type="button">Consultar pago</button><p class="field-help">El botón consulta Mercado Pago; no confirma el pago por sí mismo.</p></main><footer class="site-footer"><a class="footer-brand" href="index.html">prove.it <span>CLUB</span></a><span>COMPETÍ · DISFRUTÁ · VOLVÉ A INTENTARLO</span><span>© 2026 PROVE.IT CLUB</span></footer><div class="modal-backdrop" id="loginModal" hidden><section class="login-modal" role="dialog" aria-modal="true" aria-labelledby="loginTitle"><button class="modal-close" id="closeLogin" aria-label="Cerrar">×</button><div class="modal-brand"><span class="brand-mark"><i></i><i></i><i></i></span><span>prove<span class="brand-dot">.</span>it</span></div><p class="eyebrow">GUARDÁ TU TORNEO</p><h2 id="loginTitle">Entrá al club.</h2><p class="modal-copy">Iniciá sesión o creá tu cuenta para guardar tu torneo.</p><button class="auth-option" data-auth-google><span class="google-g">G</span> Continuar con Google</button><button class="auth-option email-option" data-auth-email>✉ <span>Continuar con email</span></button><form class="auth-form" data-auth-form hidden><div class="auth-tabs"><button type="button" data-auth-mode="signin" class="active">Ingresar</button><button type="button" data-auth-mode="signup">Crear cuenta</button></div><label>Email<input name="email" type="email" autocomplete="email" required maxlength="254" placeholder="vos@ejemplo.com"></label><label data-password-label>Contraseña<input name="password" type="password" autocomplete="current-password" minlength="8" required placeholder="Mínimo 8 caracteres"></label><label data-code-label hidden>Código de verificación<input name="code" inputmode="numeric" autocomplete="one-time-code" placeholder="El código que te llegó por email"></label><label data-new-password-label hidden>Nueva contraseña<input name="newPassword" type="password" minlength="8" autocomplete="new-password" placeholder="Mínimo 8 caracteres"></label><button class="auth-option auth-submit" type="submit">Ingresar con email</button><button class="auth-text-button" type="button" data-auth-reset>Olvidé mi contraseña</button></form><p class="auth-message" data-auth-message role="status" aria-live="polite" hidden></p><p class="fine-print" data-auth-hint>Ingresá para organizar tu competencia.</p></section></div>
+  <script type="module" src="/app.js"></script><script type="module" src="/src/auth-ui.js"></script><script type="module" src="/src/payment-ui.js"></script></body></html>
