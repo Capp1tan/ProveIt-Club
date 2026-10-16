@@ -7,6 +7,8 @@ import { createTournament } from '../functions/create-tournament/resource';
  * Perfil público solo para personas con sesión iniciada.
  * Cada usuario puede modificar su propio perfil; el correo no se almacena aquí.
  */
+import { billing } from '../functions/billing/resource';
+
 const schema = a.schema({
   Profile: a
     .model({
@@ -32,6 +34,19 @@ const schema = a.schema({
     .returns(a.ref('ClubAccess')).authorization(allow => [allow.authenticated()]).handler(a.handler.function(clubAccount)),
   saveClubProfile: a.mutation().arguments({ profileId: a.id(), nickname: a.string().required(), bio: a.string(), avatarPath: a.string(), phoneNumber: a.string().required() })
     .returns(a.ref('Profile')).authorization(allow => [allow.authenticated()]).handler(a.handler.function(clubAccount)),
+  // Solicitudes de cobro privadas: sólo el organizador puede consultarlas.
+  TournamentPayment: a.model({
+    createdBySub:a.string().required(),tournamentName:a.string().required(),status:a.string().required(),
+    amountCents:a.integer().required(),currency:a.string().required(),paymentMode:a.string().required(),
+    payload:a.string(),checkoutUrl:a.string(),preferenceId:a.string(),collectorId:a.string(),paymentId:a.string(),
+    expiresAt:a.datetime().required(),leaseUntil:a.float(),lastCheckedAt:a.float(),
+  }).authorization(allow=>[allow.ownerDefinedIn('createdBySub').identityClaim('sub').to(['read'])]),
+  BillingSettings: a.model({amountCents:a.integer().required(),enabled:a.boolean().required()})
+    .authorization(allow=>[allow.authenticated().to(['read'])]),
+  TournamentFee: a.customType({amountCents:a.integer().required(),currency:a.string().required(),enabled:a.boolean().required(),mode:a.string().required(),canPay:a.boolean().required()}),
+  getTournamentFee:a.query().returns(a.ref('TournamentFee')).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(billing)),
+  setTournamentFee:a.mutation().arguments({amountCents:a.integer().required(),enabled:a.boolean().required()}).returns(a.ref('TournamentFee')).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(billing)),
+  checkTournamentPayment:a.mutation().arguments({checkoutId:a.id().required()}).returns(a.ref('TournamentPayment')).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(billing)),
   // Las cuentas pueden consultar torneos. Sólo la función validada los escribe.
   Tournament: a.model({
     name: a.string().required(),
@@ -52,6 +67,8 @@ const schema = a.schema({
     organizerConsentAt: a.datetime(),
     startsAt: a.datetime(),
     timeZone: a.string(),
+    creationPaymentStatus:a.string(),
+    paymentMode:a.string(),
     winnerProfileId: a.id(),
     winnerName: a.string(),
     decidedBySub: a.string(),
@@ -103,7 +120,7 @@ const schema = a.schema({
     participantIds: a.string().required().array().required(),
     judgeIds: a.string().required().array().required(),
     treasurerId: a.string(),
-  }).returns(a.ref('Tournament'))
+  }).returns(a.ref('TournamentPayment'))
     .authorization(allow => [allow.authenticated()])
     .handler(a.handler.function(createTournament)),
 });
@@ -111,5 +128,3 @@ const schema = a.schema({
 export type Schema = ClientSchema<typeof schema>;
 
 export const data = defineData({ schema });
-
-
