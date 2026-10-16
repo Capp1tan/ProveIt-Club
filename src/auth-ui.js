@@ -97,8 +97,7 @@ Hub.listen('auth', ({ payload }) => {
 const backendInitialization = configureAmplify().catch(() => false).then(ready => {
   backendReady = ready;
   if (hint && ready) hint.textContent = 'Tu cuenta se protege con AWS Cognito.';
-  void syncAccountControl();
-  return ready;
+  return syncAccountControl().finally(() => window.proveitLoadingDone?.('account')).then(() => ready);
 });
 window.addEventListener('proveit:profile-updated', syncAccountControl);
 
