@@ -168,8 +168,8 @@ try {
   if(detail) {
     if(!await configureAmplify())throw new Error('No pudimos conectar con AWS. Recargá para intentar de nuevo.');
     currentUser=await getCurrentUser();
-    await loadBadges().catch(()=>{});
-    try {profiles=new Map((await registeredProfiles({includeBio:true})).map(profile=>[profile.id,profile]));}catch{}
+    // Las dos lecturas son independientes: se preparan en paralelo.
+    await Promise.all([loadBadges().catch(()=>{}),registeredProfiles({includeBio:true}).then(items=>{profiles=new Map(items.map(profile=>[profile.id,profile]));}).catch(()=>{})]);
     profilePreview.setProfiles(profiles);
     await refreshTournament();
     setInterval(updateClock,1000);
@@ -185,3 +185,5 @@ try {
     });notice.hidden=true;
   }
 }catch(error){notice.hidden=false;notice.dataset.error='true';notice.textContent=error.name==='UserUnAuthenticatedException'?'Ingresá con tu cuenta para consultar los torneos.':error.message;}
+
+finally { window.proveitLoadingDone?.('page'); }
