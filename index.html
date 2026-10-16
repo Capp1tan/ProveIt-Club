@@ -121,15 +121,17 @@
       </div>
     </section>
 
-    <!-- Patrocinadores: imagen original en public/sponsors; nombres restantes de ejemplo. -->
+    <!-- Patrocinadores: PNG transparentes en public/sponsors; FUEL UP y LEVEL UP son ejemplos. -->
     <section class="sponsors" aria-label="Patrocinadores">
       <div class="sponsor-intro"><span>LOS QUE HACEN<br>POSIBLE EL PIQUE</span><small>ESPACIO PARA PATROCINADORES</small></div>
-      <!-- El encuadre se ajusta con CSS; el archivo original permanece intacto. -->
-      <figure class="sponsor-mila" aria-label="Mila Express, patrocinador">
-        <img src="/sponsors/mila-express.jpg" alt="Mila Express" width="1600" height="1600" loading="lazy" decoding="async">
+      <!-- Los PNG ya tienen fondo transparente: contain muestra el logo completo. -->
+      <figure class="sponsor-partner sponsor-mila" aria-label="Mila Express, patrocinador">
+        <img src="/sponsors/mila-express.png" alt="Mila Express" width="1536" height="1024" loading="lazy" decoding="async">
       </figure>
       <div class="sponsor-logo sponsor-two">FUEL<span>UP</span><b>®</b></div>
-      <div class="sponsor-logo sponsor-black"><span class="slash-mark">//</span> BLACK LINE</div>
+      <figure class="sponsor-partner sponsor-black-line" aria-label="Black Line, patrocinador">
+        <img src="/sponsors/black-line.png" alt="Black Line" width="1536" height="1024" loading="lazy" decoding="async">
+      </figure>
       <div class="sponsor-logo sponsor-four">LEVEL<span>UP</span><b>®</b></div>
     </section>
   </main>

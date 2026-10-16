@@ -1,3 +1,9 @@
+# 2.9.2 — Patrocinadores sin fondo
+
+- Rehace Mila Express con PNG transparente, conservando la milanesa.
+- Sustituye Black Line por su logo con celular y sólo el nombre, sin subtítulos.
+- Elimina el marco y fondo de la tarjeta anterior; muestra ambos logos completos.
+
 # 2.9.1 — Mila Express en patrocinadores
 
 - Integra la imagen original en una tarjeta adaptable al sitio oscuro.
