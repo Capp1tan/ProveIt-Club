@@ -17,15 +17,16 @@ export const handler = async (event: { identity?: { sub?: string }; arguments: {
     const key={id:event.arguments.tournamentId};
     const t=(await db.send(new GetCommand({TableName:table,Key:key,ConsistentRead:true}))).Item;
     if(!t || t.createdBySub!==sub) throw new Error('Sólo el organizador puede preparar este sorteo.');
+    if(t.creationPaymentStatus==='REVERSED')throw new Error('El pago de creación fue revertido. Contactá al administrador.');
     if(t.draw) return t;
     if(!Array.isArray(t.rosterStatuses) || !t.rosterStatuses.length || !t.rosterStatuses.every((s:string)=>s==='ACCEPTED')) throw new Error('Faltan confirmaciones.');
     const draw=createDraw(t),now=new Date().toISOString();
     try {
       await db.send(new TransactWriteCommand({TransactItems:[{Update:{TableName:table,Key:key,
         UpdateExpression:'SET #draw = :draw, #status = :ready, updatedAt = :now',
-        ConditionExpression:'attribute_exists(id) AND attribute_not_exists(#draw)',
+        ConditionExpression:'attribute_exists(id) AND attribute_not_exists(#draw) AND (attribute_not_exists(creationPaymentStatus) OR creationPaymentStatus=:paid)',
         ExpressionAttributeNames:{'#draw':'draw','#status':'status'},
-        ExpressionAttributeValues:{':draw':draw,':ready':'READY',':now':now}}}]}));
+        ExpressionAttributeValues:{':draw':draw,':ready':'READY',':now':now,':paid':'APPROVED'}}}]}));
       return {...t,draw,status:'READY',updatedAt:now};
     } catch(error) {
       if((error as Error).name!=='TransactionCanceledException') throw error;
@@ -54,6 +55,7 @@ export const handler = async (event: { identity?: { sub?: string }; arguments: {
     if(!Number.isInteger(index) || index<0 || index>80) throw new Error('Invitación inválida.');
     const tournament=(await db.send(new GetCommand({TableName:tournamentTable,Key:{id:invitation.tournamentId},ConsistentRead:true}))).Item;
     if(!tournament || !Array.isArray(tournament.rosterStatuses) || tournament.rosterStatuses[index]!=='PENDING') throw new Error('El torneo ya no espera esta respuesta.');
+    if(tournament.creationPaymentStatus==='REVERSED')throw new Error('El pago de creación fue revertido. Contactá al administrador.');
     const noJudge = tournament.arbitrationMode === 'ORGANIZER';
     if (accept && noJudge && (event.arguments.acceptOrganizerDecision !== true || invitation.consentVersion !== 'NO_JUDGE_V1' || tournament.consentVersion !== 'NO_JUDGE_V1')) throw new Error('Para unirte, aceptá que este torneo no tiene juez y el organizador decide el resultado.');
     const statuses=[...tournament.rosterStatuses]; statuses[index]=status;
