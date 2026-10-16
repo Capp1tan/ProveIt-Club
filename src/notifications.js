@@ -1,3 +1,4 @@
+import { noJudgeConsent, scheduleLabel } from './tournament-schedule.js';
 // Campana de invitaciones. Consulta cada 20 s con la página visible; no envía emails ni push.
 import '../notifications.css';
 import { Hub } from 'aws-amplify/utils';
@@ -21,6 +22,7 @@ if (nav) {
   const refresh = document.createElement('button'); refresh.type = 'button'; refresh.textContent = 'Actualizar'; refresh.className = 'notification-refresh';
   panel.append(title,sound,description,message,list,refresh); root.append(bell,panel); nav.prepend(root);
   let userId = '', invitations = [], busy = false, answering = false, generation = 0;
+  const consentChecks = new Set();
   let audio, queuedSound = false, soundEnabled = true;
   try { soundEnabled = localStorage.getItem('proveit:notification-sound') !== 'off'; } catch {}
   const soundLabel = () => { sound.textContent = soundEnabled ? 'Sonido activado · silenciar' : 'Sonido desactivado · activar'; sound.setAttribute('aria-pressed',String(soundEnabled)); };
@@ -65,9 +67,23 @@ if (nav) {
       const card = document.createElement('article'); card.className = 'notification-card';
       const link = document.createElement('a'); link.href = '/torneo.html?id=' + encodeURIComponent(invitation.tournamentId); link.textContent = invitation.tournamentName;
       const role = document.createElement('p'); role.textContent = 'Te invitaron como ' + (roles[invitation.role] || 'integrante') + '.';
+      const noJudge=invitation.arbitrationMode==='ORGANIZER';
+      const schedule=document.createElement('p'); schedule.className='notification-help'; schedule.textContent=scheduleLabel(invitation.startsAt,invitation.timeZone);
+      card.append(link,role,schedule);
+      if(invitation.rulesSnapshot) { const rules=document.createElement('p'); rules.className='invitation-rules'; rules.textContent='Reglas: '+invitation.rulesSnapshot; card.append(rules); }
+      let agreement;
+      if(noJudge) {
+        const warning=document.createElement('p'); warning.className='arbitration-warning'; warning.textContent='Sin juez · decide el organizador, incluso si participa.';
+        const label=document.createElement('label'); label.className='invitation-consent'; agreement=document.createElement('input'); agreement.type='checkbox'; agreement.checked=consentChecks.has(invitation.id);
+        const text=document.createElement('span'); text.textContent=noJudgeConsent; label.append(agreement,text); card.append(warning,label);
+      }
       const actions = document.createElement('div'); actions.className = 'notification-actions';
       for (const accept of [true,false]) {
         const button = document.createElement('button'); button.type = 'button'; button.textContent = accept ? 'Aceptar' : 'Rechazar';
+        if(accept && noJudge) {
+          button.disabled=!agreement.checked;
+          agreement.addEventListener('change',()=>{agreement.checked ? consentChecks.add(invitation.id) : consentChecks.delete(invitation.id);button.disabled=!agreement.checked;});
+        }
         button.className = accept ? 'notification-accept' : 'notification-reject';
         button.addEventListener('click',async () => {
           if (answering) return;
@@ -75,7 +91,8 @@ if (nav) {
           panel.querySelectorAll('.notification-actions button').forEach(control => { control.disabled = true; });
           message.textContent = 'Guardando respuesta…';
           try {
-            await respondInvitation(invitation.id,accept);
+            await respondInvitation(invitation.id,accept,noJudge && agreement.checked);
+            consentChecks.delete(invitation.id);
             if (activeGeneration !== generation) return;
             invitations = invitations.filter(item => item.id !== invitation.id); render();
             message.textContent = accept ? 'Aceptaste la invitación.' : 'Rechazaste la invitación.';
@@ -84,7 +101,7 @@ if (nav) {
           finally { answering = false; }
         }); actions.append(button);
       }
-      card.append(link,role,actions); list.append(card);
+      card.append(actions); list.append(card);
     }
   }
   function rememberNew(items) {
@@ -114,7 +131,7 @@ if (nav) {
   document.addEventListener('click',event => { if (!root.contains(event.target)) close(); });
   root.addEventListener('keydown',event => { if (event.key === 'Escape') { close(); bell.focus(); } });
   async function connect() {
-    generation++; userId = ''; invitations = []; queuedSound = false; root.hidden = true; close(); render();
+    generation++; consentChecks.clear(); userId = ''; invitations = []; queuedSound = false; root.hidden = true; close(); render();
     const activeGeneration = generation;
     try {
       if (!await configureAmplify()) return;
