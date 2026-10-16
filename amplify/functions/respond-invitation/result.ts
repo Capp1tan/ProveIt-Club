@@ -4,6 +4,7 @@ export async function recordDuelResult(db: DynamoDBDocumentClient, sub: string, 
   const TableName=process.env.TOURNAMENT_TABLE_NAME!;
   const read=async()=> (await db.send(new GetCommand({TableName,Key:{id:tournamentId},ConsistentRead:true}))).Item;
   const t=await read();
+  if(t?.creationPaymentStatus==='REVERSED')throw new Error('El pago de creación fue revertido. Contactá al administrador.');
   if(!t || t.format!=='DUEL' || t.participantIds.length!==2) throw new Error('El registro de ganador está disponible para Duelo 1v1.');
   if(!t.startsAt || !Number.isFinite(Date.parse(t.startsAt)) || Date.now()<Date.parse(t.startsAt)) throw new Error('Todavía no llegó el horario de inicio.');
   if(!t.participantIds.includes(winnerProfileId)) throw new Error('Elegí uno de los participantes del duelo.');
