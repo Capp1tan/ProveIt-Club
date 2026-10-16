@@ -1,6 +1,6 @@
 import { UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { assertActiveAccount } from '../lifecycle';
-import { db,table,read,fee,isCreator,assertBillingAccess,ensureCheckout,publicCheckout,mp,reconcilePayment } from './common';
+import { db,table,read,fee,mode,isCreator,assertBillingAccess,ensureCheckout,publicCheckout,mp,reconcilePayment } from './common';
 type Event={fieldName?:string;info?:{fieldName:string};identity?:{sub?:string};arguments:Record<string,any>};
 export const handler=async(event:Event)=>{
   const sub=event.identity?.sub;if(!sub)throw new Error('Iniciá sesión.');
@@ -17,6 +17,7 @@ export const handler=async(event:Event)=>{
   if(!/^[0-9a-f-]{36}$/i.test(args.checkoutId || ''))throw new Error('Solicitud inválida.');
   let row=await read('PAYMENT_TABLE_NAME',args.checkoutId);
   if(!row || row.createdBySub!==sub)throw new Error('Solicitud no encontrada para tu cuenta.');
+  if(row.paymentMode!==mode())throw new Error('Esta solicitud pertenece al entorno anterior. Creá un torneo nuevo para obtener un pago real.');
   if(row.deletedAt)return publicCheckout(row);
   // Límite compartido por cuenta/solicitud: el polling no dispara búsquedas sin fin.
   if(row.status==='PENDING' && row.preferenceId && (!row.lastCheckedAt || Date.now()-row.lastCheckedAt>15000)) {

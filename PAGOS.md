@@ -1,10 +1,13 @@
 # Cobros por creación de torneos
 
-## Estado inicial
+## Estado de producción — 2.9.0
 
-Versión 2.7.0, Checkout Pro mediante Preferences API. La configuración del servidor
-usa `MERCADOPAGO_MODE: 'test'` en las tres funciones. Sólo el Creador puede iniciar
-solicitudes en este entorno. No hay cobros reales ni fondos para premios.
+Checkout Pro mediante Preferences API. Las tres funciones usan
+`MERCADOPAGO_MODE: 'live'` y secretos independientes:
+`MERCADOPAGO_PRODUCTION_ACCESS_TOKEN` y `MERCADOPAGO_PRODUCTION_WEBHOOK_SECRET`.
+Las cuentas completas del club pueden iniciar pagos reales por creación de torneos.
+El QR contiene el enlace HTTPS de Checkout Pro; no es un QR presencial de caja.
+No se usan las credenciales de pruebas y los enlaces TEST anteriores se rechazan.
 
 ## Flujo
 
@@ -36,19 +39,20 @@ El primer despliegue omite temporalmente el secreto de firma para obtener la URL
 Durante ese despliegue el endpoint rechaza todas las notificaciones. Después de
 configurar Webhooks se vincula el secreto y se vuelve a desplegar.
 
-## Antes de pasar a cobros reales
+## Operación y comprobación del primer cobro
 
-Completar una compra de prueba con cuentas autorizadas y comprobar pago, activación,
-invitaciones y rechazo. El agente no debe hacer pagos reales ni decidir por otros.
-Validar que Mercado Pago admita el importe elegido y revisar las comisiones de la
-cuenta. No asumir que $1 ARS está disponible sólo porque el precio se muestra.
+El cambio de producción requiere token real y Webhooks en modo productivo con el
+endpoint HTTPS del backend y el evento Pagos (legacy). No se realiza una compra
+real desde el agente. El primer cobro debe completarlo una persona distinta del
+vendedor; hasta verificarlo no debe afirmarse que el flujo completo está validado.
 
-Activar las credenciales de producción en MP y guardar el token real en Amplify.
-Configurar la URL en el modo productivo y su firma correspondiente. Cambiar las tres
-funciones a `MERCADOPAGO_MODE: 'live'` y desplegar como un cambio coordinado.
-Las solicitudes TEST no pueden acreditarse con pagos LIVE ni viceversa. Para
-desactivar nuevos cobros, pausar la creación desde el panel del Creador; las
-solicitudes ya emitidas conservan su precio y siguen siendo conciliables.
+Validar el importe admitido y las comisiones de la cuenta. Si Mercado Pago rechaza
+el monto, no se publica el torneo y se muestra el error. No se incrementa la tarifa
+automáticamente. Las solicitudes conservan el importe fijado al crearse.
+
+Para pausar nuevos cobros usar la tarifa del perfil del Creador. Revertir el entorno
+requiere cambiar las tres funciones y sus secretos de forma coordinada: los pagos
+LIVE pendientes deben seguir conciliándose con las credenciales productivas.
 
 Los torneos anteriores a esta función conservan su estado. Un reembolso o contracargo
 del pago utilizado marca el torneo como REVERSED y bloquea nuevas confirmaciones y

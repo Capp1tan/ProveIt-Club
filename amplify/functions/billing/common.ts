@@ -31,6 +31,7 @@ export function publicCheckout(row:any) {
 export async function ensureCheckout(row:any,sub:string) {
   if(row.createdBySub!==sub)throw new Error('Esta solicitud no te pertenece.');
   if(row.deletedAt)throw new Error('La solicitud o el torneo fueron eliminados. No vuelvas a pagar este enlace.');
+  if(row.paymentMode!==mode())throw new Error('Este enlace pertenece al entorno anterior. Creá un torneo nuevo para obtener un pago real.');
   if(row.status==='APPROVED' || row.checkoutUrl || row.status==='REVERSED')return publicCheckout(row);
   if(Date.parse(row.expiresAt)<=Date.now())throw new Error('La solicitud venció. Creá un nuevo borrador.');
   if(row.paymentMode!==mode())throw new Error('Esta solicitud pertenece a otro entorno de pagos. Creá un nuevo borrador.');
@@ -40,6 +41,7 @@ export async function ensureCheckout(row:any,sub:string) {
   try {
     const account=await mp('/users/me');
     if(account.site_id!=='MLA')throw new Error('La cuenta de cobro debe operar en Argentina.');
+    if(mode()==='LIVE' && account.tags?.includes('test_user'))throw new Error('La cuenta de cobro todavía corresponde a un vendedor ficticio. Contactá al administrador.');
     const back='https://proveitclub.win/pago.html?id='+encodeURIComponent(row.id);
     const preference=await mp('/checkout/preferences',{
       items:[{id:'tournament-creation',title:'ProveIt Club — creación de torneo',description:'Servicio de organización de un torneo',currency_id:'ARS',quantity:1,unit_price:row.amountCents/100}],

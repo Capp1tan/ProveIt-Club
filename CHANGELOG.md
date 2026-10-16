@@ -1,3 +1,11 @@
+# 2.9.0 — Checkout Pro en producción
+
+- Credenciales de producción separadas en secretos de Amplify; modo LIVE en las tres funciones.
+- QR del checkout real y acceso de creación para cuentas completas.
+- Rechazo de enlaces del entorno anterior y de vendedores ficticios en producción.
+- El pago se comprueba en servidor antes de publicar el torneo.
+- No se realiza un cobro real desde el agente; primera transacción por comprobar.
+
 # 2.8.2 — Eliminación individual de torneos
 
 - Retira el botón y el código de eliminación masiva.

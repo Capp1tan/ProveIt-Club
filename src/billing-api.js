@@ -6,7 +6,8 @@ export async function setTournamentFee(amountCents,enabled){return data(await (a
 export async function checkPayment(checkoutId){return data(await (await tournamentClient()).mutations.checkTournamentPayment({checkoutId}));}
 export async function savedPayment(id){return data(await (await tournamentClient()).models.TournamentPayment.get({id},{selectionSet:['id','tournamentName','status','amountCents','currency','paymentMode','checkoutUrl','expiresAt','createdAt','updatedAt','deletedAt']}));}
 export async function myPendingPayments({includeExpired=false}={}){
+  const activeMode=(await tournamentFee()).mode;
   const client=await tournamentClient(),rows=[];let nextToken;
   do{const result=await client.models.TournamentPayment.list({filter:{status:{eq:'PENDING'}},nextToken,limit:100,selectionSet:['id','tournamentName','status','amountCents','expiresAt','paymentMode','createdAt','deletedAt']});rows.push(...(data(result)||[]));nextToken=result.nextToken;}while(nextToken);
-  return rows.filter(row=>!row.deletedAt && (includeExpired || Date.parse(row.expiresAt)>Date.now())).sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
+  return rows.filter(row=>row.paymentMode===activeMode && !row.deletedAt && (includeExpired || Date.parse(row.expiresAt)>Date.now())).sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
 }

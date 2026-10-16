@@ -1,5 +1,5 @@
 import QRCode from 'qrcode';
-import { checkPayment,savedPayment,money } from './billing-api.js';
+import { checkPayment,money } from './billing-api.js';
 import { Hub } from 'aws-amplify/utils';
 import { deleteTournament } from './maintenance-api.js';
 const panel=document.getElementById('paymentPanel'),notice=document.getElementById('paymentNotice'),refresh=document.getElementById('refreshPayment');
@@ -47,7 +47,8 @@ async function update(manual=false){
 }
 refresh.addEventListener('click',()=>void update(true));
 Hub.listen('auth',({payload})=>{if(payload.event==='signedIn'){stopped=false;void update(true);}if(payload.event==='signedOut'){stopped=true;panel.replaceChildren();notice.hidden=false;notice.textContent='Ingresá con tu cuenta para consultar el pago.';}});
-try{if(!id)throw new Error('Falta el identificador del pago.');render(await savedPayment(id));await update();}
+// Primero consulta al servidor: nunca pintar un QR antiguo de otro entorno.
+try{if(!id)throw new Error('Falta el identificador del pago.');await update(true);}
 catch(error){notice.hidden=false;notice.textContent=error.name==='UserUnAuthenticatedException'?'Ingresá con tu cuenta para consultar el pago.':error.message;}
 finally{window.proveitLoadingDone?.('page');}
 setInterval(()=>void update(),15000);

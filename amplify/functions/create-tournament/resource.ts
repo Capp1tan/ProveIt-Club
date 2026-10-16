@@ -5,5 +5,7 @@ export const createTournament = defineFunction({
   entry: './handler.ts',
   resourceGroupName: 'data',
   timeoutSeconds: 30,
-  environment: { MERCADOPAGO_ACCESS_TOKEN: secret('MERCADOPAGO_ACCESS_TOKEN'), MERCADOPAGO_MODE: 'test' },
+  environment: { MERCADOPAGO_ACCESS_TOKEN: secret('MERCADOPAGO_PRODUCTION_ACCESS_TOKEN'), MERCADOPAGO_MODE: 'live' },
 });
+
+
