@@ -1,3 +1,4 @@
+import { myPendingPayments, money } from './billing-api.js';
 import { loadBadges, badgeElements } from './badges.js';
 import { ProfilePreview } from './profile-preview.js';
 import { connectBracket } from './bracket-lines.js';
@@ -134,6 +135,8 @@ function renderTournament(t) {
   const status=states(t),format=formats.find(f=>f.id===t.format);
   const label=t.winnerProfileId?'DUELO FINALIZADO':t.draw?'TODOS CONFIRMADOS · SORTEO GUARDADO':status.includes('REJECTED')?'INVITACIÓN RECHAZADA · SORTEO DETENIDO':t.rosterStatuses?'SALA DE ESPERA':'TORNEO ANTERIOR · EN PREPARACIÓN';
   detail.append(element('p',label,'eyebrow'),element('h1',t.name),element('p',t.activity));
+  if(t.paymentMode==='TEST')detail.append(element('p','TORNEO DE PRUEBA · no corresponde a un cobro real','tournament-notice'));
+  if(t.creationPaymentStatus==='REVERSED')detail.append(element('p','El pago de creación fue revertido. Contactá al administrador.','tournament-notice'));
   const arbitration=element('section','','tournament-notice arbitration-warning');
   arbitration.append(element('strong',t.arbitrationMode==='ORGANIZER' ? 'Sin juez · Decide el organizador' : 'Con juez · Decide un juez designado'));
   if(t.arbitrationMode==='ORGANIZER')arbitration.append(element('p','El organizador decide el resultado final, incluso si también participa.'),element('p','La condición se acepta explícitamente al unirse.'));
@@ -178,6 +181,10 @@ try {
     window.addEventListener('proveit:invitation-updated',()=>void refreshTournament(true));
   } else {
     const tournaments=await listClubTournaments();
+    try {for(const payment of await myPendingPayments()) {
+      const card=element('a','','tournament-panel tournament-card');card.href='/pago.html?id='+encodeURIComponent(payment.id);
+      card.append(element('small','TU SOLICITUD · PENDIENTE DE PAGO'),element('h2',payment.tournamentName),element('p',money(payment.amountCents)+(payment.paymentMode==='TEST'?' · prueba':'')));list.append(card);
+    }} catch { /* Los torneos publicados siguen visibles si falla la lista privada. */ }
     if(!tournaments.length)list.append(element('p','Todavía no hay torneos. Creá el primer desafío.','tournament-empty'));
     tournaments.forEach(t=>{
       const card=element('a','','tournament-panel tournament-card');card.href='/torneo.html?id='+encodeURIComponent(t.id);
