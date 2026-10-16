@@ -197,5 +197,4 @@ form.addEventListener('submit', async event => {
 Hub.listen('auth', ({payload}) => { if (['signedIn','signedOut'].includes(payload.event)) void connectAccount(); });
 selectFormat(selectedFormat);
 updateArbitration(); updateSchedule();
-void connectAccount();
-
+void connectAccount().finally(() => window.proveitLoadingDone?.('page'));
