@@ -102,3 +102,5 @@ if (!ready) {
   }
 }
 
+
+window.proveitLoadingDone?.('page');
