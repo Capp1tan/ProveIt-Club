@@ -2,13 +2,15 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand, TransactWriteCommand } from '@aws-sdk/lib-dynamodb';
 import { recordDuelResult } from './result';
+import { prizeAction } from './prize';
 import { assertActiveAccount, assertActiveTournament } from '../lifecycle';
 import { createDraw } from './draw';
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
-export const handler = async (event: { identity?: { sub?: string }; arguments: { invitationId?: string; accept?: boolean; tournamentId?: string; winnerProfileId?: string; acceptOrganizerDecision?: boolean } }) => {
+export const handler = async (event: { identity?: { sub?: string }; arguments: { prizeTitle?: string; prizeDescription?: string; prizeLinks?: string; prizeAttachments?: string; prizeRevision?: number; uploadContentType?: string; uploadSize?: number; invitationId?: string; accept?: boolean; tournamentId?: string; winnerProfileId?: string; acceptOrganizerDecision?: boolean } }) => {
   const sub=event.identity?.sub;
   if(!sub)throw new Error('Iniciá sesión.');
   await assertActiveAccount(sub);
+  if ('prizeTitle' in event.arguments || 'uploadContentType' in event.arguments) return prizeAction(db,sub,event.arguments);
   if (event.arguments.winnerProfileId) {
     if (!sub || !event.arguments.tournamentId || typeof event.arguments.winnerProfileId !== 'string' || event.arguments.winnerProfileId.length>128) throw new Error('Resultado inválido.');
     return recordDuelResult(db, sub, event.arguments.tournamentId, event.arguments.winnerProfileId);

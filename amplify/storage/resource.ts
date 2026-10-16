@@ -7,6 +7,8 @@ import { defineStorage } from '@aws-amplify/backend';
 export const storage = defineStorage({
   name: 'proveitProfilePictures',
   access: (allow) => ({
+    // Los adjuntos sólo se cargan con una URL breve emitida por el servidor.
+    'prize-media/*': [allow.authenticated.to(['read'])],
     'profile-pictures/{entity_id}/*': [
       allow.entity('identity').to(['read', 'write', 'delete']),
       allow.authenticated.to(['read']),

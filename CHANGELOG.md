@@ -1,3 +1,11 @@
+# 2.10.0 — Premios y difusión de torneos
+
+- Premio provisional destacado, editable por jueces confirmados o por el organizador en torneos sin juez.
+- Hasta cuatro imágenes/videos privados y cinco enlaces HTTPS; límites comprobados en servidor.
+- Guardado con revisión para evitar sobrescrituras; bloqueo al registrar al ganador.
+- Compartir enlace, WhatsApp, Facebook y X; imagen vertical PNG para historias con QR del torneo.
+- Las historias se descargan o comparten con las aplicaciones disponibles, sin publicación automática.
+
 # 2.9.2 — Patrocinadores sin fondo
 
 - Rehace Mila Express con PNG transparente, conservando la milanesa.

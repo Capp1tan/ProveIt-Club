@@ -83,6 +83,9 @@ const schema = a.schema({
     rosterStatuses: a.string().required().array(),
     membershipRevision: a.integer(),
     draw: a.string(),
+    // Premio provisional, editable sólo a través de la función que comprueba al juez.
+    prizeTitle:a.string(), prizeDescription:a.string(), prizeLinks:a.string(), prizeAttachments:a.string(),
+    prizeRevision:a.integer(), prizeUpdatedAt:a.datetime(), prizeUpdatedBySub:a.string(),
   }).authorization(allow => [allow.authenticated().to(['read'])]),
   TournamentInvitation: a.model({
     tournamentId: a.id().required(),
@@ -100,6 +103,9 @@ const schema = a.schema({
     timeZone: a.string(),
     rulesSnapshot: a.string(),
   }).authorization(allow => [allow.ownerDefinedIn('recipientSub').identityClaim('sub').to(['read'])]),
+  PrizeUpload:a.customType({path:a.string().required(),url:a.string().required()}),
+  prepareClubPrizeUpload:a.mutation().arguments({tournamentId:a.id().required(),uploadContentType:a.string().required(),uploadSize:a.integer().required()}).returns(a.ref('PrizeUpload')).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(respondInvitation)),
+  saveClubTournamentPrize:a.mutation().arguments({tournamentId:a.id().required(),prizeTitle:a.string().required(),prizeDescription:a.string(),prizeLinks:a.string(),prizeAttachments:a.string(),prizeRevision:a.integer().required()}).returns(a.ref('Tournament')).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(respondInvitation)),
   recordClubDuelResult: a.mutation().arguments({ tournamentId: a.id().required(), winnerProfileId: a.id().required() })
     .returns(a.ref('Tournament')).authorization(allow => [allow.authenticated()]).handler(a.handler.function(respondInvitation)),
   prepareTournamentDraw: a.mutation().arguments({ tournamentId: a.id().required() })

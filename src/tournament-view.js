@@ -1,3 +1,5 @@
+import { prizePanel } from './tournament-prize.js';
+import { sharePanel } from './tournament-share.js';
 import { myPendingPayments, money } from './billing-api.js';
 import { loadBadges, badgeElements, initializeAccess } from './badges.js';
 import { deleteTournament } from './maintenance-api.js';
@@ -142,7 +144,8 @@ function renderTournament(t) {
   const arbitration=element('section','','tournament-notice arbitration-warning');
   arbitration.append(element('strong',t.arbitrationMode==='ORGANIZER' ? 'Sin juez · Decide el organizador' : 'Con juez · Decide un juez designado'));
   if(t.arbitrationMode==='ORGANIZER')arbitration.append(element('p','El organizador decide el resultado final, incluso si también participa.'),element('p','La condición se acepta explícitamente al unirse.'));
-  detail.append(arbitration,schedulePanel(t));
+  const canEditPrize=t.arbitrationMode==='ORGANIZER' ? currentUser?.userId===t.createdBySub : (t.judgeIds || []).some((id,index)=>profiles.get(id)?.owner?.split('::')[0]===currentUser?.userId && (!t.rosterStatuses || t.rosterStatuses[t.participantIds.length+index]==='ACCEPTED'));
+  detail.append(prizePanel(t,{canEdit:canEditPrize,onSaved:saved=>{renderTournament(saved);lastVersion=saved.updatedAt+String(saved.draw);}}),arbitration,schedulePanel(t));
   const info=element('section','','tournament-panel');info.append(element('h2',format?.name || t.format));
   if(format && !t.draw){const image=element('div','','format-preview');image.innerHTML=formatImage(format.id);image.append(element('p',format.description));info.append(image);}
   const rules=element('p',t.description || 'El organizador todavía no agregó reglas.');rules.style.whiteSpace='pre-wrap';info.append(rules);detail.append(info);
@@ -152,9 +155,9 @@ function renderTournament(t) {
   const p=t.participantIds.length,j=p+t.judgeIds.length;
   detail.append(roster('Participantes',t.participantIds,t.participantNames,status.slice(0,p)),roster('Jueces',t.judgeIds,t.judgeNames,status.slice(p,j)),roster('Tesorero',t.treasurerId?[t.treasurerId]:[],t.treasurerName?[t.treasurerName]:[],status.slice(j)));
   const refresh=element('button','Actualizar confirmaciones','format-choice');refresh.type='button';refresh.addEventListener('click',()=>void refreshTournament(true));
-  const copy=element('button','Copiar enlace','primary-button');copy.type='button';copy.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(location.href);copy.textContent='Enlace copiado';}catch{notice.textContent='Copiá la dirección desde la barra del navegador.';notice.hidden=false;}});
+
   if(t.format==='DUEL')detail.append(resultPanel(t));
-  detail.append(refresh,copy,element('p','El registro de ganador está disponible en Duelo 1v1. La gestión del dinero y los resultados de otros formatos siguen pendientes.','field-help'));
+  detail.append(sharePanel(t),refresh,element('p','El registro de ganador está disponible en Duelo 1v1. La gestión del dinero y los resultados de otros formatos siguen pendientes.','field-help'));
   if(isClubAdmin || currentUser?.userId===t.createdBySub) {
     const remove=element('button','Eliminar torneo','danger-button');remove.type='button';
     remove.addEventListener('click',async()=>{
@@ -173,7 +176,7 @@ async function refreshTournament(force=false) {
     let t=await getClubTournament(id);if(!t){profilePreview?.lock();drawCleanup?.();detail.replaceChildren();currentTournament=null;throw new Error('Este torneo fue eliminado o ya no está disponible.');}
     if (!t.draw && t.rosterStatuses?.length && t.rosterStatuses.every(state=>state==='ACCEPTED') && (await getCurrentUser()).userId===t.createdBySub) t=await ensureClubTournamentDraw(id) || t;
     const version=t.updatedAt+String(t.draw);
-    if(force || version!==lastVersion){renderTournament(t);lastVersion=version;}
+    if((force || version!==lastVersion) && !detail.querySelector('[data-prize-editing="true"]')){renderTournament(t);lastVersion=version;}
     notice.hidden=true;
   }catch(error){notice.hidden=false;notice.textContent=error.message;notice.dataset.error='true';}
   finally{refreshing=false;}

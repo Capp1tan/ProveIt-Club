@@ -77,3 +77,7 @@ export async function recordClubDuelResult(tournamentId, winnerProfileId) {
   const client = await tournamentClient();
   return resultData(await client.mutations.recordClubDuelResult({ tournamentId, winnerProfileId }));
 }
+
+// Los permisos del premio se validan en AWS, no por los botones visibles.
+export async function saveTournamentPrize(values){const c=await tournamentClient();return resultData(await c.mutations.saveClubTournamentPrize(values));}
+export async function preparePrizeUpload(values){const c=await tournamentClient();return resultData(await c.mutations.prepareClubPrizeUpload(values));}

@@ -82,3 +82,8 @@ for(const fn of [backend.billing,backend.paymentWebhook]) {
     fn.addEnvironment(env,backend.data.resources.tables[model].tableName);
   }
 }
+
+// El juez autorizado recibe una URL de carga válida por dos minutos.
+backend.storage.resources.bucket.grantPut(backend.respondInvitation.resources.lambda,'prize-media/*');
+backend.storage.resources.bucket.grantRead(backend.respondInvitation.resources.lambda,'prize-media/*');
+backend.respondInvitation.addEnvironment('PRIZE_BUCKET_NAME',backend.storage.resources.bucket.bucketName);
