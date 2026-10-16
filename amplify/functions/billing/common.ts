@@ -5,10 +5,10 @@ export const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 export const table = (key: string) => process.env[key]!;
 export const read = async (key: string, id: string): Promise<any> => (await db.send(new GetCommand({TableName:table(key),Key:{id},ConsistentRead:true}))).Item;
 export const mode = () => process.env.MERCADOPAGO_MODE === 'live' ? 'LIVE' : 'TEST';
-export async function mp(path: string, body?: any): Promise<any> {
+export async function mp(path: string, body?: any, method?:string): Promise<any> {
   const token=process.env.MERCADOPAGO_ACCESS_TOKEN;
   if(!token) throw new Error('Los pagos todavía no están configurados.');
-  const response=await fetch('https://api.mercadopago.com'+path,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(8000)});
+  const response=await fetch('https://api.mercadopago.com'+path,{method:method || (body?'POST':'GET'),headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(8000)});
   if(!response.ok) {
     // Nunca devolver respuestas del proveedor con datos privados o credenciales.
     console.warn('mercadopago_api_error',{status:response.status,path:path.split('?')[0]});
@@ -72,6 +72,7 @@ export async function reconcilePayment(paymentId:string) {
   if(payment.metadata?.proveit_checkout!==row.id)return;
   const now=new Date().toISOString();
   if(['refunded','charged_back'].includes(payment.status) && row.paymentId===String(payment.id)) {
+    if(row.status==='REVERSED')return;
     // Se conserva el registro: nunca se borra el torneo ni se inicia una devolución.
     await db.send(new TransactWriteCommand({TransactItems:[
       {Update:{TableName:table('PAYMENT_TABLE_NAME'),Key:{id:row.id},UpdateExpression:'SET #s=:s, updatedAt=:now',ConditionExpression:'paymentId=:pid',ExpressionAttributeNames:{'#s':'status'},ExpressionAttributeValues:{':s':'REVERSED',':now':now,':pid':String(payment.id)}}},
@@ -79,7 +80,8 @@ export async function reconcilePayment(paymentId:string) {
     ]}));return;
   }
   if(payment.status!=='approved' || Number(payment.transaction_amount_refunded || 0)>0 || row.status==='REVERSED')return;
-  if(row.status==='APPROVED')return;
+  const expire=()=>mp('/checkout/preferences/'+encodeURIComponent(row.preferenceId),{expires:true,expiration_date_to:now},'PUT').catch(()=>{console.warn('preference_expiration_pending');});
+  if(row.status==='APPROVED'){if(row.paymentId===String(payment.id))await expire();return;}
   const payload=JSON.parse(row.payload);
   // Una única transacción publica torneo, invitaciones y recibo interno.
   const tournament={...payload.tournament,creationPaymentStatus:'APPROVED',paymentMode:row.paymentMode,updatedAt:now};
@@ -89,5 +91,8 @@ export async function reconcilePayment(paymentId:string) {
     ...payload.invites.map((invite:any)=>({Put:{TableName:table('INVITATION_TABLE_NAME'),Item:{...invite,createdAt:now,updatedAt:now},ConditionExpression:'attribute_not_exists(id)'}})),
     {Update:{TableName:table('PAYMENT_TABLE_NAME'),Key:{id:row.id},UpdateExpression:'SET #s=:approved, paymentId=:pid, updatedAt=:now',ConditionExpression:'#s=:pending',ExpressionAttributeNames:{'#s':'status'},ExpressionAttributeValues:{':approved':'APPROVED',':pending':'PENDING',':pid':String(payment.id),':now':now}}},
   ]}));}
-  catch(error) {if((error as Error).name==='TransactionCanceledException' && (await read('PAYMENT_TABLE_NAME',row.id))?.status==='APPROVED')return;throw error;}
+  catch(error) {if((error as Error).name!=='TransactionCanceledException' || (await read('PAYMENT_TABLE_NAME',row.id))?.status!=='APPROVED')throw error;}
+  // Reduce la posibilidad de volver a pagar usando un enlace guardado.
+  // Si MP falla, una notificación repetida reintenta el vencimiento.
+  await expire();
 }
