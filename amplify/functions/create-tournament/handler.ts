@@ -1,7 +1,9 @@
 // Esta función es la puerta de escritura. Las reglas se comprueban en AWS,
 // aunque alguien intente saltarse el formulario del navegador.
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, GetCommand, TransactWriteCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
+
+import { read,fee,assertBillingAccess,ensureCheckout } from '../billing/common';
 
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const formats = new Set(['DUEL', 'ROUND_ROBIN', 'SINGLE_ELIMINATION', 'DOUBLE_ELIMINATION', 'SWISS', 'FREE_FOR_ALL']);
@@ -15,6 +17,13 @@ export const handler = async (event: { arguments: Arguments; identity?: { sub?: 
   const sub = event.identity?.sub;
   if (!sub) throw new Error('Iniciá sesión para crear un torneo.');
   const args = event.arguments;
+  await assertBillingAccess(sub);
+  if (/^[0-9a-f-]{36}$/i.test(args.tournamentId || '')) {
+    const previous=await read('PAYMENT_TABLE_NAME',args.tournamentId);
+    if(previous)return ensureCheckout(previous,sub);
+  }
+  const pricing=await fee();
+  if(!pricing.enabled)throw new Error('La creación de torneos está pausada temporalmente.');
   const text = (value: unknown, min: number, max: number, label: string) => {
     if (typeof value !== 'string' || value.trim().length < min || value.trim().length > max) {
       throw new Error(`${label}: usá entre ${min} y ${max} caracteres.`);
@@ -77,10 +86,6 @@ export const handler = async (event: { arguments: Arguments; identity?: { sub?: 
     rosterStatuses: owners.map(recipient => recipient === sub ? 'ACCEPTED' : 'PENDING'), createdAt: now, updatedAt: now,
     __typename: 'Tournament',
   };
-  try {
-    // El ID se conserva al reintentar: evita duplicados ante un corte de conexión.
-    const invitationTable = process.env.INVITATION_TABLE_NAME!;
-    // Torneo e invitaciones se guardan juntos: no se confirma a personas ajenas.
     const invites = profiles.map((profile, index) => ({
       id: args.tournamentId + ':' + profile.id,
       tournamentId: args.tournamentId, tournamentName: name,
@@ -92,16 +97,10 @@ export const handler = async (event: { arguments: Arguments; identity?: { sub?: 
       consentAcceptedAt: noJudge && owners[index] === sub ? now : null,
       invitedBySub: sub, createdAt: now, updatedAt: now, __typename: 'TournamentInvitation',
     }));
-    await db.send(new TransactWriteCommand({ TransactItems: [
-      { Put: { TableName: tournamentTable, Item: item, ConditionExpression: 'attribute_not_exists(id)' } },
-      ...invites.map(invite => ({ Put: { TableName: invitationTable, Item: invite, ConditionExpression: 'attribute_not_exists(id)' } })),
-    ] }));
-    return item;
-  } catch (error) {
-    if ((error as Error).name !== 'TransactionCanceledException') throw error;
-    const existing = await db.send(new GetCommand({ TableName: tournamentTable, Key: { id: args.tournamentId }, ConsistentRead: true }));
-    if (existing.Item?.createdBySub === sub) return existing.Item;
-    throw new Error('No se pudo guardar el torneo. Volvé a cargar la página.');
-  }
+  // El borrador es privado. No existen torneo ni invitaciones antes del pago.
+  const request={id:args.tournamentId,createdBySub:sub,tournamentName:name,status:'PENDING',amountCents:pricing.amountCents,currency:'ARS',paymentMode:pricing.mode,
+    payload:JSON.stringify({tournament:item,invites}),expiresAt:new Date(Math.min(Date.now()+30*60*1000,timestamp)).toISOString(),createdAt:now,updatedAt:now,__typename:'TournamentPayment'};
+  try {await db.send(new PutCommand({TableName:process.env.PAYMENT_TABLE_NAME!,Item:request,ConditionExpression:'attribute_not_exists(id)'}));}
+  catch(error){if((error as Error).name!=='ConditionalCheckFailedException')throw error;return ensureCheckout(await read('PAYMENT_TABLE_NAME',args.tournamentId),sub);}
+  return ensureCheckout(request,sub);
 };
-
