@@ -4,7 +4,8 @@ import { GetCommand, UpdateCommand, DynamoDBDocumentClient } from '@aws-sdk/lib-
 import { S3Client, PutObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { assertActiveTournament } from '../lifecycle';
-const s3=new S3Client({});
+// El navegador sube el cuerpo real; no firmar el checksum de un cuerpo vacío.
+const s3=new S3Client({requestChecksumCalculation:'WHEN_REQUIRED'});
 const types:Record<string,string>={'image/jpeg':'jpg','image/png':'png','image/webp':'webp','video/mp4':'mp4','video/webm':'webm'};
 export async function prizeAction(db:DynamoDBDocumentClient,sub:string,args:any) {
   if(typeof args.tournamentId!=='string' || !/^[a-f0-9-]{36}$/i.test(args.tournamentId))throw new Error('Torneo inválido.');
