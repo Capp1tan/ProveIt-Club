@@ -18,6 +18,14 @@ const participants = new Set();
 const judges = new Set();
 let profiles = [];
 let pricingReady=false;
+let connectionAttempt = 0;
+let pricingMessage = 'Todavía estamos consultando si podés crear torneos.';
+// Una consulta lenta debe terminar con una explicación y permitir reintentar.
+async function withDeadline(operation, message, milliseconds = 20000) {
+  let timer;
+  try { return await Promise.race([operation, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(message)), milliseconds); })]); }
+  finally { clearTimeout(timer); }
+}
 let selectedFormat = formats[0].id;
 const mode = document.getElementById('arbitrationMode');
 const startsLocal = document.getElementById('startsLocal');
@@ -153,8 +161,8 @@ async function refreshPeople() {
   loading = true; submit.disabled = true;
   const status = document.getElementById('peopleStatus'); status.textContent = 'Cargando cuentas del club…';
   try {
-    await loadBadges().catch(() => {});
-    profiles = (await registeredProfiles()).filter(profile => profile.accountComplete);
+    void loadBadges().then(renderPeople).catch(() => {});
+    profiles = (await withDeadline(registeredProfiles(), 'La lista de cuentas tardó demasiado. Usá «Actualizar lista» para reintentar.')).filter(profile => profile.accountComplete);
     for (const selected of [participants,judges]) for (const id of selected) if (!profiles.some(profile => profile.id === id)) selected.delete(id);
     if (treasurer.value && !profiles.some(profile => profile.id === treasurer.value)) treasurer.value = '';
     renderPeople(); status.textContent = `${profiles.length} perfiles disponibles. Para aparecer aquí, cada persona debe ingresar y guardar su nick y teléfono en Mi perfil.`;
@@ -162,31 +170,57 @@ async function refreshPeople() {
   finally { loading = false; submit.disabled = !pricingReady; }
 }
 async function connectAccount() {
+  const attempt = ++connectionAttempt;
   const gate = document.getElementById('accountGate');
+  pricingReady = false; submit.disabled = true;
+  fields.disabled = true; gate.hidden = false;
+  document.getElementById('accountGateText').textContent = 'Conectando tu cuenta…';
+  document.getElementById('tournamentLogin').hidden = true;
+  document.getElementById('retryConnection').hidden = true;
   try {
-    if (!await configureAmplify()) throw new Error('No pudimos conectar con AWS. Recargá para intentar de nuevo.');
-    await getCurrentUser(); fields.disabled = false; gate.hidden = true;
+    if (!await withDeadline(configureAmplify(), 'AWS tardó demasiado en responder. Reintentá la conexión.')) throw new Error('No pudimos conectar con AWS. Reintentá la conexión.');
+    try { await withDeadline(getCurrentUser(), 'No pudimos comprobar tu sesión a tiempo. Reintentá la conexión.'); }
+    catch (error) {
+      if (error.name !== 'UserUnAuthenticatedException') throw error;
+      if (attempt !== connectionAttempt) return;
+      document.getElementById('accountGateText').textContent = 'Ingresá con tu cuenta para crear un torneo.';
+      document.getElementById('tournamentLogin').hidden = false;
+      return;
+    }
+    if (attempt !== connectionAttempt) return;
     try { sessionStorage.removeItem(resumeKey); } catch {}
-    const pricing=await tournamentFee();
+    const pricing=await withDeadline(tournamentFee(), 'No pudimos consultar la tarifa a tiempo. Reintentá la conexión; no se realizó ningún cobro.');
+    if (attempt !== connectionAttempt) return;
     pricingReady=pricing.enabled && pricing.canPay;
     document.getElementById('creationFee').textContent=pricing.mode==='TEST' ? 'Modo de prueba: '+money(pricing.amountCents)+' ficticios. Sólo el Creador puede probar el pago.' : 'Tarifa por crear este torneo: '+money(pricing.amountCents)+'. Se paga una sola vez; las invitaciones se envían después de acreditarse.';
     if(!pricing.enabled)document.getElementById('creationFee').textContent='La creación de torneos está pausada temporalmente.';
-    if(pricing.mode==='TEST' && !pricing.canPay)document.getElementById('creationFee').textContent='Los pagos están en preparación. La creación de nuevos torneos todavía no está habilitada para tu cuenta.';
+    if(pricing.mode==='TEST' && !pricing.canPay)document.getElementById('creationFee').textContent='Los pagos siguen en modo de prueba y sólo están habilitados para la cuenta del Creador. Podés recibir invitaciones, pero todavía no crear un torneo desde esta cuenta. No se realizó ningún cobro.';
+    pricingMessage=document.getElementById('creationFee').textContent;
+    if (!pricingReady) {
+      document.getElementById('accountGateText').textContent=pricingMessage;
+      document.getElementById('peopleStatus').textContent='La creación de torneos no está habilitada para esta cuenta en este momento.';
+      show(pricingMessage); return;
+    }
+    fields.disabled = false; gate.hidden = true;
     submit.textContent=pricing.mode==='TEST'?'Preparar pago de prueba ↗':'Pagar y crear torneo ↗';
     await refreshPeople();
-  } catch {
+  } catch (error) {
+    if (attempt !== connectionAttempt) return;
     fields.disabled = true; gate.hidden = false;
-    document.getElementById('accountGateText').textContent = 'Ingresá con tu cuenta para elegir integrantes y guardar el torneo.';
-    document.getElementById('tournamentLogin').hidden = false;
+    document.getElementById('accountGateText').textContent = error.message || 'No pudimos conectar con el servidor. Reintentá la conexión.';
+    document.getElementById('retryConnection').hidden = false;
   }
 }
+
+document.getElementById('retryConnection').addEventListener('click', () => void connectAccount());
 document.getElementById('tournamentLogin').addEventListener('click', () => { saveDraft(); try { sessionStorage.setItem(resumeKey, '1'); } catch {} });
 document.getElementById('reloadPeople').addEventListener('click', refreshPeople);
 search.addEventListener('input', renderPeople);
 treasurer.addEventListener('change', renderPeople);
 form.addEventListener('input', saveDraft);
 form.addEventListener('submit', async event => {
-  event.preventDefault(); if (saving || loading || !pricingReady) return;
+  event.preventDefault(); if (saving || loading) return;
+  if (!pricingReady) return show(pricingMessage, true);
   if (participants.size < 2) return show('Seleccioná al menos dos participantes con cuenta en ProveIt.', true);
   if (selectedFormat === 'DUEL' && participants.size !== 2) return show('El Duelo 1v1 requiere exactamente dos participantes. Quitá las personas sobrantes.', true);
   if (!noJudge() && !judges.size) return show('Seleccioná al menos un juez o elegí el modo sin juez.', true);
@@ -196,7 +230,8 @@ form.addEventListener('submit', async event => {
   catch(error) { return show(error.message,true); }
   saving = true; submit.disabled = true; show('Preparando el pago del torneo…');
   try {
-    const result = await createClubTournament({ tournamentId, arbitrationMode: mode.value, startsAt, timeZone: zone.value, acceptOrganizerDecision: noJudge() && consent.checked, name: form.elements.name.value.trim(), activity: form.elements.activity.value.trim(), description: form.elements.description.value.trim(), format: selectedFormat, participantIds: [...participants], judgeIds: [...judges], treasurerId: treasurer.value || null });
+    // El mismo identificador permite reintentar si AWS respondió después del límite de espera.
+    const result = await withDeadline(createClubTournament({ tournamentId, arbitrationMode: mode.value, startsAt, timeZone: zone.value, acceptOrganizerDecision: noJudge() && consent.checked, name: form.elements.name.value.trim(), activity: form.elements.activity.value.trim(), description: form.elements.description.value.trim(), format: selectedFormat, participantIds: [...participants], judgeIds: [...judges], treasurerId: treasurer.value || null }), 'La preparación del pago tardó demasiado. Podés reintentar desde este formulario; conservamos el identificador para no duplicar la solicitud.', 45000);
     try { sessionStorage.removeItem(draftKey); } catch {}
     location.href = `/pago.html?id=${encodeURIComponent(result.id)}`;
   } catch (error) { show(error.message || 'No se pudo guardar. Podés reintentar.', true); }
@@ -206,3 +241,4 @@ Hub.listen('auth', ({payload}) => { if (['signedIn','signedOut'].includes(payloa
 selectFormat(selectedFormat);
 updateArbitration(); updateSchedule();
 void connectAccount().finally(() => window.proveitLoadingDone?.('page'));
+
