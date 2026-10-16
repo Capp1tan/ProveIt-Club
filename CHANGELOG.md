@@ -1,3 +1,12 @@
+# 2.5.0 — Duelo sin juez y torneos programados
+
+- Modos con juez o sin juez; en este último decide el organizador, incluso si juega.
+- Aceptación explícita y registrada de la condición sin juez, con reglas visibles en la invitación.
+- Fecha, hora y zona horaria obligatorias para nuevos torneos; cuenta regresiva sin inicio automático.
+- Ganador definitivo para Duelo 1v1: lo registra el organizador sin juez o un juez designado, después del horario y de las confirmaciones.
+- Reglas, arbitraje e inicio fijados al crear. Sin capturas ni gestión de pagos.
+- Los torneos anteriores conservan sus datos; no se les inventa un horario ni consentimiento.
+
 # 2.4.1 — Compatibilidad del resolver de cuentas
 
 - Corregido el despacho de operaciones: el evento de Amplify no siempre incluye `info.fieldName`.
