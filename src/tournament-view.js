@@ -1,4 +1,7 @@
 import { loadBadges, badgeElements } from './badges.js';
+import { ProfilePreview } from './profile-preview.js';
+import { connectBracket } from './bracket-lines.js';
+import { Hub } from 'aws-amplify/utils';
 import { scheduleLabel, countdownLabel, noJudgeConsent } from './tournament-schedule.js';
 // Sala de espera y cuadro: las confirmaciones y el sorteo provienen de AWS.
 import { formats, formatImage } from './tournament-formats.js';
@@ -8,7 +11,10 @@ const notice=document.getElementById('tournamentsNotice'),detail=document.getEle
 const element=(tag,text,className)=>{const node=document.createElement(tag);node.textContent=text;if(className)node.className=className;return node;};
 const stateNames={PENDING:'Esperando confirmación',ACCEPTED:'Confirmado',REJECTED:'Invitación rechazada'};
 let profiles=new Map(),lastVersion='',refreshing=false,currentUser=null,currentTournament=null;
+let drawCleanup;
 const photoRequests=new Map();
+const profilePreview=detail ? new ProfilePreview({avatar,badges:badgeElements}) : null;
+Hub.listen('auth',({payload})=>{if(payload.event==='signedOut')profilePreview?.lock();});
 function avatar(id,name) {
   const node=element('span',Array.from(name.trim())[0]?.toUpperCase() || '?','person-avatar');
   node.setAttribute('aria-hidden','true');
@@ -28,7 +34,7 @@ function roster(title,ids,names,statuses) {
     const state=statuses[i] || 'PENDING';
     const row=element('li','','waiting-person');row.dataset.state=state;
     const stateLabel=state==='ACCEPTED' && currentTournament?.arbitrationMode==='ORGANIZER' ? 'Confirmado · aceptó sin juez' : stateNames[state] || 'Pendiente';
-    row.append(avatar(ids[i],name),element('strong',name),badgeElements(profiles.get(ids[i])?.owner?.split('::')[0]),element('span',stateLabel,'waiting-state'));rows.append(row);
+    row.append(profilePreview.button(ids[i],name),element('span',stateLabel,'waiting-state'));rows.append(row);
   });
   if(!names.length) rows.append(element('li',title==='Jueces' ? 'Sin juez · decide el organizador' : 'Sin tesorero'));
   section.append(rows);return section;
@@ -40,29 +46,36 @@ function drawBoard(t) {
   try {draw=JSON.parse(t.draw);} catch {section.append(element('p','No pudimos leer el sorteo guardado. Actualizá para reintentar.'));return section;}
   const players=new Map(draw.order.map(player=>[player.id,player]));
   const board=element('div','','draw-board');
-  const slotNode=slot=>{
+  board.setAttribute('role','region');board.setAttribute('aria-label','Llave del torneo. Los nombres abren una vista previa de perfil.');board.tabIndex=0;
+  const canvas=element('div','','draw-canvas');board.append(canvas);
+  const links=[];
+  const slotNode=(slot,matchId,index)=>{
     const row=element('div','','draw-player');
+    row.dataset.slot=String(index);
     if(!slot) {row.append(element('span','Descanso / pase libre'));return row;}
     const player=slot.playerId?players.get(slot.playerId):slot.name?slot:null;
     if(player) {
-      row.append(avatar(player.id,player.name),element('span',player.name),badgeElements(profiles.get(player.id)?.owner?.split('::')[0]));
+      row.append(profilePreview.button(player.id,player.name));
       if(t.winnerProfileId===player.id) { row.dataset.winner='true'; row.append(element('strong','Ganador','winner-tag')); }
     }
-    else row.append(element('span',(slot.outcome==='loser'?'Perdedor de ':'Ganador de ')+slot.source));
+    else {row.append(element('span',(slot.outcome==='loser'?'Perdedor de ':'Ganador de ')+slot.source,'draw-placeholder'));links.push({source:slot.source,target:matchId,slot:index,outcome:slot.outcome});}
     return row;
   };
   draw.rounds.forEach(round=>{
     const column=element('section','','draw-round');
     column.append(element('p',round.group,'eyebrow'),element('h3',round.name));
+    const matches=element('div','','round-matches');column.append(matches);
     round.matches.forEach(match=>{
       const card=element('article','','draw-match');
+      card.dataset.matchId=match.id;card.setAttribute('aria-label','Encuentro '+match.id);
       card.append(element('small',match.id));
-      if(match.entrants) match.entrants.forEach(player=>card.append(slotNode(player)));
-      else {card.append(slotNode(match.left),element('span','VS','draw-versus'),slotNode(match.right));}
-      column.append(card);
-    });board.append(column);
+      if(match.entrants) match.entrants.forEach((player,index)=>card.append(slotNode(player,match.id,index)));
+      else {card.append(slotNode(match.left,match.id,0),element('span','VS','draw-versus'),slotNode(match.right,match.id,1));}
+      matches.append(card);
+    });canvas.append(column);
   });
-  section.append(element('p','Sorteo aleatorio guardado: recargar no cambia los cruces.'),board);
+  section.append(element('p','Sorteo aleatorio guardado. Mantené el cursor sobre un nombre para ver su perfil, o tocá el nombre.'),board);
+  drawCleanup=connectBracket(canvas,links);
   if(t.format==='SWISS')section.append(element('p','Se sorteó la primera ronda. Las siguientes requieren resultados y emparejamientos por puntaje, que todavía no están implementados.','tournament-notice'));
   if(t.format==='DOUBLE_ELIMINATION')section.append(element('p','Los casilleros de ganadores y perdedores se completarán al registrar resultados. El reinicio de la gran final depende de las reglas acordadas.'));
   return section;
@@ -115,6 +128,7 @@ function resultPanel(t) {
   });section.append(form);return section;
 }
 function renderTournament(t) {
+  profilePreview?.dismiss();drawCleanup?.();drawCleanup=null;
   currentTournament=t;
   detail.replaceChildren();
   const status=states(t),format=formats.find(f=>f.id===t.format);
@@ -154,7 +168,9 @@ try {
   if(detail) {
     if(!await configureAmplify())throw new Error('No pudimos conectar con AWS. Recargá para intentar de nuevo.');
     currentUser=await getCurrentUser();
-    try {await loadBadges();profiles=new Map((await registeredProfiles()).map(profile=>[profile.id,profile]));}catch{}
+    await loadBadges().catch(()=>{});
+    try {profiles=new Map((await registeredProfiles({includeBio:true})).map(profile=>[profile.id,profile]));}catch{}
+    profilePreview.setProfiles(profiles);
     await refreshTournament();
     setInterval(updateClock,1000);
     setInterval(()=>void refreshTournament(),15000);
