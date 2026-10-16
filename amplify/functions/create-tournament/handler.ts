@@ -9,6 +9,7 @@ type Arguments = {
   tournamentId: string; name: string; activity: string; format: string;
   description?: string | null; participantIds: string[]; judgeIds: string[];
   treasurerId?: string | null;
+  arbitrationMode: string; startsAt: string; timeZone: string; acceptOrganizerDecision?: boolean;
 };
 export const handler = async (event: { arguments: Arguments; identity?: { sub?: string } }) => {
   const sub = event.identity?.sub;
@@ -20,9 +21,17 @@ export const handler = async (event: { arguments: Arguments; identity?: { sub?: 
     }
     return value.trim();
   };
+  if (!['ORGANIZER','JUDGES'].includes(args.arbitrationMode)) throw new Error('Elegí si el torneo tendrá juez.');
+  const noJudge = args.arbitrationMode === 'ORGANIZER';
+  if (noJudge && args.acceptOrganizerDecision !== true) throw new Error('Aceptá explícitamente la condición de torneo sin juez.');
+  const timestamp = Date.parse(args.startsAt);
+  if (!Number.isFinite(timestamp) || new Date(timestamp).toISOString() !== args.startsAt || timestamp <= Date.now()) throw new Error('Elegí una fecha y hora futuras válidas.');
+  if (typeof args.timeZone !== 'string' || args.timeZone.length > 80) throw new Error('Zona horaria inválida.');
+  try { new Intl.DateTimeFormat('es', { timeZone: args.timeZone }).format(new Date(timestamp)); }
+  catch { throw new Error('Elegí una zona horaria válida.'); }
   const name = text(args.name, 3, 80, 'Nombre');
   const activity = text(args.activity, 2, 80, 'Actividad');
-  const description = text(args.description ?? '', 0, 1000, 'Descripción');
+  const description = text(args.description ?? '', noJudge ? 10 : 0, 1000, 'Reglas');
   if (!formats.has(args.format)) throw new Error('Elegí un formato válido.');
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(args.tournamentId)) {
     throw new Error('Identificador de torneo inválido.');
@@ -35,7 +44,8 @@ export const handler = async (event: { arguments: Arguments; identity?: { sub?: 
   };
   const participantIds = ids(args.participantIds, 2, 64, 'Participantes');
   if (args.format === 'DUEL' && participantIds.length !== 2) throw new Error('El Duelo 1v1 requiere exactamente dos participantes.');
-  const judgeIds = ids(args.judgeIds, 1, 16, 'Jueces');
+  const judgeIds = ids(args.judgeIds, noJudge ? 0 : 1, 16, 'Jueces');
+  if (noJudge && judgeIds.length) throw new Error('Un torneo sin juez no puede tener jueces seleccionados.');
   const treasurerId = args.treasurerId || null;
   const allIds = [...participantIds, ...judgeIds, ...(treasurerId ? ids([treasurerId], 1, 1, 'Tesorero') : [])];
   if (new Set(allIds).size !== allIds.length) throw new Error('Cada persona debe tener un único rol en este torneo.');
@@ -61,6 +71,8 @@ export const handler = async (event: { arguments: Arguments; identity?: { sub?: 
     participantIds, participantNames: participantIds.map(id => names.get(id)),
     judgeIds, judgeNames: judgeIds.map(id => names.get(id)),
     treasurerId, treasurerName: treasurerId ? names.get(treasurerId) : null,
+    arbitrationMode: args.arbitrationMode, startsAt: args.startsAt, timeZone: args.timeZone,
+    consentVersion: noJudge ? 'NO_JUDGE_V1' : null, organizerConsentAt: noJudge ? now : null,
     createdBySub: sub, status: 'AWAITING_RESPONSES', membershipRevision: 0,
     rosterStatuses: owners.map(recipient => recipient === sub ? 'ACCEPTED' : 'PENDING'), createdAt: now, updatedAt: now,
     __typename: 'Tournament',
@@ -75,6 +87,9 @@ export const handler = async (event: { arguments: Arguments; identity?: { sub?: 
       recipientSub: owners[index], profileId: profile.id, rosterIndex: index,
       role: index < participantIds.length ? 'PARTICIPANT' : index < participantIds.length + judgeIds.length ? 'JUDGE' : 'TREASURER',
       status: owners[index] === sub ? 'ACCEPTED' : 'PENDING',
+      arbitrationMode: args.arbitrationMode, startsAt: args.startsAt, timeZone: args.timeZone,
+      rulesSnapshot: description, consentVersion: noJudge ? 'NO_JUDGE_V1' : null,
+      consentAcceptedAt: noJudge && owners[index] === sub ? now : null,
       invitedBySub: sub, createdAt: now, updatedAt: now, __typename: 'TournamentInvitation',
     }));
     await db.send(new TransactWriteCommand({ TransactItems: [
