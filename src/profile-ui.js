@@ -1,3 +1,4 @@
+import { mountBillingAdmin } from './billing-admin.js';
 import { loadBadges, badgeElements, initializeAccess, mountBadgeAdmin } from './badges.js';
 // Edición del perfil. El archivo no almacena imágenes ni datos en el navegador:
 // Amplify los envía a S3 y a la base de datos cuando el backend esté desplegado.
@@ -86,7 +87,7 @@ if (!ready) {
       const access = await initializeAccess();
       await loadBadges();
       document.getElementById('profileBadges').replaceChildren(badgeElements(user.userId));
-      if (access.isCreator) await mountBadgeAdmin();
+      if (access.isCreator) { await mountBadgeAdmin(); await mountBillingAdmin(); }
     } catch { showNotice('No pudimos cargar las insignias. Podés editar tu perfil y recargar para reintentar.', true); } })();
     if (profile) {
       profileId = profile.id;
