@@ -1,12 +1,13 @@
 import { loadBadges, badgeElements } from './badges.js';
+import { scheduleLabel, countdownLabel, noJudgeConsent } from './tournament-schedule.js';
 // Sala de espera y cuadro: las confirmaciones y el sorteo provienen de AWS.
 import { formats, formatImage } from './tournament-formats.js';
-import { avatarUrl, getCurrentUser } from './auth-client.js';
-import { listClubTournaments, getClubTournament, registeredProfiles, ensureClubTournamentDraw } from './tournaments-api.js';
+import { avatarUrl, getCurrentUser, configureAmplify } from './auth-client.js';
+import { listClubTournaments, getClubTournament, registeredProfiles, ensureClubTournamentDraw, recordClubDuelResult } from './tournaments-api.js';
 const notice=document.getElementById('tournamentsNotice'),detail=document.getElementById('tournamentDetail'),list=document.getElementById('tournamentsList');
 const element=(tag,text,className)=>{const node=document.createElement(tag);node.textContent=text;if(className)node.className=className;return node;};
 const stateNames={PENDING:'Esperando confirmación',ACCEPTED:'Confirmado',REJECTED:'Invitación rechazada'};
-let profiles=new Map(),lastVersion='',refreshing=false;
+let profiles=new Map(),lastVersion='',refreshing=false,currentUser=null,currentTournament=null;
 const photoRequests=new Map();
 function avatar(id,name) {
   const node=element('span',Array.from(name.trim())[0]?.toUpperCase() || '?','person-avatar');
@@ -26,9 +27,10 @@ function roster(title,ids,names,statuses) {
   names.forEach((name,i)=>{
     const state=statuses[i] || 'PENDING';
     const row=element('li','','waiting-person');row.dataset.state=state;
-    row.append(avatar(ids[i],name),element('strong',name),badgeElements(profiles.get(ids[i])?.owner?.split('::')[0]),element('span',stateNames[state] || 'Pendiente','waiting-state'));rows.append(row);
+    const stateLabel=state==='ACCEPTED' && currentTournament?.arbitrationMode==='ORGANIZER' ? 'Confirmado · aceptó sin juez' : stateNames[state] || 'Pendiente';
+    row.append(avatar(ids[i],name),element('strong',name),badgeElements(profiles.get(ids[i])?.owner?.split('::')[0]),element('span',stateLabel,'waiting-state'));rows.append(row);
   });
-  if(!names.length) rows.append(element('li','Sin tesorero'));
+  if(!names.length) rows.append(element('li',title==='Jueces' ? 'Sin juez · decide el organizador' : 'Sin tesorero'));
   section.append(rows);return section;
 }
 function drawBoard(t) {
@@ -42,7 +44,10 @@ function drawBoard(t) {
     const row=element('div','','draw-player');
     if(!slot) {row.append(element('span','Descanso / pase libre'));return row;}
     const player=slot.playerId?players.get(slot.playerId):slot.name?slot:null;
-    if(player) row.append(avatar(player.id,player.name),element('span',player.name),badgeElements(profiles.get(player.id)?.owner?.split('::')[0]));
+    if(player) {
+      row.append(avatar(player.id,player.name),element('span',player.name),badgeElements(profiles.get(player.id)?.owner?.split('::')[0]));
+      if(t.winnerProfileId===player.id) { row.dataset.winner='true'; row.append(element('strong','Ganador','winner-tag')); }
+    }
     else row.append(element('span',(slot.outcome==='loser'?'Perdedor de ':'Ganador de ')+slot.source));
     return row;
   };
@@ -62,11 +67,63 @@ function drawBoard(t) {
   if(t.format==='DOUBLE_ELIMINATION')section.append(element('p','Los casilleros de ganadores y perdedores se completarán al registrar resultados. El reinicio de la gran final depende de las reglas acordadas.'));
   return section;
 }
+// Sólo pinta el reloj. La autorización y la hora para decidir se comprueban en AWS.
+function updateClock() {
+  const timer=document.getElementById('tournamentCountdown');
+  if(timer && currentTournament?.startsAt) timer.textContent=currentTournament.winnerProfileId ? 'Duelo finalizado' : countdownLabel(currentTournament.startsAt);
+  const button=document.getElementById('recordDuelWinner');
+  if(button && !button.dataset.saving) button.disabled=Date.now()<Date.parse(currentTournament.startsAt);
+}
+function schedulePanel(t) {
+  const section=element('section','','tournament-panel tournament-schedule');
+  section.append(element('h2','Cuándo se juega'),element('p',scheduleLabel(t.startsAt,t.timeZone)));
+  if(t.startsAt) {
+    const timer=element('p','','tournament-countdown');timer.id='tournamentCountdown';timer.setAttribute('role','timer');timer.setAttribute('aria-live','off');section.append(timer);
+    const localZone=Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if(localZone && localZone!==t.timeZone) section.append(element('p','En tu zona: '+scheduleLabel(t.startsAt,localZone),'field-help'));
+    section.append(element('small','El reloj usa la hora de tu dispositivo. Llegar al horario no inicia la partida ni confirma personas.','field-help'));
+  }
+  return section;
+}
+function resultPanel(t) {
+  const section=element('section','','tournament-panel');section.append(element('h2','Resultado del duelo'));
+  if(t.winnerProfileId) {
+    section.append(element('p','🏆 '+t.winnerName,'duel-winner'),element('p','Decidido por '+(t.decidedByLabel || 'el árbitro acordado')+' · '+scheduleLabel(t.decidedAt,t.timeZone)),element('p','Resultado definitivo. No se puede cambiar desde esta pantalla.','field-help'));
+    return section;
+  }
+  const noJudge=t.arbitrationMode==='ORGANIZER';
+  const isJudge=(t.judgeIds || []).some(id=>{const owner=profiles.get(id)?.owner;return owner && (owner===currentUser?.username || owner===currentUser?.userId || owner.startsWith(currentUser?.userId+'::'));});
+  const canDecide=noJudge ? currentUser?.userId===t.createdBySub : isJudge;
+  section.append(element('p',noJudge ? 'El organizador registrará al ganador, incluso si también juega.' : 'Un juez designado registrará al ganador.'));
+  if(!t.startsAt) {section.append(element('p','El registro de ganador se habilita en los nuevos duelos con fecha programada.','field-help'));return section;}
+  if(t.status!=='READY' || !t.draw) {section.append(element('p','Primero deben confirmar todos los integrantes y generarse el cruce.','field-help'));return section;}
+  if(!canDecide) return section;
+  const form=element('form','','duel-result-form'),label=element('label','Quién ganó');
+  const select=element('select');select.required=true;select.id='duelWinner';label.htmlFor=select.id;
+  const empty=element('option','Elegí al ganador');empty.value='';select.append(empty);
+  t.participantIds.forEach((id,index)=>{const option=element('option',t.participantNames[index]);option.value=id;select.append(option);});
+  const button=element('button','Confirmar ganador','primary-button');button.id='recordDuelWinner';button.type='submit';
+  const message=element('p','','field-help');message.setAttribute('role','status');
+  form.append(label,select,element('p','Podrás confirmar después del horario de inicio. La decisión será definitiva.','field-help'),button,message);
+  form.addEventListener('submit',async event=>{
+    event.preventDefault();if(button.disabled || !select.value)return;
+    const name=t.participantNames[t.participantIds.indexOf(select.value)];
+    if(!window.confirm('¿Confirmar a '+name+' como ganador? Esta decisión quedará registrada y no se podrá cambiar desde el sitio.'))return;
+    button.disabled=true;button.dataset.saving='true';message.textContent='Guardando resultado…';
+    try {const saved=await recordClubDuelResult(t.id,select.value);if(!saved?.winnerProfileId)throw new Error('AWS no confirmó el resultado. Actualizá para revisar su estado.');currentTournament=saved;renderTournament(saved);lastVersion=saved.updatedAt+String(saved.draw);}
+    catch(error) {message.textContent=error.message;delete button.dataset.saving;updateClock();}
+  });section.append(form);return section;
+}
 function renderTournament(t) {
+  currentTournament=t;
   detail.replaceChildren();
   const status=states(t),format=formats.find(f=>f.id===t.format);
-  const label=t.draw?'TODOS CONFIRMADOS · SORTEO GUARDADO':status.includes('REJECTED')?'INVITACIÓN RECHAZADA · SORTEO DETENIDO':t.rosterStatuses?'SALA DE ESPERA':'TORNEO ANTERIOR · EN PREPARACIÓN';
+  const label=t.winnerProfileId?'DUELO FINALIZADO':t.draw?'TODOS CONFIRMADOS · SORTEO GUARDADO':status.includes('REJECTED')?'INVITACIÓN RECHAZADA · SORTEO DETENIDO':t.rosterStatuses?'SALA DE ESPERA':'TORNEO ANTERIOR · EN PREPARACIÓN';
   detail.append(element('p',label,'eyebrow'),element('h1',t.name),element('p',t.activity));
+  const arbitration=element('section','','tournament-notice arbitration-warning');
+  arbitration.append(element('strong',t.arbitrationMode==='ORGANIZER' ? 'Sin juez · Decide el organizador' : 'Con juez · Decide un juez designado'));
+  if(t.arbitrationMode==='ORGANIZER')arbitration.append(element('p','El organizador decide el resultado final, incluso si también participa.'),element('p','La condición se acepta explícitamente al unirse.'));
+  detail.append(arbitration,schedulePanel(t));
   const info=element('section','','tournament-panel');info.append(element('h2',format?.name || t.format));
   if(format && !t.draw){const image=element('div','','format-preview');image.innerHTML=formatImage(format.id);image.append(element('p',format.description));info.append(image);}
   const rules=element('p',t.description || 'El organizador todavía no agregó reglas.');rules.style.whiteSpace='pre-wrap';info.append(rules);detail.append(info);
@@ -77,7 +134,9 @@ function renderTournament(t) {
   detail.append(roster('Participantes',t.participantIds,t.participantNames,status.slice(0,p)),roster('Jueces',t.judgeIds,t.judgeNames,status.slice(p,j)),roster('Tesorero',t.treasurerId?[t.treasurerId]:[],t.treasurerName?[t.treasurerName]:[],status.slice(j)));
   const refresh=element('button','Actualizar confirmaciones','format-choice');refresh.type='button';refresh.addEventListener('click',()=>void refreshTournament(true));
   const copy=element('button','Copiar enlace','primary-button');copy.type='button';copy.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(location.href);copy.textContent='Enlace copiado';}catch{notice.textContent='Copiá la dirección desde la barra del navegador.';notice.hidden=false;}});
-  detail.append(refresh,copy,element('p','La carga de resultados y la gestión del dinero todavía no están disponibles.','field-help'));
+  if(t.format==='DUEL')detail.append(resultPanel(t));
+  detail.append(refresh,copy,element('p','El registro de ganador está disponible en Duelo 1v1. La gestión del dinero y los resultados de otros formatos siguen pendientes.','field-help'));
+  updateClock();
 }
 async function refreshTournament(force=false) {
   if(refreshing || document.hidden)return;refreshing=true;
@@ -93,8 +152,11 @@ async function refreshTournament(force=false) {
 }
 try {
   if(detail) {
+    if(!await configureAmplify())throw new Error('No pudimos conectar con AWS. Recargá para intentar de nuevo.');
+    currentUser=await getCurrentUser();
     try {await loadBadges();profiles=new Map((await registeredProfiles()).map(profile=>[profile.id,profile]));}catch{}
     await refreshTournament();
+    setInterval(updateClock,1000);
     setInterval(()=>void refreshTournament(),15000);
     document.addEventListener('visibilitychange',()=>{if(!document.hidden)void refreshTournament();});
     window.addEventListener('proveit:invitation-updated',()=>void refreshTournament(true));
@@ -103,7 +165,7 @@ try {
     if(!tournaments.length)list.append(element('p','Todavía no hay torneos. Creá el primer desafío.','tournament-empty'));
     tournaments.forEach(t=>{
       const card=element('a','','tournament-panel tournament-card');card.href='/torneo.html?id='+encodeURIComponent(t.id);
-      card.append(element('small',(formats.find(f=>f.id===t.format)?.name || t.format)+' · '+(t.draw?'CRUCES LISTOS':'EN PREPARACIÓN')),element('h2',t.name),element('p',t.activity+' · '+states(t).slice(0,t.participantIds.length).filter(s=>s==='ACCEPTED').length+' participantes confirmados'));list.append(card);
+      card.append(element('small',(formats.find(f=>f.id===t.format)?.name || t.format)+' · '+(t.winnerProfileId?'FINALIZADO':t.draw?'CRUCES LISTOS':'EN PREPARACIÓN')),element('h2',t.name),element('p',t.activity+' · '+states(t).slice(0,t.participantIds.length).filter(s=>s==='ACCEPTED').length+' participantes confirmados'),element('p',scheduleLabel(t.startsAt,t.timeZone),'field-help'),element('small',t.arbitrationMode==='ORGANIZER'?'Sin juez · decide el organizador':'Con juez'));list.append(card);
     });notice.hidden=true;
   }
 }catch(error){notice.hidden=false;notice.dataset.error='true';notice.textContent=error.name==='UserUnAuthenticatedException'?'Ingresá con tu cuenta para consultar los torneos.':error.message;}
