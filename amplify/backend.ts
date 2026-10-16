@@ -42,3 +42,7 @@ for (const fn of [backend.createTournament, backend.respondInvitation]) {
   backend.data.resources.tables['PrivateAccount'].grant(fn.resources.lambda, 'dynamodb:GetItem');
   fn.addEnvironment('ACCOUNT_TABLE_NAME', backend.data.resources.tables['PrivateAccount'].tableName);
 }
+
+// El juez se identifica leyendo el perfil en AWS, nunca desde un rol del navegador.
+profiles.grant(backend.respondInvitation.resources.lambda, 'dynamodb:GetItem');
+backend.respondInvitation.addEnvironment('PROFILE_TABLE_NAME', profiles.tableName);
