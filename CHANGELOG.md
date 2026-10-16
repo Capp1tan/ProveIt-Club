@@ -1,3 +1,8 @@
+# 2.8.2 — Eliminación individual de torneos
+
+- Retira el botón y el código de eliminación masiva.
+- El administrador abre cualquier torneo sin invitación y lo elimina desde su detalle, uno por vez.
+
 # 2.8.1 — Permisos de comprobaciones de baja
 
 - Permiso ConditionCheckItem explícito en las funciones que comprueban bajas dentro de transacciones.

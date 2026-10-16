@@ -1,25 +1,14 @@
-import { deleteMyAccount, deleteTournament } from './maintenance-api.js';
+import { deleteMyAccount } from './maintenance-api.js';
 import { fetchAuthSession, signOut } from './auth-client.js';
-import { listClubTournaments } from './tournaments-api.js';
-import { myPendingPayments } from './billing-api.js';
+
+
 const el=(tag,text)=>{const n=document.createElement(tag);n.textContent=text;return n;};
 export function mountAccountActions(isCreator) {
   const section=el('section','');section.className='profile-card';section.id='accountActions';
   const message=el('p','');message.setAttribute('role','status');
   if(isCreator) {
-    section.append(el('h2','Administración de torneos'),el('p','Podés eliminar cualquier torneo desde su página. La limpieza general elimina los torneos y solicitudes existentes al comenzar; los nuevos se conservan. Los recibos no se borran ni se reembolsan.'));
-    const button=el('button','Eliminar todos los torneos existentes');button.type='button';button.className='danger-button';button.id='deleteAllTournaments';
-    button.addEventListener('click',async()=>{
-      if(!window.confirm('¿Eliminar todos los torneos y solicitudes actuales? Se ocultarán y bloquearán; no se devuelve dinero.'))return;
-      button.disabled=true;const before=new Date().toISOString();
-      try {
-        const [tournaments,payments]=await Promise.all([listClubTournaments(),myPendingPayments({includeExpired:true})]);
-        const ids=[...new Set([...tournaments,...payments].filter(t=>t.createdAt<=before).map(t=>t.id))];
-        for(let i=0;i<ids.length;i++){message.textContent=`Eliminando ${i+1} de ${ids.length}…`;await deleteTournament(ids[i]);}
-        message.textContent=`Limpieza completada: ${ids.length} torneos o solicitudes eliminados.`;
-      } catch(error){message.textContent='La limpieza no terminó: '+error.message+' Podés reintentar; se omitirán los ya eliminados.';}
-      finally{button.disabled=false;}
-    });section.append(button);
+    section.append(el('h2','Administración de torneos'),el('p','Entrá a Torneos y abrí el que quieras eliminar. Tu cuenta puede acceder a cualquier torneo del club sin invitación y eliminarlo desde su página, con confirmación individual.'));
+    const link=el('a','Ver torneos del club ↗');link.href='/torneos.html';link.className='primary-button';section.append(link);
   } else {
     section.append(el('h2','Eliminar mi cuenta'),el('p','Se eliminarán tu acceso, perfil, fotos, teléfono e insignias. Se cancelarán tus torneos y dejarás de participar en los pendientes de otras personas. Los resultados históricos y recibos de pagos se conservan. No se elimina tu cuenta de Google ni de Mercado Pago.'));
     const label=el('label','Escribí ELIMINAR MI CUENTA para confirmar');label.className='profile-field';

@@ -12,10 +12,9 @@ Las listas y búsquedas excluyen las bajas; las invitaciones dejan de aparecer.
 Resultados, sorteos y confirmaciones comprueban la baja en el servidor y sus
 condiciones de escritura. Un Webhook tardío no puede republicar un torneo retirado.
 
-El panel del Creador permite limpiar todos los torneos visibles y sus solicitudes
-pendientes, incluso vencidas, existentes al pulsar el botón. El lote se procesa
-por ID y se puede reintentar. La limpieza no incluye torneos creados después del
-inicio del lote. En modo TEST sólo el Creador tiene solicitudes de pago.
+El panel del Creador enlaza al listado de torneos. Cada eliminación se realiza
+individualmente desde el detalle, con confirmación. El administrador puede abrir
+cualquier torneo del club sin estar invitado. No existe un botón de limpieza masiva.
 
 Un enlace externo de Mercado Pago ya abierto puede continuar accesible hasta su
 vencimiento. No volver a pagarlo. No hay reembolso automático al retirar el torneo.
@@ -49,5 +48,4 @@ historial/autocompletado propio del navegador; el campo usa `autocomplete=off`.
 ## Comprobaciones de implementación
 
 Compilación Vite y TypeScript del backend. No se crean cuentas desechables ni se
-ejecuta una baja real de usuario como prueba automática. El Creador elimina el
-lote de torneos actuales mediante el panel, por autorización expresa del usuario.
+ejecuta una baja real de usuario como prueba automática. Las eliminaciones se realizan individualmente desde el detalle del torneo.
