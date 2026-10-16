@@ -1,3 +1,10 @@
+# 2.6.1 — Carga inicial discreta
+
+- Pantalla oscura con marca, animación suave y salida al completar sesión y contenido.
+- Sin demora mínima; salida manual tras 4 s y automática a los 10 s si falla la carga.
+- Compatible con movimiento reducido y vuelta desde el historial.
+- Lecturas independientes de insignias y perfiles en paralelo en el torneo.
+
 # 2.6.0 — Llaves interactivas y vista previa de perfiles
 
 - Nombres interactivos con foto, nick, biografía e insignias públicas.
@@ -139,4 +146,3 @@ Primera versión de ProveIt Club que conecta la web con cuentas y perfiles persi
 - `3.0.0`: otro cambio de etapa importante decidido para el proyecto.
 
 La numeración identifica entregas del proyecto; no es una certificación de que no existan errores.
-
