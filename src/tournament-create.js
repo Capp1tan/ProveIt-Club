@@ -1,3 +1,4 @@
+import { tournamentFee, money } from './billing-api.js';
 import { noJudgeConsent, timeZones, zoneLabel, localToUtc, scheduleLabel } from './tournament-schedule.js';
 import { loadBadges, badgeElements } from './badges.js';
 import { Hub } from 'aws-amplify/utils';
@@ -16,6 +17,7 @@ const submit = document.getElementById('createTournament');
 const participants = new Set();
 const judges = new Set();
 let profiles = [];
+let pricingReady=false;
 let selectedFormat = formats[0].id;
 const mode = document.getElementById('arbitrationMode');
 const startsLocal = document.getElementById('startsLocal');
@@ -157,7 +159,7 @@ async function refreshPeople() {
     if (treasurer.value && !profiles.some(profile => profile.id === treasurer.value)) treasurer.value = '';
     renderPeople(); status.textContent = `${profiles.length} perfiles disponibles. Para aparecer aquí, cada persona debe ingresar y guardar su nick y teléfono en Mi perfil.`;
   } catch (error) { status.textContent = 'No pudimos cargar la lista. Usá «Actualizar lista» para reintentar.'; show(error.message, true); }
-  finally { loading = false; submit.disabled = false; }
+  finally { loading = false; submit.disabled = !pricingReady; }
 }
 async function connectAccount() {
   const gate = document.getElementById('accountGate');
@@ -165,6 +167,12 @@ async function connectAccount() {
     if (!await configureAmplify()) throw new Error('No pudimos conectar con AWS. Recargá para intentar de nuevo.');
     await getCurrentUser(); fields.disabled = false; gate.hidden = true;
     try { sessionStorage.removeItem(resumeKey); } catch {}
+    const pricing=await tournamentFee();
+    pricingReady=pricing.enabled && pricing.canPay;
+    document.getElementById('creationFee').textContent=pricing.mode==='TEST' ? 'Modo de prueba: '+money(pricing.amountCents)+' ficticios. Sólo el Creador puede probar el pago.' : 'Tarifa por crear este torneo: '+money(pricing.amountCents)+'. Se paga una sola vez; las invitaciones se envían después de acreditarse.';
+    if(!pricing.enabled)document.getElementById('creationFee').textContent='La creación de torneos está pausada temporalmente.';
+    if(pricing.mode==='TEST' && !pricing.canPay)document.getElementById('creationFee').textContent='Los pagos están en preparación. La creación de nuevos torneos todavía no está habilitada para tu cuenta.';
+    submit.textContent=pricing.mode==='TEST'?'Preparar pago de prueba ↗':'Pagar y crear torneo ↗';
     await refreshPeople();
   } catch {
     fields.disabled = true; gate.hidden = false;
@@ -178,7 +186,7 @@ search.addEventListener('input', renderPeople);
 treasurer.addEventListener('change', renderPeople);
 form.addEventListener('input', saveDraft);
 form.addEventListener('submit', async event => {
-  event.preventDefault(); if (saving || loading) return;
+  event.preventDefault(); if (saving || loading || !pricingReady) return;
   if (participants.size < 2) return show('Seleccioná al menos dos participantes con cuenta en ProveIt.', true);
   if (selectedFormat === 'DUEL' && participants.size !== 2) return show('El Duelo 1v1 requiere exactamente dos participantes. Quitá las personas sobrantes.', true);
   if (!noJudge() && !judges.size) return show('Seleccioná al menos un juez o elegí el modo sin juez.', true);
@@ -186,13 +194,13 @@ form.addEventListener('submit', async event => {
   let startsAt;
   try { startsAt=localToUtc(startsLocal.value,zone.value); if(Date.parse(startsAt)<=Date.now()) throw new Error('Elegí una fecha y hora futuras.'); }
   catch(error) { return show(error.message,true); }
-  saving = true; submit.disabled = true; show('Guardando tu torneo…');
+  saving = true; submit.disabled = true; show('Preparando el pago del torneo…');
   try {
     const result = await createClubTournament({ tournamentId, arbitrationMode: mode.value, startsAt, timeZone: zone.value, acceptOrganizerDecision: noJudge() && consent.checked, name: form.elements.name.value.trim(), activity: form.elements.activity.value.trim(), description: form.elements.description.value.trim(), format: selectedFormat, participantIds: [...participants], judgeIds: [...judges], treasurerId: treasurer.value || null });
     try { sessionStorage.removeItem(draftKey); } catch {}
-    location.href = `/torneo.html?id=${encodeURIComponent(result.id)}`;
+    location.href = `/pago.html?id=${encodeURIComponent(result.id)}`;
   } catch (error) { show(error.message || 'No se pudo guardar. Podés reintentar.', true); }
-  finally { saving = false; submit.disabled = false; }
+  finally { saving = false; submit.disabled = !pricingReady; }
 });
 Hub.listen('auth', ({payload}) => { if (['signedIn','signedOut'].includes(payload.event)) void connectAccount(); });
 selectFormat(selectedFormat);
