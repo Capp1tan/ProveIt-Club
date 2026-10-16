@@ -9,7 +9,7 @@ const table = (key: string) => process.env[key]!;
 const read = async (key: string, id: string) => (await db.send(new GetCommand({TableName:table(key),Key:{id},ConsistentRead:true}))).Item;
 async function matching(key:string, field:string, value:string, prefix=false) {
   const items:any[]=[];let cursor;
-  do { const page=await db.send(new ScanCommand({TableName:table(key),FilterExpression:prefix?'begins_with(#field, :value)':'#field = :value',ExpressionAttributeNames:{'#field':field},ExpressionAttributeValues:{':value':value},ExclusiveStartKey:cursor}));items.push(...(page.Items || []));cursor=page.LastEvaluatedKey; } while(cursor);
+  do { const page=await db.send(new ScanCommand({TableName:table(key),ConsistentRead:true,FilterExpression:prefix?'begins_with(#field, :value)':'#field = :value',ExpressionAttributeNames:{'#field':field},ExpressionAttributeValues:{':value':value},ExclusiveStartKey:cursor}));items.push(...(page.Items || []));cursor=page.LastEvaluatedKey; } while(cursor);
   return items;
 }
 // Un tombstone impide que un webhook tardío vuelva a publicar el torneo.

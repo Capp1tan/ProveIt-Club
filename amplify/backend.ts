@@ -42,6 +42,7 @@ for (const [model, environment] of [['PrivateAccount','ACCOUNT_TABLE_NAME'], ['U
 }
 backend.auth.resources.userPool.grant(accountFunction, 'cognito-idp:AdminGetUser');
 backend.clubAccount.addEnvironment('USER_POOL_ID', backend.auth.resources.userPool.userPoolId);
+backend.data.resources.tables['UniqueClaim'].grant(accountFunction,'dynamodb:ConditionCheckItem');
 // La baja sólo acepta la identidad autenticada; el administrador del club está protegido.
 backend.auth.resources.userPool.grant(backend.maintenance.resources.lambda,'cognito-idp:AdminGetUser','cognito-idp:AdminDeleteUser');
 backend.maintenance.addEnvironment('USER_POOL_ID',backend.auth.resources.userPool.userPoolId);
@@ -75,6 +76,7 @@ for(const fn of [backend.createTournament,backend.billing]) {
 }
 backend.data.resources.tables['BillingSettings'].grant(backend.billing.resources.lambda,'dynamodb:UpdateItem');
 for(const fn of [backend.billing,backend.paymentWebhook]) {
+  backend.data.resources.tables['UniqueClaim'].grant(fn.resources.lambda,'dynamodb:ConditionCheckItem');
   for(const [model,env] of [['Tournament','TOURNAMENT_TABLE_NAME'],['TournamentInvitation','INVITATION_TABLE_NAME'],['UniqueClaim','CLAIM_TABLE_NAME'],['TournamentPayment','PAYMENT_TABLE_NAME']] as const) {
     backend.data.resources.tables[model].grant(fn.resources.lambda,'dynamodb:GetItem','dynamodb:PutItem','dynamodb:UpdateItem');
     fn.addEnvironment(env,backend.data.resources.tables[model].tableName);

@@ -1,3 +1,8 @@
+# 2.8.1 — Permisos de comprobaciones de baja
+
+- Permiso ConditionCheckItem explícito en las funciones que comprueban bajas dentro de transacciones.
+- Lecturas consistentes durante la limpieza de cuentas.
+
 # 2.8.0 — Eliminación de torneos, cuentas e historial
 
 - Organizador: retirar sus torneos y solicitudes; Creador: retirar cualquiera y limpieza general.
