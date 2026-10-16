@@ -1,3 +1,12 @@
+# 2.7.0 — Creación con pago automático (pruebas)
+
+- Solicitudes privadas con precio fijado por servidor; no envían invitaciones antes del pago.
+- Checkout Pro, QR local del enlace y consulta automática del estado.
+- Webhook firmado y consulta a la API antes de habilitar torneo e invitaciones en una transacción.
+- Tarifa administrable sólo por el Creador; precio inicial 100 centavos ARS.
+- Modo TEST limitado al Creador; no habilita cobros reales.
+- No procesa apuestas, premios, transferencias ni reembolsos.
+
 # 2.6.1 — Carga inicial discreta
 
 - Pantalla oscura con marca, animación suave y salida al completar sesión y contenido.
