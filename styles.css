@@ -14,3 +14,9 @@
 
 /* Insignias concedidas por el servidor; nunca contienen el teléfono. */
 .club-badges{display:inline-flex;gap:6px;flex-wrap:wrap;align-items:center}.club-badge{font-size:10px;line-height:1.5;font-weight:700;letter-spacing:.06em;border:1px solid;padding:3px 8px;border-radius:20px;white-space:nowrap}.club-badge[data-code="CREATOR"]{color:#ffdd85;background:#49350e;border-color:#b98b30;box-shadow:0 0 16px #e9b94733}.club-badge[data-code="BETA_TESTER"]{color:#8af7e4;background:#123b35;border-color:#278b79;box-shadow:0 0 12px #42d9b921}#profileBadges{margin-bottom:18px}#badgeAdmin{margin-top:24px}#badgePeople{display:grid;gap:10px}.badge-admin-person{display:flex;gap:12px;align-items:center;padding:12px;border:1px solid #343b36;border-radius:10px}.badge-admin-person strong{flex:1}.badge-admin-person button{padding:9px;border:1px solid #526253;border-radius:8px;color:#d9f1df;background:#202b23;cursor:pointer}.badge-admin-person button:disabled{opacity:.5}#badgeNotice{color:#b4c5b7}
+
+/* Mila Express: tarjeta adaptable. El encuadre conserva nombre y comida sin
+   modificar la imagen original; ajustar width para cambiar su tamaño. */
+.sponsor-mila{flex:0 0 auto;width:204px;aspect-ratio:3/2;margin:0;overflow:hidden;border:1px solid #39443b;border-radius:10px;background:#17202a;box-shadow:0 5px 18px #0003}
+.sponsor-mila img{display:block;width:100%;height:100%;object-fit:cover;object-position:center bottom}
+@media(max-width:640px){.sponsor-mila{width:174px}}

@@ -1,3 +1,8 @@
+# 2.9.1 — Mila Express en patrocinadores
+
+- Integra la imagen original en una tarjeta adaptable al sitio oscuro.
+- Carga diferida y encuadre mediante CSS, sin modificar el original.
+
 # 2.9.0 — Checkout Pro en producción
 
 - Credenciales de producción separadas en secretos de Amplify; modo LIVE en las tres funciones.
