@@ -24,7 +24,7 @@ export async function registeredProfiles({ includeBio = false } = {}) {
 export async function createClubTournament(values) {
   const client = await tournamentClient();
   const result = resultData(await client.mutations.createClubTournament(values));
-  if (!result?.id) throw new Error('AWS no confirmó el guardado. Podés reintentar sin crear un duplicado.');
+  if (!result?.id) throw new Error('AWS no confirmó la solicitud de pago. Podés reintentar sin crear un duplicado.');
   return result;
 }
 export async function listClubTournaments() {
