@@ -46,6 +46,17 @@ const schema = a.schema({
     treasurerName: a.string(),
     createdBySub: a.string().required(),
     status: a.string().required(),
+    // Opcionales para conservar los torneos anteriores; obligatorios al crear nuevos.
+    arbitrationMode: a.string(),
+    consentVersion: a.string(),
+    organizerConsentAt: a.datetime(),
+    startsAt: a.datetime(),
+    timeZone: a.string(),
+    winnerProfileId: a.id(),
+    winnerName: a.string(),
+    decidedBySub: a.string(),
+    decidedByLabel: a.string(),
+    decidedAt: a.datetime(),
     // Estados alineados con participantes, jueces y tesorero. Ausente en torneos anteriores.
     rosterStatuses: a.string().required().array(),
     membershipRevision: a.integer(),
@@ -60,18 +71,31 @@ const schema = a.schema({
     rosterIndex: a.integer().required(),
     status: a.string().required(),
     invitedBySub: a.string().required(),
+    arbitrationMode: a.string(),
+    consentVersion: a.string(),
+    consentAcceptedAt: a.datetime(),
+    startsAt: a.datetime(),
+    timeZone: a.string(),
+    rulesSnapshot: a.string(),
   }).authorization(allow => [allow.ownerDefinedIn('recipientSub').identityClaim('sub').to(['read'])]),
+  recordClubDuelResult: a.mutation().arguments({ tournamentId: a.id().required(), winnerProfileId: a.id().required() })
+    .returns(a.ref('Tournament')).authorization(allow => [allow.authenticated()]).handler(a.handler.function(respondInvitation)),
   prepareTournamentDraw: a.mutation().arguments({ tournamentId: a.id().required() })
     .returns(a.ref('Tournament')).authorization(allow => [allow.authenticated()])
     .handler(a.handler.function(respondInvitation)),
   respondToTournamentInvitation: a.mutation().arguments({
     invitationId: a.id().required(),
     accept: a.boolean().required(),
+    acceptOrganizerDecision: a.boolean(),
   }).returns(a.ref('TournamentInvitation'))
     .authorization(allow => [allow.authenticated()])
     .handler(a.handler.function(respondInvitation)),
   createClubTournament: a.mutation().arguments({
     tournamentId: a.id().required(),
+    arbitrationMode: a.string().required(),
+    startsAt: a.datetime().required(),
+    timeZone: a.string().required(),
+    acceptOrganizerDecision: a.boolean(),
     name: a.string().required(),
     activity: a.string().required(),
     format: a.string().required(),
