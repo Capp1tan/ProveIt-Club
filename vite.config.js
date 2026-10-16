@@ -4,9 +4,7 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   build: {
     rollupOptions: {
-      input: ['index.html', 'crear-torneo.html', 'perfil.html', 'torneo.html', 'torneos.html'],
+      input: ['index.html', 'crear-torneo.html', 'perfil.html', 'torneo.html', 'torneos.html', 'pago.html'],
     },
   },
 });
-
-
