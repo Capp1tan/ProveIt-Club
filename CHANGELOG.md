@@ -1,3 +1,11 @@
+# 2.6.0 — Llaves interactivas y vista previa de perfiles
+
+- Nombres interactivos con foto, nick, biografía e insignias públicas.
+- Vista previa tras 500 ms de permanencia; apertura por teclado, clic y toque.
+- Tarjeta fuera del área recortada de la llave, con cierre por Escape y al desplazar.
+- Conexiones SVG según los cruces guardados; se resaltan los encuentros relacionados.
+- No se consultan teléfonos ni correos. No cambia el sorteo ni se agregan resultados.
+
 # 2.5.0 — Duelo sin juez y torneos programados
 
 - Modos con juez o sin juez; en este último decide el organizador, incluso si juega.
