@@ -1,10 +1,15 @@
 // Respuesta y sorteo atómicos, con control de revisión para confirmaciones simultáneas.
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand, TransactWriteCommand } from '@aws-sdk/lib-dynamodb';
+import { recordDuelResult } from './result';
 import { createDraw } from './draw';
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
-export const handler = async (event: { identity?: { sub?: string }; arguments: { invitationId?: string; accept?: boolean; tournamentId?: string } }) => {
+export const handler = async (event: { identity?: { sub?: string }; arguments: { invitationId?: string; accept?: boolean; tournamentId?: string; winnerProfileId?: string; acceptOrganizerDecision?: boolean } }) => {
   const sub=event.identity?.sub;
+  if (event.arguments.winnerProfileId) {
+    if (!sub || !event.arguments.tournamentId || typeof event.arguments.winnerProfileId !== 'string' || event.arguments.winnerProfileId.length>128) throw new Error('Resultado inválido.');
+    return recordDuelResult(db, sub, event.arguments.tournamentId, event.arguments.winnerProfileId);
+  }
   // Recupera también un torneo de 2.2.0 que ya tenía todas sus invitaciones aceptadas.
   if (event.arguments.tournamentId) {
     if (!sub) throw new Error('Iniciá sesión.');
@@ -49,6 +54,8 @@ export const handler = async (event: { identity?: { sub?: string }; arguments: {
     if(!Number.isInteger(index) || index<0 || index>80) throw new Error('Invitación inválida.');
     const tournament=(await db.send(new GetCommand({TableName:tournamentTable,Key:{id:invitation.tournamentId},ConsistentRead:true}))).Item;
     if(!tournament || !Array.isArray(tournament.rosterStatuses) || tournament.rosterStatuses[index]!=='PENDING') throw new Error('El torneo ya no espera esta respuesta.');
+    const noJudge = tournament.arbitrationMode === 'ORGANIZER';
+    if (accept && noJudge && (event.arguments.acceptOrganizerDecision !== true || invitation.consentVersion !== 'NO_JUDGE_V1' || tournament.consentVersion !== 'NO_JUDGE_V1')) throw new Error('Para unirte, aceptá que este torneo no tiene juez y el organizador decide el resultado.');
     const statuses=[...tournament.rosterStatuses]; statuses[index]=status;
     const allAccepted=statuses.every(value=>value==='ACCEPTED');
     const draw=tournament.draw || (allAccepted?createDraw(tournament):null);
@@ -59,7 +66,7 @@ export const handler = async (event: { identity?: { sub?: string }; arguments: {
     if(draw) { update+=', #draw = :draw'; names['#draw']='draw'; values[':draw']=draw; }
     try {
       await db.send(new TransactWriteCommand({TransactItems:[
-        {Update:{TableName,Key:{id:invitationId},UpdateExpression:'SET #status = :status, updatedAt = :now',
+        {Update:{TableName,Key:{id:invitationId},UpdateExpression:accept && noJudge ? 'SET #status = :status, updatedAt = :now, consentAcceptedAt = :now' : 'SET #status = :status, updatedAt = :now',
           ConditionExpression:'recipientSub = :sub AND #status = :pending',ExpressionAttributeNames:{'#status':'status'},
           ExpressionAttributeValues:{':status':status,':now':now,':sub':sub,':pending':'PENDING'}}},
         {Update:{TableName:tournamentTable,Key:{id:invitation.tournamentId},UpdateExpression:update,
