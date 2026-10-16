@@ -1,3 +1,4 @@
+import { noJudgeConsent, timeZones, zoneLabel, localToUtc, scheduleLabel } from './tournament-schedule.js';
 import { loadBadges, badgeElements } from './badges.js';
 import { Hub } from 'aws-amplify/utils';
 import { avatarUrl, configureAmplify, getCurrentUser } from './auth-client.js';
@@ -16,6 +17,28 @@ const participants = new Set();
 const judges = new Set();
 let profiles = [];
 let selectedFormat = formats[0].id;
+const mode = document.getElementById('arbitrationMode');
+const startsLocal = document.getElementById('startsLocal');
+const zone = document.getElementById('timeZone');
+const consent = document.getElementById('organizerConsent');
+for (const value of timeZones) { const option=document.createElement('option'); option.value=value; option.textContent=zoneLabel(value); zone.append(option); }
+zone.value='America/Argentina/Buenos_Aires';
+const noJudge = () => mode.value === 'ORGANIZER';
+function updateSchedule() {
+  try { const utc=localToUtc(startsLocal.value,zone.value); const label=scheduleLabel(utc,zone.value); document.getElementById('schedulePreview').textContent=label; document.getElementById('scheduleSummary').textContent=label; }
+  catch(error) { document.getElementById('schedulePreview').textContent=error.message; document.getElementById('scheduleSummary').textContent='Fecha pendiente'; }
+}
+function updateArbitration() {
+  if(noJudge()) judges.clear();
+  document.getElementById('judgesSection').hidden=noJudge();
+  document.getElementById('arbitrationWarning').hidden=!noJudge();
+  document.getElementById('organizerConsentLabel').hidden=!noJudge();
+  consent.required=noJudge(); consent.checked=false;
+  form.elements.description.required=noJudge(); form.elements.description.minLength=noJudge()?10:0;
+  renderPeople();
+}
+mode.addEventListener('change',()=>{updateArbitration();saveDraft();});
+startsLocal.addEventListener('input',updateSchedule); zone.addEventListener('change',updateSchedule);
 let loading = false;
 let saving = false;
 let tournamentId = crypto.randomUUID();
@@ -23,20 +46,23 @@ const draftKey = 'proveit:tournament-draft';
 const resumeKey = 'proveit:tournament-resume';
 const show = (text, error = false) => { notice.textContent = text; notice.dataset.error = String(error); };
 function saveDraft() {
-  try { sessionStorage.setItem(draftKey, JSON.stringify({ format: selectedFormat, name: form.elements.name.value, activity: form.elements.activity.value, description: form.elements.description.value })); } catch { /* El formulario funciona sin almacenamiento local. */ }
+  try { sessionStorage.setItem(draftKey, JSON.stringify({ format: selectedFormat, name: form.elements.name.value, activity: form.elements.activity.value, description: form.elements.description.value, arbitrationMode: mode.value, startsLocal: startsLocal.value, timeZone: zone.value })); } catch { /* El formulario funciona sin almacenamiento local. */ }
 }
 try {
   const draft = JSON.parse(sessionStorage.getItem(draftKey) || 'null');
   if (draft) {
     if (formats.some(format => format.id === draft.format)) selectedFormat = draft.format;
+    if (['JUDGES','ORGANIZER'].includes(draft.arbitrationMode)) mode.value=draft.arbitrationMode;
+    if (timeZones.includes(draft.timeZone)) zone.value=draft.timeZone;
+    if (typeof draft.startsLocal==='string') startsLocal.value=draft.startsLocal;
     for (const key of ['name','activity','description']) if (typeof draft[key] === 'string') form.elements[key].value = draft[key];
   }
 } catch { /* Un borrador inválido no impide crear. */ }
 function updateSummary() {
   document.getElementById('participantCount').textContent = `${participants.size} / ${selectedFormat === 'DUEL' ? 'exactamente 2' : 'mínimo 2'}`;
-  document.getElementById('judgeCount').textContent = `${judges.size} / mínimo 1`;
+  document.getElementById('judgeCount').textContent = `${judges.size} / ${noJudge() ? 'sin juez' : 'mínimo 1'}`;
   const format = formats.find(item => item.id === selectedFormat);
-  document.getElementById('tournamentSummary').textContent = `${format.name} · ${participants.size} participantes · ${judges.size} jueces · ${treasurer.value ? 'con tesorero' : 'sin tesorero'}`;
+  document.getElementById('tournamentSummary').textContent = `${format.name} · ${participants.size} participantes · ${noJudge() ? 'sin juez · decide el organizador' : judges.size+' jueces'} · ${treasurer.value ? 'con tesorero' : 'sin tesorero'}`;
 }
 function selectFormat(id) {
   selectedFormat = id;
@@ -155,10 +181,14 @@ form.addEventListener('submit', async event => {
   event.preventDefault(); if (saving || loading) return;
   if (participants.size < 2) return show('Seleccioná al menos dos participantes con cuenta en ProveIt.', true);
   if (selectedFormat === 'DUEL' && participants.size !== 2) return show('El Duelo 1v1 requiere exactamente dos participantes. Quitá las personas sobrantes.', true);
-  if (!judges.size) return show('Seleccioná al menos un juez.', true);
+  if (!noJudge() && !judges.size) return show('Seleccioná al menos un juez o elegí el modo sin juez.', true);
+  if (noJudge() && !consent.checked) return show(noJudgeConsent, true);
+  let startsAt;
+  try { startsAt=localToUtc(startsLocal.value,zone.value); if(Date.parse(startsAt)<=Date.now()) throw new Error('Elegí una fecha y hora futuras.'); }
+  catch(error) { return show(error.message,true); }
   saving = true; submit.disabled = true; show('Guardando tu torneo…');
   try {
-    const result = await createClubTournament({ tournamentId, name: form.elements.name.value.trim(), activity: form.elements.activity.value.trim(), description: form.elements.description.value.trim(), format: selectedFormat, participantIds: [...participants], judgeIds: [...judges], treasurerId: treasurer.value || null });
+    const result = await createClubTournament({ tournamentId, arbitrationMode: mode.value, startsAt, timeZone: zone.value, acceptOrganizerDecision: noJudge() && consent.checked, name: form.elements.name.value.trim(), activity: form.elements.activity.value.trim(), description: form.elements.description.value.trim(), format: selectedFormat, participantIds: [...participants], judgeIds: [...judges], treasurerId: treasurer.value || null });
     try { sessionStorage.removeItem(draftKey); } catch {}
     location.href = `/torneo.html?id=${encodeURIComponent(result.id)}`;
   } catch (error) { show(error.message || 'No se pudo guardar. Podés reintentar.', true); }
@@ -166,5 +196,6 @@ form.addEventListener('submit', async event => {
 });
 Hub.listen('auth', ({payload}) => { if (['signedIn','signedOut'].includes(payload.event)) void connectAccount(); });
 selectFormat(selectedFormat);
+updateArbitration(); updateSchedule();
 void connectAccount();
 
