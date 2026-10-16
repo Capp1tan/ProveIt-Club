@@ -128,6 +128,7 @@ if (nav) {
   function close() { panel.hidden = true; bell.setAttribute('aria-expanded','false'); }
   bell.addEventListener('click',() => { panel.hidden = !panel.hidden; bell.setAttribute('aria-expanded',String(!panel.hidden)); if (!panel.hidden) void refreshInvitations(); });
   refresh.addEventListener('click',refreshInvitations);
+  window.addEventListener('proveit:tournament-deleted',()=>void refreshInvitations());
   document.addEventListener('click',event => { if (!root.contains(event.target)) close(); });
   root.addEventListener('keydown',event => { if (event.key === 'Escape') { close(); bell.focus(); } });
   async function connect() {

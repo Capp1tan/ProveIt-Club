@@ -1,9 +1,10 @@
 // Esta función es la puerta de escritura. Las reglas se comprueban en AWS,
 // aunque alguien intente saltarse el formulario del navegador.
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, GetCommand, TransactWriteCommand } from '@aws-sdk/lib-dynamodb';
 
 import { read,fee,assertBillingAccess,ensureCheckout } from '../billing/common';
+import { assertActiveAccount } from '../lifecycle';
 
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const formats = new Set(['DUEL', 'ROUND_ROBIN', 'SINGLE_ELIMINATION', 'DOUBLE_ELIMINATION', 'SWISS', 'FREE_FOR_ALL']);
@@ -16,11 +17,13 @@ type Arguments = {
 export const handler = async (event: { arguments: Arguments; identity?: { sub?: string } }) => {
   const sub = event.identity?.sub;
   if (!sub) throw new Error('Iniciá sesión para crear un torneo.');
+  await assertActiveAccount(sub);
   const args = event.arguments;
   await assertBillingAccess(sub);
   if (/^[0-9a-f-]{36}$/i.test(args.tournamentId || '')) {
     const previous=await read('PAYMENT_TABLE_NAME',args.tournamentId);
     if(previous)return ensureCheckout(previous,sub);
+    if(await read('TOURNAMENT_TABLE_NAME',args.tournamentId))throw new Error('Ese identificador ya corresponde a un torneo. Abrí un nuevo formulario.');
   }
   const pricing=await fee();
   if(!pricing.enabled)throw new Error('La creación de torneos está pausada temporalmente.');
@@ -100,7 +103,16 @@ export const handler = async (event: { arguments: Arguments; identity?: { sub?: 
   // El borrador es privado. No existen torneo ni invitaciones antes del pago.
   const request={id:args.tournamentId,createdBySub:sub,tournamentName:name,status:'PENDING',amountCents:pricing.amountCents,currency:'ARS',paymentMode:pricing.mode,
     payload:JSON.stringify({tournament:item,invites}),expiresAt:new Date(Math.min(Date.now()+30*60*1000,timestamp)).toISOString(),createdAt:now,updatedAt:now,__typename:'TournamentPayment'};
-  try {await db.send(new PutCommand({TableName:process.env.PAYMENT_TABLE_NAME!,Item:request,ConditionExpression:'attribute_not_exists(id)'}));}
-  catch(error){if((error as Error).name!=='ConditionalCheckFailedException')throw error;return ensureCheckout(await read('PAYMENT_TABLE_NAME',args.tournamentId),sub);}
+  try {await db.send(new TransactWriteCommand({TransactItems:[
+    {ConditionCheck:{TableName:process.env.CLAIM_TABLE_NAME!,Key:{id:'deleted-account:'+sub},ConditionExpression:'attribute_not_exists(id)'}},
+    {Put:{TableName:process.env.PAYMENT_TABLE_NAME!,Item:request,ConditionExpression:'attribute_not_exists(id)'}},
+  ]}));}
+  catch(error){
+    if((error as Error).name!=='TransactionCanceledException')throw error;
+    await assertActiveAccount(sub);
+    const previous=await read('PAYMENT_TABLE_NAME',args.tournamentId);
+    if(!previous)throw new Error('No pudimos preparar la solicitud. Reintentá.');
+    return ensureCheckout(previous,sub);
+  }
   return ensureCheckout(request,sub);
 };

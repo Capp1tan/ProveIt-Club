@@ -1,12 +1,14 @@
 import QRCode from 'qrcode';
 import { checkPayment,savedPayment,money } from './billing-api.js';
 import { Hub } from 'aws-amplify/utils';
+import { deleteTournament } from './maintenance-api.js';
 const panel=document.getElementById('paymentPanel'),notice=document.getElementById('paymentNotice'),refresh=document.getElementById('refreshPayment');
 const id=new URLSearchParams(location.search).get('id');let busy=false,stopped=false,qrUrl='';
 const node=(tag,text,cls)=>{const n=document.createElement(tag);n.textContent=text;if(cls)n.className=cls;return n;};
 function render(row){
   if(!row)throw new Error('No encontramos esta solicitud en tu cuenta. Ingresá con la cuenta que inició el torneo.');
   panel.replaceChildren();panel.append(node('p',row.paymentMode==='TEST'?'MODO DE PRUEBA · SIN COBRO REAL':'CREACIÓN DE TORNEO','eyebrow'),node('h1',row.tournamentName),node('p',money(row.amountCents),'payment-amount'));
+  if(row.deletedAt){stopped=true;refresh.hidden=true;panel.append(node('h2','Torneo o solicitud eliminados'),node('p','No vuelvas a pagar este enlace. La eliminación no realiza reembolsos. Si ya pagaste, contactá al administrador.'));return;}
   if(row.status==='APPROVED'){
     stopped=true;refresh.hidden=true;
     panel.append(node('h2','Pago confirmado'),node('p','Tu torneo ya está habilitado y las invitaciones fueron enviadas.'));
@@ -17,6 +19,13 @@ function render(row){
     stopped=true;panel.append(node('h2','El enlace de pago venció'),node('p','Si pagaste, usá «Consultar pago» para comprobar su acreditación antes de volver a pagar. Si no pagaste, iniciá un nuevo torneo.'));return;
   }
   panel.append(node('h2','Esperando tu pago'),node('p','El torneo se habilita cuando Mercado Pago confirme el cobro. No hace falta enviar comprobantes.'));
+  const cancel=node('button','Eliminar solicitud','danger-button');cancel.type='button';
+  cancel.addEventListener('click',async()=>{
+    if(!window.confirm('¿Eliminar esta solicitud? No vuelvas a pagar un enlace guardado. Si ya pagaste, la eliminación no devuelve el dinero.'))return;
+    cancel.disabled=true;
+    try{await deleteTournament(id);location.href='/torneos.html';}
+    catch(error){cancel.disabled=false;notice.textContent=error.message;notice.hidden=false;}
+  });panel.append(cancel);
   if(row.checkoutUrl){
     const url=new URL(row.checkoutUrl);
     if(url.protocol!=='https:' || !['www.mercadopago.com.ar','sandbox.mercadopago.com.ar'].includes(url.hostname))throw new Error('Dirección de pago inválida.');

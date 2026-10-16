@@ -1,5 +1,6 @@
 // Las reservas privadas y el perfil se modifican en una sola transacción.
 import { createHash } from 'node:crypto';
+import { assertActiveAccount } from '../lifecycle';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand, PutCommand, DeleteCommand, TransactWriteCommand } from '@aws-sdk/lib-dynamodb';
 import { CognitoIdentityProviderClient, AdminGetUserCommand } from '@aws-sdk/client-cognito-identity-provider';
@@ -19,6 +20,9 @@ export const handler = async (event: Event) => {
   // admite el formato reducido del resolver sin confiar en datos de identidad.
   const operation = event.fieldName || event.info?.fieldName ||
     ('phoneNumber' in args ? 'saveClubProfile' : 'enabled' in args ? 'manageClubBadge' : 'initializeClubAccess');
+  // Consultar el estado permite retomar una baja interrumpida desde Mi perfil.
+  if(operation==='initializeClubAccess' && await get('CLAIM_TABLE_NAME','deleted-account:'+sub))return {isCreator:false};
+  await assertActiveAccount(sub);
   const now = new Date().toISOString();
   if (operation === 'initializeClubAccess') {
     let claim = await get('CLAIM_TABLE_NAME', 'creator');
@@ -68,6 +72,7 @@ export const handler = async (event: Event) => {
   const item = { ...existing, id, nickname, bio, avatarPath, accountComplete: true, owner: existing?.owner || sub + '::' + event.identity!.username, createdAt: existing?.createdAt || now, updatedAt: now, __typename: 'Profile' };
   const newClaim = phoneKey(phone.number);
   const transactions: any[] = [
+    { ConditionCheck: { TableName: table('CLAIM_TABLE_NAME'), Key: { id: 'deleted-account:' + sub }, ConditionExpression: 'attribute_not_exists(id)' } },
     { Put: { TableName: table('CLAIM_TABLE_NAME'), Item: { id: newClaim, accountSub: sub, createdAt: now, updatedAt: now, __typename: 'UniqueClaim' }, ConditionExpression: 'attribute_not_exists(id) OR accountSub = :sub', ExpressionAttributeValues: { ':sub': sub } } },
     { Put: { TableName: table('ACCOUNT_TABLE_NAME'), Item: { id: sub, accountSub: sub, phoneNumber: phone.number, phoneVerified: false, revision: revision + 1, createdAt: account?.createdAt || now, updatedAt: now, __typename: 'PrivateAccount' }, ConditionExpression: account ? 'revision = :revision' : 'attribute_not_exists(id)', ...(account ? { ExpressionAttributeValues: { ':revision': revision } } : {}) } },
     { Put: { TableName: table('PROFILE_TABLE_NAME'), Item: item, ConditionExpression: existing ? '#owner = :owner' : 'attribute_not_exists(id)', ...(existing ? { ExpressionAttributeNames: { '#owner': 'owner' }, ExpressionAttributeValues: { ':owner': existing.owner } } : {}) } },

@@ -1,5 +1,6 @@
 import { myPendingPayments, money } from './billing-api.js';
-import { loadBadges, badgeElements } from './badges.js';
+import { loadBadges, badgeElements, initializeAccess } from './badges.js';
+import { deleteTournament } from './maintenance-api.js';
 import { ProfilePreview } from './profile-preview.js';
 import { connectBracket } from './bracket-lines.js';
 import { Hub } from 'aws-amplify/utils';
@@ -13,6 +14,7 @@ const element=(tag,text,className)=>{const node=document.createElement(tag);node
 const stateNames={PENDING:'Esperando confirmación',ACCEPTED:'Confirmado',REJECTED:'Invitación rechazada'};
 let profiles=new Map(),lastVersion='',refreshing=false,currentUser=null,currentTournament=null;
 let drawCleanup;
+let isClubAdmin=false;
 const photoRequests=new Map();
 const profilePreview=detail ? new ProfilePreview({avatar,badges:badgeElements}) : null;
 Hub.listen('auth',({payload})=>{if(payload.event==='signedOut')profilePreview?.lock();});
@@ -153,13 +155,22 @@ function renderTournament(t) {
   const copy=element('button','Copiar enlace','primary-button');copy.type='button';copy.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(location.href);copy.textContent='Enlace copiado';}catch{notice.textContent='Copiá la dirección desde la barra del navegador.';notice.hidden=false;}});
   if(t.format==='DUEL')detail.append(resultPanel(t));
   detail.append(refresh,copy,element('p','El registro de ganador está disponible en Duelo 1v1. La gestión del dinero y los resultados de otros formatos siguen pendientes.','field-help'));
+  if(isClubAdmin || currentUser?.userId===t.createdBySub) {
+    const remove=element('button','Eliminar torneo','danger-button');remove.type='button';
+    remove.addEventListener('click',async()=>{
+      if(!window.confirm('¿Eliminar «'+t.name+'»? Se ocultará y quedará bloqueado para todos. No se devuelve el pago de creación.'))return;
+      remove.disabled=true;
+      try{await deleteTournament(t.id);location.href='/torneos.html';}
+      catch(error){remove.disabled=false;notice.hidden=false;notice.textContent=error.message;}
+    });detail.append(remove);
+  }
   updateClock();
 }
 async function refreshTournament(force=false) {
   if(refreshing || document.hidden)return;refreshing=true;
   try {
     const id=new URLSearchParams(location.search).get('id');if(!id)throw new Error('El enlace no incluye un torneo.');
-    let t=await getClubTournament(id);if(!t)throw new Error('No encontramos ese torneo.');
+    let t=await getClubTournament(id);if(!t){profilePreview?.lock();drawCleanup?.();detail.replaceChildren();currentTournament=null;throw new Error('Este torneo fue eliminado o ya no está disponible.');}
     if (!t.draw && t.rosterStatuses?.length && t.rosterStatuses.every(state=>state==='ACCEPTED') && (await getCurrentUser()).userId===t.createdBySub) t=await ensureClubTournamentDraw(id) || t;
     const version=t.updatedAt+String(t.draw);
     if(force || version!==lastVersion){renderTournament(t);lastVersion=version;}
@@ -171,6 +182,7 @@ try {
   if(detail) {
     if(!await configureAmplify())throw new Error('No pudimos conectar con AWS. Recargá para intentar de nuevo.');
     currentUser=await getCurrentUser();
+    isClubAdmin=Boolean((await initializeAccess()).isCreator);
     // Las dos lecturas son independientes: se preparan en paralelo.
     await Promise.all([loadBadges().catch(()=>{}),registeredProfiles({includeBio:true}).then(items=>{profiles=new Map(items.map(profile=>[profile.id,profile]));}).catch(()=>{})]);
     profilePreview.setProfiles(profiles);

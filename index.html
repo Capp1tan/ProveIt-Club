@@ -73,7 +73,9 @@
   <!-- Buscador desplegable. La demo filtra torneos de ejemplo definidos en app.js. -->
   <section class="search-panel" id="searchPanel" hidden>
     <label for="tournamentSearch">BUSCAR TORNEOS</label>
-    <div class="search-input-wrap"><span aria-hidden="true">⌕</span><input id="tournamentSearch" type="search" placeholder="Probá con LoL, fútbol, trivia…"><button id="closeSearch" aria-label="Cerrar búsqueda">×</button></div>
+    <div class="search-input-wrap"><span aria-hidden="true">⌕</span><input id="tournamentSearch" type="search" autocomplete="off" placeholder="Probá con LoL, fútbol, trivia…"><button id="closeSearch" aria-label="Cerrar búsqueda">×</button></div>
+    <div class="search-history-actions"><button type="button" id="clearRecentSearches">Borrar búsquedas recientes</button><button type="button" id="resetSearchSuggestions">Restablecer sugerencias ocultas</button></div>
+    <div id="recentSearches" class="search-recent"></div>
     <div id="searchResults" class="search-results"><p class="muted">Escribí para explorar los torneos.</p></div>
   </section>
 
@@ -159,3 +161,5 @@
   <script type="module" src="/src/auth-ui.js"></script>
 </body>
 </html>
+
+

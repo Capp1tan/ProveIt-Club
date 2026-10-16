@@ -26,10 +26,11 @@ export async function assertBillingAccess(sub:string) {
 }
 export function publicCheckout(row:any) {
   // Las mutaciones no necesitan enviar el borrador ni el identificador del pagador.
-  return {id:row.id,tournamentName:row.tournamentName,createdBySub:row.createdBySub,status:row.status,amountCents:row.amountCents,currency:row.currency,paymentMode:row.paymentMode,checkoutUrl:row.checkoutUrl,expiresAt:row.expiresAt,createdAt:row.createdAt,updatedAt:row.updatedAt};
+  return {id:row.id,tournamentName:row.tournamentName,createdBySub:row.createdBySub,status:row.status,amountCents:row.amountCents,currency:row.currency,paymentMode:row.paymentMode,checkoutUrl:row.deletedAt?null:row.checkoutUrl,expiresAt:row.expiresAt,createdAt:row.createdAt,updatedAt:row.updatedAt,deletedAt:row.deletedAt};
 }
 export async function ensureCheckout(row:any,sub:string) {
   if(row.createdBySub!==sub)throw new Error('Esta solicitud no te pertenece.');
+  if(row.deletedAt)throw new Error('La solicitud o el torneo fueron eliminados. No vuelvas a pagar este enlace.');
   if(row.status==='APPROVED' || row.checkoutUrl || row.status==='REVERSED')return publicCheckout(row);
   if(Date.parse(row.expiresAt)<=Date.now())throw new Error('La solicitud venció. Creá un nuevo borrador.');
   if(row.paymentMode!==mode())throw new Error('Esta solicitud pertenece a otro entorno de pagos. Creá un nuevo borrador.');
@@ -82,6 +83,7 @@ export async function reconcilePayment(paymentId:string) {
   if(payment.status!=='approved' || Number(payment.transaction_amount_refunded || 0)>0 || row.status==='REVERSED')return;
   const expire=()=>mp('/checkout/preferences/'+encodeURIComponent(row.preferenceId),{expires:true,expiration_date_to:now},'PUT').catch(()=>{console.warn('preference_expiration_pending');});
   if(row.status==='APPROVED'){if(row.paymentId===String(payment.id))await expire();return;}
+  if(row.deletedAt || await read('CLAIM_TABLE_NAME','deleted-account:'+row.createdBySub)) {await expire();return;}
   const payload=JSON.parse(row.payload);
   // Una única transacción publica torneo, invitaciones y recibo interno.
   const tournament={...payload.tournament,creationPaymentStatus:'APPROVED',paymentMode:row.paymentMode,updatedAt:now};
@@ -89,7 +91,8 @@ export async function reconcilePayment(paymentId:string) {
     {Put:{TableName:table('CLAIM_TABLE_NAME'),Item:{id:'payment:'+String(payment.id),accountSub:row.createdBySub,createdAt:now,updatedAt:now,__typename:'UniqueClaim'},ConditionExpression:'attribute_not_exists(id)'}},
     {Put:{TableName:table('TOURNAMENT_TABLE_NAME'),Item:tournament,ConditionExpression:'attribute_not_exists(id)'}},
     ...payload.invites.map((invite:any)=>({Put:{TableName:table('INVITATION_TABLE_NAME'),Item:{...invite,createdAt:now,updatedAt:now},ConditionExpression:'attribute_not_exists(id)'}})),
-    {Update:{TableName:table('PAYMENT_TABLE_NAME'),Key:{id:row.id},UpdateExpression:'SET #s=:approved, paymentId=:pid, updatedAt=:now',ConditionExpression:'#s=:pending',ExpressionAttributeNames:{'#s':'status'},ExpressionAttributeValues:{':approved':'APPROVED',':pending':'PENDING',':pid':String(payment.id),':now':now}}},
+    {Update:{TableName:table('PAYMENT_TABLE_NAME'),Key:{id:row.id},UpdateExpression:'SET #s=:approved, paymentId=:pid, updatedAt=:now',ConditionExpression:'#s=:pending AND attribute_not_exists(deletedAt)',ExpressionAttributeNames:{'#s':'status'},ExpressionAttributeValues:{':approved':'APPROVED',':pending':'PENDING',':pid':String(payment.id),':now':now}}},
+    {ConditionCheck:{TableName:table('CLAIM_TABLE_NAME'),Key:{id:'deleted-account:'+row.createdBySub},ConditionExpression:'attribute_not_exists(id)'}},
   ]}));}
   catch(error) {if((error as Error).name!=='TransactionCanceledException' || (await read('PAYMENT_TABLE_NAME',row.id))?.status!=='APPROVED')throw error;}
   // Reduce la posibilidad de volver a pagar usando un enlace guardado.

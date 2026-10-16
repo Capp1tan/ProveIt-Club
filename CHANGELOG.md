@@ -1,3 +1,12 @@
+# 2.8.0 — Eliminación de torneos, cuentas e historial
+
+- Organizador: retirar sus torneos y solicitudes; Creador: retirar cualquiera y limpieza general.
+- Baja lógica recuperable de torneos; se bloquean resultados, respuestas y republicación por Webhook.
+- Baja definitiva de la cuenta propia en Cognito, perfil, teléfono e insignias; fotos limpiadas por SDK antes de confirmar. Creador protegido en servidor.
+- Historial competitivo y recibos retenidos; eliminar no reembolsa pagos.
+- Búsquedas recientes con eliminación individual y general; sugerencias descartables por navegador.
+- Compilación de frontend y comprobación TypeScript; no se eliminan cuentas reales para probar.
+
 # 2.7.1 — Espera limitada y mensajes de pago
 
 - Las consultas de cuenta, tarifa y perfiles tienen límite de espera y permiten reintentar.

@@ -8,6 +8,7 @@ import { createTournament } from '../functions/create-tournament/resource';
  * Cada usuario puede modificar su propio perfil; el correo no se almacena aquí.
  */
 import { billing } from '../functions/billing/resource';
+import { maintenance } from '../functions/maintenance/resource';
 
 const schema = a.schema({
   Profile: a
@@ -29,6 +30,8 @@ const schema = a.schema({
   ClubBadge: a.model({ accountSub: a.string().required(), accountUsername: a.string(), code: a.string().required() })
     .authorization(allow => [allow.authenticated().to(['read'])]),
   ClubAccess: a.customType({ isCreator: a.boolean().required() }),
+  deleteClubTournament: a.mutation().arguments({ tournamentId: a.id().required() }).returns(a.boolean()).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(maintenance)),
+  deleteMyClubAccount: a.mutation().arguments({ confirmation: a.string().required() }).returns(a.boolean()).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(maintenance)),
   initializeClubAccess: a.mutation().returns(a.ref('ClubAccess')).authorization(allow => [allow.authenticated()]).handler(a.handler.function(clubAccount)),
   manageClubBadge: a.mutation().arguments({ profileId: a.id().required(), code: a.string().required(), enabled: a.boolean().required() })
     .returns(a.ref('ClubAccess')).authorization(allow => [allow.authenticated()]).handler(a.handler.function(clubAccount)),
@@ -39,7 +42,7 @@ const schema = a.schema({
     createdBySub:a.string().required(),tournamentName:a.string().required(),status:a.string().required(),
     amountCents:a.integer().required(),currency:a.string().required(),paymentMode:a.string().required(),
     payload:a.string(),checkoutUrl:a.string(),preferenceId:a.string(),collectorId:a.string(),paymentId:a.string(),
-    expiresAt:a.datetime().required(),leaseUntil:a.float(),lastCheckedAt:a.float(),
+    expiresAt:a.datetime().required(),leaseUntil:a.float(),lastCheckedAt:a.float(),deletedAt:a.datetime(),
   }).authorization(allow=>[allow.ownerDefinedIn('createdBySub').identityClaim('sub').to(['read'])]),
   BillingSettings: a.model({amountCents:a.integer().required(),enabled:a.boolean().required()})
     .authorization(allow=>[allow.authenticated().to(['read'])]),
@@ -61,6 +64,8 @@ const schema = a.schema({
     treasurerName: a.string(),
     createdBySub: a.string().required(),
     status: a.string().required(),
+    deletedAt: a.datetime(),
+    deletedBySub: a.string(),
     // Opcionales para conservar los torneos anteriores; obligatorios al crear nuevos.
     arbitrationMode: a.string(),
     consentVersion: a.string(),
@@ -128,3 +133,6 @@ const schema = a.schema({
 export type Schema = ClientSchema<typeof schema>;
 
 export const data = defineData({ schema });
+
+
+

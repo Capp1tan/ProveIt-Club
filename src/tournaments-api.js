@@ -36,11 +36,12 @@ export async function listClubTournaments() {
     tournaments.push(...(resultData(result) || []));
     nextToken = result.nextToken;
   } while (nextToken);
-  return tournaments.sort((a,b) => b.createdAt.localeCompare(a.createdAt));
+  return tournaments.filter(t=>!t.deletedAt && t.status!=='DELETED').sort((a,b) => b.createdAt.localeCompare(a.createdAt));
 }
 export async function getClubTournament(id) {
   const client = await tournamentClient();
-  return resultData(await client.models.Tournament.get({ id }));
+  const row=resultData(await client.models.Tournament.get({ id }));
+  return row && !row.deletedAt && row.status!=='DELETED' ? row : null;
 }
 
 
@@ -56,7 +57,9 @@ export async function pendingInvitations() {
     });
     invitations.push(...(resultData(result) || [])); nextToken = result.nextToken;
   } while (nextToken);
-  return invitations.sort((a,b) => b.createdAt.localeCompare(a.createdAt));
+  // No mostrar invitaciones de torneos retirados aunque la campana estuviera abierta.
+  const live=new Map(await Promise.all([...new Set(invitations.map(i=>i.tournamentId))].map(async id=>[id,Boolean(await getClubTournament(id))])));
+  return invitations.filter(i=>live.get(i.tournamentId)).sort((a,b) => b.createdAt.localeCompare(a.createdAt));
 }
 export async function respondInvitation(invitationId, accept, acceptOrganizerDecision = false) {
   const client = await tournamentClient();

@@ -1,4 +1,5 @@
 import { mountBillingAdmin } from './billing-admin.js';
+import { mountAccountActions } from './account-actions.js';
 import { loadBadges, badgeElements, initializeAccess, mountBadgeAdmin } from './badges.js';
 // Edición del perfil. El archivo no almacena imágenes ni datos en el navegador:
 // Amplify los envía a S3 y a la base de datos cuando el backend esté desplegado.
@@ -85,6 +86,7 @@ if (!ready) {
     // Las insignias se cargan aparte: un error no impide editar el perfil.
     void (async () => { try {
       const access = await initializeAccess();
+      mountAccountActions(access.isCreator);
       await loadBadges();
       document.getElementById('profileBadges').replaceChildren(badgeElements(user.userId));
       if (access.isCreator) { await mountBadgeAdmin(); await mountBillingAdmin(); }

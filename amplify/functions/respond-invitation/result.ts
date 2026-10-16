@@ -1,9 +1,11 @@
 // El resultado 1v1 es definitivo: sólo el árbitro acordado puede registrarlo.
 import { DynamoDBDocumentClient, GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
+import { assertActiveTournament } from '../lifecycle';
 export async function recordDuelResult(db: DynamoDBDocumentClient, sub: string, tournamentId: string, winnerProfileId: string) {
   const TableName=process.env.TOURNAMENT_TABLE_NAME!;
   const read=async()=> (await db.send(new GetCommand({TableName,Key:{id:tournamentId},ConsistentRead:true}))).Item;
   const t=await read();
+  assertActiveTournament(t);
   if(t?.creationPaymentStatus==='REVERSED')throw new Error('El pago de creación fue revertido. Contactá al administrador.');
   if(!t || t.format!=='DUEL' || t.participantIds.length!==2) throw new Error('El registro de ganador está disponible para Duelo 1v1.');
   if(!t.startsAt || !Number.isFinite(Date.parse(t.startsAt)) || Date.now()<Date.parse(t.startsAt)) throw new Error('Todavía no llegó el horario de inicio.');
@@ -27,7 +29,7 @@ export async function recordDuelResult(db: DynamoDBDocumentClient, sub: string, 
   try {
     const result=await db.send(new UpdateCommand({TableName,Key:{id:tournamentId},
       UpdateExpression:'SET winnerProfileId = :winner, winnerName = :name, decidedBySub = :sub, decidedByLabel = :label, decidedAt = :now, updatedAt = :now, #status = :completed',
-      ConditionExpression:'attribute_not_exists(winnerProfileId) AND #status = :ready AND membershipRevision = :revision',
+      ConditionExpression:'attribute_not_exists(deletedAt) AND attribute_not_exists(winnerProfileId) AND #status = :ready AND membershipRevision = :revision',
       ExpressionAttributeNames:{'#status':'status'},
       ExpressionAttributeValues:{':winner':winnerProfileId,':name':winnerName,':sub':sub,':label':decidedByLabel,':now':now,':completed':'COMPLETED',':ready':'READY',':revision':t.membershipRevision || 0},ReturnValues:'ALL_NEW'}));
     return result.Attributes;

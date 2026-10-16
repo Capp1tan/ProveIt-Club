@@ -1,4 +1,5 @@
 import { billing } from './functions/billing/resource';
+import { maintenance } from './functions/maintenance/resource';
 import { paymentWebhook } from './functions/payment-webhook/resource';
 import { FunctionUrlAuthType } from 'aws-cdk-lib/aws-lambda';
 import { defineBackend } from '@aws-amplify/backend';
@@ -10,7 +11,7 @@ import { respondInvitation } from './functions/respond-invitation/resource';
 import { createTournament } from './functions/create-tournament/resource';
 
 /** Recursos AWS que Amplify podrá desplegar cuando habilitemos el backend. */
-const backend = defineBackend({ auth, data, storage, createTournament, respondInvitation, clubAccount, billing, paymentWebhook });
+const backend = defineBackend({ auth, data, storage, createTournament, respondInvitation, clubAccount, billing, paymentWebhook, maintenance });
 // Acceso mínimo: leer perfiles registrados y crear torneos validados.
 const profiles = backend.data.resources.tables['Profile'];
 const tournaments = backend.data.resources.tables['Tournament'];
@@ -41,6 +42,15 @@ for (const [model, environment] of [['PrivateAccount','ACCOUNT_TABLE_NAME'], ['U
 }
 backend.auth.resources.userPool.grant(accountFunction, 'cognito-idp:AdminGetUser');
 backend.clubAccount.addEnvironment('USER_POOL_ID', backend.auth.resources.userPool.userPoolId);
+// La baja sólo acepta la identidad autenticada; el administrador del club está protegido.
+backend.auth.resources.userPool.grant(backend.maintenance.resources.lambda,'cognito-idp:AdminGetUser','cognito-idp:AdminDeleteUser');
+backend.maintenance.addEnvironment('USER_POOL_ID',backend.auth.resources.userPool.userPoolId);
+for(const [model,env] of [['Profile','PROFILE_TABLE_NAME'],['PrivateAccount','ACCOUNT_TABLE_NAME'],['UniqueClaim','CLAIM_TABLE_NAME'],['ClubBadge','BADGE_TABLE_NAME'],['Tournament','TOURNAMENT_TABLE_NAME'],['TournamentPayment','PAYMENT_TABLE_NAME'],['TournamentInvitation','INVITATION_TABLE_NAME']] as const) {
+  backend.data.resources.tables[model].grantReadWriteData(backend.maintenance.resources.lambda);
+  backend.maintenance.addEnvironment(env,backend.data.resources.tables[model].tableName);
+}
+backend.data.resources.tables['UniqueClaim'].grantReadData(backend.respondInvitation.resources.lambda);
+backend.respondInvitation.addEnvironment('CLAIM_TABLE_NAME',backend.data.resources.tables['UniqueClaim'].tableName);
 for (const fn of [backend.createTournament, backend.respondInvitation]) {
   backend.data.resources.tables['PrivateAccount'].grant(fn.resources.lambda, 'dynamodb:GetItem');
   fn.addEnvironment('ACCOUNT_TABLE_NAME', backend.data.resources.tables['PrivateAccount'].tableName);

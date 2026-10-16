@@ -2,10 +2,13 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand, TransactWriteCommand } from '@aws-sdk/lib-dynamodb';
 import { recordDuelResult } from './result';
+import { assertActiveAccount, assertActiveTournament } from '../lifecycle';
 import { createDraw } from './draw';
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 export const handler = async (event: { identity?: { sub?: string }; arguments: { invitationId?: string; accept?: boolean; tournamentId?: string; winnerProfileId?: string; acceptOrganizerDecision?: boolean } }) => {
   const sub=event.identity?.sub;
+  if(!sub)throw new Error('Iniciá sesión.');
+  await assertActiveAccount(sub);
   if (event.arguments.winnerProfileId) {
     if (!sub || !event.arguments.tournamentId || typeof event.arguments.winnerProfileId !== 'string' || event.arguments.winnerProfileId.length>128) throw new Error('Resultado inválido.');
     return recordDuelResult(db, sub, event.arguments.tournamentId, event.arguments.winnerProfileId);
@@ -17,6 +20,7 @@ export const handler = async (event: { identity?: { sub?: string }; arguments: {
     const key={id:event.arguments.tournamentId};
     const t=(await db.send(new GetCommand({TableName:table,Key:key,ConsistentRead:true}))).Item;
     if(!t || t.createdBySub!==sub) throw new Error('Sólo el organizador puede preparar este sorteo.');
+    assertActiveTournament(t);
     if(t.creationPaymentStatus==='REVERSED')throw new Error('El pago de creación fue revertido. Contactá al administrador.');
     if(t.draw) return t;
     if(!Array.isArray(t.rosterStatuses) || !t.rosterStatuses.length || !t.rosterStatuses.every((s:string)=>s==='ACCEPTED')) throw new Error('Faltan confirmaciones.');
@@ -24,13 +28,14 @@ export const handler = async (event: { identity?: { sub?: string }; arguments: {
     try {
       await db.send(new TransactWriteCommand({TransactItems:[{Update:{TableName:table,Key:key,
         UpdateExpression:'SET #draw = :draw, #status = :ready, updatedAt = :now',
-        ConditionExpression:'attribute_exists(id) AND attribute_not_exists(#draw) AND (attribute_not_exists(creationPaymentStatus) OR creationPaymentStatus=:paid)',
+        ConditionExpression:'attribute_exists(id) AND attribute_not_exists(deletedAt) AND attribute_not_exists(#draw) AND (attribute_not_exists(creationPaymentStatus) OR creationPaymentStatus=:paid)',
         ExpressionAttributeNames:{'#draw':'draw','#status':'status'},
         ExpressionAttributeValues:{':draw':draw,':ready':'READY',':now':now,':paid':'APPROVED'}}}]}));
       return {...t,draw,status:'READY',updatedAt:now};
     } catch(error) {
       if((error as Error).name!=='TransactionCanceledException') throw error;
       const latest=(await db.send(new GetCommand({TableName:table,Key:key,ConsistentRead:true}))).Item;
+      assertActiveTournament(latest);
       if(latest?.draw) return latest;
       throw error;
     }
@@ -54,6 +59,7 @@ export const handler = async (event: { identity?: { sub?: string }; arguments: {
     const index=invitation.rosterIndex;
     if(!Number.isInteger(index) || index<0 || index>80) throw new Error('Invitación inválida.');
     const tournament=(await db.send(new GetCommand({TableName:tournamentTable,Key:{id:invitation.tournamentId},ConsistentRead:true}))).Item;
+    assertActiveTournament(tournament);
     if(!tournament || !Array.isArray(tournament.rosterStatuses) || tournament.rosterStatuses[index]!=='PENDING') throw new Error('El torneo ya no espera esta respuesta.');
     if(tournament.creationPaymentStatus==='REVERSED')throw new Error('El pago de creación fue revertido. Contactá al administrador.');
     const noJudge = tournament.arbitrationMode === 'ORGANIZER';
@@ -72,7 +78,7 @@ export const handler = async (event: { identity?: { sub?: string }; arguments: {
           ConditionExpression:'recipientSub = :sub AND #status = :pending',ExpressionAttributeNames:{'#status':'status'},
           ExpressionAttributeValues:{':status':status,':now':now,':sub':sub,':pending':'PENDING'}}},
         {Update:{TableName:tournamentTable,Key:{id:invitation.tournamentId},UpdateExpression:update,
-          ConditionExpression:'attribute_exists(id) AND (attribute_not_exists(membershipRevision) OR membershipRevision = :previous)',
+          ConditionExpression:'attribute_exists(id) AND attribute_not_exists(deletedAt) AND (attribute_not_exists(membershipRevision) OR membershipRevision = :previous)',
           ExpressionAttributeNames:names,ExpressionAttributeValues:values}},
       ]}));
       return {...invitation,status,updatedAt:now};
