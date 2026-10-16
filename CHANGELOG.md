@@ -1,3 +1,11 @@
+# 2.7.1 — Espera limitada y mensajes de pago
+
+- Las consultas de cuenta, tarifa y perfiles tienen límite de espera y permiten reintentar.
+- Los fallos de conexión ya no se confunden con una sesión cerrada.
+- El modo TEST explica arriba del formulario por qué sólo el Creador puede crear torneos.
+- Preparar el pago tiene un límite de 45 segundos y conserva el identificador al reintentar.
+- Se mantiene la restricción TEST; no habilita cobros reales ni otras cuentas.
+
 # 2.7.0 — Creación con pago automático (pruebas)
 
 - Solicitudes privadas con precio fijado por servidor; no envían invitaciones antes del pago.
@@ -155,3 +163,4 @@ Primera versión de ProveIt Club que conecta la web con cuentas y perfiles persi
 - `3.0.0`: otro cambio de etapa importante decidido para el proyecto.
 
 La numeración identifica entregas del proyecto; no es una certificación de que no existan errores.
+
