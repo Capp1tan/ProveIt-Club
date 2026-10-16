@@ -58,9 +58,9 @@ export async function pendingInvitations() {
   } while (nextToken);
   return invitations.sort((a,b) => b.createdAt.localeCompare(a.createdAt));
 }
-export async function respondInvitation(invitationId, accept) {
+export async function respondInvitation(invitationId, accept, acceptOrganizerDecision = false) {
   const client = await tournamentClient();
-  const result = resultData(await client.mutations.respondToTournamentInvitation({ invitationId, accept }));
+  const result = resultData(await client.mutations.respondToTournamentInvitation({ invitationId, accept, acceptOrganizerDecision }));
   if (!result?.id) throw new Error('No se pudo confirmar la respuesta. Actualizá para revisar su estado.');
   return result;
 }
@@ -68,4 +68,9 @@ export async function respondInvitation(invitationId, accept) {
 export async function ensureClubTournamentDraw(tournamentId) {
   const client = await tournamentClient();
   return resultData(await client.mutations.prepareTournamentDraw({ tournamentId }));
+}
+
+export async function recordClubDuelResult(tournamentId, winnerProfileId) {
+  const client = await tournamentClient();
+  return resultData(await client.mutations.recordClubDuelResult({ tournamentId, winnerProfileId }));
 }
