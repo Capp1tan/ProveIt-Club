@@ -1,3 +1,13 @@
+# 2.13.2 — Chat más ágil y menos consultas
+
+- Mensaje visible de inmediato como pendiente; confirmación con respuesta del servidor y reintento sin duplicados.
+- El servidor devuelve el mensaje guardado: no se exige otra lectura para mostrar el envío.
+- Actualizaciones incrementales y reconciliación periódica; render sólo de mensajes modificados.
+- Buzón compartido: 1,5 segundos con chat activo y 4 segundos minimizado, con pausa al ocultar la pestaña y retroceso ante errores.
+- Se evita reescribir la lista de amigos en cada envío; frecuencia y amistad tienen registros separados.
+- Lecturas independientes en paralelo, consultas simultáneas deduplicadas y URLs de avatar compartidas.
+- Consulta directa del perfil por ID, compatible con los perfiles antiguos, y caché breve por sesión.
+
 # 2.13.1 — Enter y sonido de mensajes
 
 - Enter envía y Shift + Enter inserta otra línea en chats privados y de torneo.

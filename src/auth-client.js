@@ -2,6 +2,7 @@
 // cuando se despliega el backend; sin ese archivo el sitio mantiene la demo y
 // muestra una explicación, en vez de fingir que el registro funcionó.
 import { Amplify } from 'aws-amplify';
+import { Hub } from 'aws-amplify/utils';
 import {
   confirmResetPassword,
   confirmSignIn,
@@ -19,6 +20,9 @@ let configured = false;
 let configurationPromise;
 let dataClientPromise;
 let sessionPromise;
+let publicProfilePromise,publicProfileSub='',publicProfileAt=0,profileEpoch=0;
+const avatarRequests=new Map();
+Hub.listen('auth',({payload})=>{if(['signedOut','signedIn'].includes(payload.event)){profileEpoch++;publicProfilePromise=undefined;publicProfileSub='';avatarRequests.clear();}});
 // Amplify conserva sus tokens en el almacenamiento persistente del navegador.
 // Comprobamos y renovamos la sesión antes de usarla, sin guardar contraseñas.
 export async function getCurrentUser() {
@@ -76,22 +80,32 @@ function requireBackend() {
 
 export { confirmResetPassword, confirmSignIn, confirmSignUp, fetchAuthSession, resetPassword, signIn, signInWithRedirect, signOut, signUp };
 
+// El perfil público se comparte entre cabecera, cuenta y chat durante 15 segundos.
+// Sólo se recuerda el ID por cuenta; no se guardan teléfono ni tokens en este caché.
 export async function loadProfile({ includePrivate = false } = {}) {
   requireBackend();
-  const dataClient = await profileClient();
-  const user = await getCurrentUser();
-  const profiles = [];
-  let nextToken;
-  do {
-    // El límite se aplica antes del filtro en DynamoDB: hay que seguir todas las páginas.
-    const result = await dataClient.models.Profile.list({ filter: { owner: { contains: user.userId } }, limit: 100, nextToken });
-    if (result.errors?.length) throw new Error(result.errors[0].message);
-    profiles.push(...(result.data || [])); nextToken = result.nextToken;
-  } while (nextToken);
-  profiles.sort((a,b) => (b.updatedAt || '').localeCompare(a.updatedAt || '') || a.id.localeCompare(b.id));
-  const accountResult = includePrivate ? await dataClient.models.PrivateAccount.get({ id: user.userId }) : {};
-  if (accountResult.errors?.length) throw new Error(accountResult.errors[0].message);
-  return { user, profile: profiles[0] ?? null, account: accountResult.data };
+  const [dataClient,user]=await Promise.all([profileClient(),getCurrentUser()]);
+  if(!publicProfilePromise || publicProfileSub!==user.userId || Date.now()-publicProfileAt>15000){
+    publicProfileSub=user.userId;publicProfileAt=Date.now();const current=profileEpoch;
+    publicProfilePromise=(async()=>{
+      let id;try{id=sessionStorage.getItem('proveit:profile-id:'+user.userId);}catch{}
+      const direct=id?await dataClient.models.Profile.get({id}):{data:null};
+      if(direct.errors?.length)throw new Error(direct.errors[0].message);
+      let profile=direct.data;
+      const owns=p=>p?.owner===user.username || p?.owner===user.userId || p?.owner?.startsWith(user.userId+'::');
+      if(!owns(profile)){
+        const profiles=[];let nextToken;
+        do{const result=await dataClient.models.Profile.list({filter:{owner:{contains:user.userId}},limit:100,nextToken});if(result.errors?.length)throw new Error(result.errors[0].message);profiles.push(...(result.data || []));nextToken=result.nextToken;}while(nextToken);
+        profiles.sort((a,b)=>(b.updatedAt || '').localeCompare(a.updatedAt || '') || a.id.localeCompare(b.id));profile=profiles[0] ?? null;
+      }
+      if(current!==profileEpoch)throw new Error('Tu sesión cambió.');
+      if(profile)try{sessionStorage.setItem('proveit:profile-id:'+user.userId,profile.id);}catch{}
+      return profile;
+    })().catch(error=>{if(current===profileEpoch)publicProfilePromise=undefined;throw error;});
+  }
+  const [profile,accountResult]=await Promise.all([publicProfilePromise,includePrivate?dataClient.models.PrivateAccount.get({id:user.userId}):Promise.resolve({})]);
+  if(accountResult.errors?.length)throw new Error(accountResult.errors[0].message);
+  return {user,profile,account:accountResult.data};
 }
 
 export async function saveProfile(profileId, values) {
@@ -113,6 +127,7 @@ export async function saveProfile(profileId, values) {
   };
   const result = await dataClient.mutations.saveClubProfile({ profileId, ...payload });
   if (result.errors?.length) throw new Error(result.errors[0].message);
+  publicProfilePromise=undefined;publicProfileAt=0;
   return result.data;
 }
 
@@ -133,11 +148,13 @@ export async function saveAvatar(file) {
   return path;
 }
 
-export async function avatarUrl(path) {
-  if (!path) return '';
-  const { getUrl } = await import('aws-amplify/storage');
-  const result = await getUrl({ path, options: { expiresIn: 3600 } });
-  return result.url.toString();
+export function avatarUrl(path) {
+  if(!path)return Promise.resolve('');
+  const cached=avatarRequests.get(path);if(cached && cached.expires>Date.now())return cached.promise;
+  const promise=import('aws-amplify/storage').then(({getUrl})=>getUrl({path,options:{expiresIn:3600}})).then(result=>result.url.toString());
+  avatarRequests.set(path,{promise,expires:Date.now()+50*60000});
+  promise.catch(()=>{if(avatarRequests.get(path)?.promise===promise)avatarRequests.delete(path);});
+  return promise;
 }
 
 

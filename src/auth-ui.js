@@ -55,6 +55,7 @@ function displayAccount(user, profile = null) {
 
   if (profile?.avatarPath) {
     avatarUrl(profile.avatarPath).then(url => {
+      if (profileLink.dataset.accountSub !== user.userId) return;
       const image = document.createElement('img');
       // Reserva el tamaño incluso antes de cargar los estilos o la foto.
       image.width = 42; image.height = 42; image.decoding = 'async';

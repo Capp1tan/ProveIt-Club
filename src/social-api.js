@@ -1,19 +1,19 @@
-import { tournamentClient } from './tournaments-api.js';
-import { getCurrentUser,loadProfile } from './auth-client.js';
+// Un cliente compartido y lecturas simultáneas deduplicadas. AppSync sigue
+// validando el token y la función vuelve a comprobar permisos en cada operación.
+import { configureAmplify,loadProfile,profileClient } from './auth-client.js';
 import { Hub } from 'aws-amplify/utils';
-let identitySub='',profilePromise;
-Hub.listen('auth',({payload})=>{if(payload.event==='signedOut'){identitySub='';profilePromise=undefined;}});
-// AWS comprueba identidad, amistad, cupos y pertenencia a cada sala.
-export async function socialAction(action,args={}) {
- const client=await tournamentClient();let selfProfileId;
- if(!['STATE','INBOX'].includes(action)){
-  const user=await getCurrentUser();
-  if(identitySub!==user.userId){identitySub=user.userId;profilePromise=undefined;}
-  if(!profilePromise)profilePromise=loadProfile().then(({profile})=>{if(!profile)throw new Error('Guardá tu perfil antes de usar amigos y chats.');return profile.id;}).catch(error=>{profilePromise=undefined;throw error;});
-  selfProfileId=await profilePromise;
- }
- const result=await client.mutations.clubSocial({action,...args,...(selfProfileId?{selfProfileId}:{})});
- if(result.errors?.length)throw new Error(result.errors.map(e=>e.message).join(' '));
- if(!result.data)throw new Error('AWS no confirmó la respuesta. Volvé a intentar.');
- return JSON.parse(result.data);
+let clientPromise,profilePromise,epoch=0;const reads=new Map();
+Hub.listen('auth',({payload})=>{if(['signedOut','signedIn'].includes(payload.event)){epoch++;profilePromise=undefined;reads.clear();}});
+function client(){if(!clientPromise)clientPromise=configureAmplify().then(ready=>{if(!ready)throw new Error('No pudimos conectar con el club.');return profileClient();}).catch(e=>{clientPromise=undefined;throw e;});return clientPromise;}
+export function socialAction(action,args={}){
+ const read=['STATE','INBOX','MESSAGES'].includes(action),key=action+JSON.stringify(args);if(read && reads.has(key))return reads.get(key);
+ const current=epoch;
+ const work=(async()=>{const api=await client();let selfProfileId;
+  if(!['STATE','INBOX'].includes(action)){if(!profilePromise)profilePromise=loadProfile().then(({profile})=>{if(!profile)throw new Error('Guardá tu perfil antes de usar amigos y chats.');return profile.id;}).catch(e=>{profilePromise=undefined;throw e;});selfProfileId=await profilePromise;}
+  if(current!==epoch)throw new Error('Tu sesión cambió.');
+  const result=await api.mutations.clubSocial({action,...args,...(selfProfileId?{selfProfileId}:{})});
+  if(current!==epoch)throw new Error('Tu sesión cambió.');
+  if(result.errors?.length)throw new Error(result.errors.map(e=>e.message).join(' '));if(!result.data)throw new Error('AWS no confirmó la respuesta. Volvé a intentar.');return JSON.parse(result.data);
+ })();
+ if(read){reads.set(key,work);work.then(()=>{if(reads.get(key)===work)reads.delete(key);},()=>{if(reads.get(key)===work)reads.delete(key);});}return work;
 }

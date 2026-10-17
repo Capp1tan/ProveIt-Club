@@ -1,6 +1,6 @@
 import { profileClient } from './auth-client.js';
 let badges = [];
-let accessPromise;
+let accessPromise,badgePromise;
 function data(result) {
   if (result.errors?.length) throw new Error(result.errors.map(error => error.message).join(' '));
   return result.data;
@@ -9,7 +9,11 @@ export function initializeAccess() {
   if (!accessPromise) accessPromise = profileClient().then(client => client.mutations.initializeClubAccess()).then(data).catch(error => { accessPromise = undefined; throw error; });
   return accessPromise;
 }
-export async function loadBadges() {
+export function loadBadges() {
+  if(!badgePromise)badgePromise=readBadges().finally(()=>{badgePromise=undefined;});
+  return badgePromise;
+}
+async function readBadges() {
   const client = await profileClient();
   const items = []; let nextToken;
   do {
