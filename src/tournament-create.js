@@ -138,7 +138,7 @@ function renderPeople() {
       const name = document.createElement('span'); name.textContent = profile.nickname;
       label.append(input,personAvatar(profile),name,badgeElements(owner(profile)),selectionState(input.checked)); list.append(label);
     }
-    if (!filtered.length) { const empty = document.createElement('p'); empty.textContent = profiles.length ? 'No hay perfiles con ese nick.' : 'Todavía no hay perfiles para seleccionar.'; list.append(empty); }
+    if (!list.childElementCount) { const empty = document.createElement('p'); empty.textContent = role==='judge'?'No hay jueces disponibles con ese nick. El rol se habilita en Mi perfil.':profiles.length ? 'No hay perfiles con ese nick.' : 'Todavía no hay perfiles para seleccionar.'; list.append(empty); }
   }
   updateSummary();
 }
