@@ -22,7 +22,7 @@ export function badgeElements(sub) {
   const wrapper = document.createElement('span'); wrapper.className = 'club-badges';
   if (!sub) return wrapper;
   for (const badge of badges.filter(item => item.accountSub === sub || item.accountUsername === sub)) {
-    const text = { CREATOR: '★ Creador', BETA_TESTER: '✦ Betatester' }[badge.code];
+    const text = { CREATOR: '★ Creador', BETA_TESTER: '✦ Betatester', VERIFIED:'✓ Verificado' }[badge.code];
     if (!text) continue;
     const node = document.createElement('span'); node.className = 'club-badge'; node.dataset.code = badge.code; node.textContent = text;
     wrapper.append(node);
@@ -55,7 +55,12 @@ export async function mountBadgeAdmin() {
           document.getElementById('profileBadges').replaceChildren(badgeElements((await getCurrentUser()).userId));
         } catch (error) { notice.textContent = error.message; button.disabled = false; }
       });
-      row.append(name, badgeElements(sub), button); people.append(row);
+      const verified=badges.some(b=>(b.accountSub===sub || b.accountUsername===sub) && b.code==='VERIFIED');
+      const verify=document.createElement('button');verify.type='button';verify.textContent=verified?'Quitar verificado':'Dar verificado';
+      verify.addEventListener('click',async()=>{verify.disabled=true;try{data(await client.mutations.manageClubBadge({profileId:profile.id,code:'VERIFIED',enabled:!verified}));await loadBadges();render();notice.textContent='Verificado actualizado.';}catch(error){notice.textContent=error.message;verify.disabled=false;}});
+      const phone=document.createElement('button');phone.type='button';phone.textContent='Permitir sin teléfono';
+      phone.addEventListener('click',async()=>{phone.disabled=true;try{data(await client.mutations.setClubPhoneOptional({profileId:profile.id,phoneOptional:true}));notice.textContent=profile.nickname+': teléfono opcional habilitado.';phone.textContent='Excepción habilitada';}catch(error){notice.textContent=error.message;phone.disabled=false;}});
+      row.append(name,badgeElements(sub),button,verify,phone);people.append(row);
     }
     if (!people.childElementCount) people.textContent = 'No hay perfiles con ese nick.';
   }

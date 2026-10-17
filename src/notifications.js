@@ -62,7 +62,7 @@ if (nav) {
     bell.setAttribute('aria-label', 'Notificaciones: ' + invitations.length + ' invitaciones pendientes');
     list.replaceChildren();
     if (!invitations.length) { const empty = document.createElement('p'); empty.textContent = 'No tenés invitaciones pendientes.'; list.append(empty); }
-    const roles = { PARTICIPANT:'participante', JUDGE:'juez', TREASURER:'tesorero' };
+    const roles = { PARTICIPANT:'participante', JUDGE:'juez y responsable del dinero', TREASURER:'tesorero' };
     for (const invitation of invitations) {
       const card = document.createElement('article'); card.className = 'notification-card';
       const link = document.createElement('a'); link.href = '/torneo.html?id=' + encodeURIComponent(invitation.tournamentId); link.textContent = invitation.tournamentName;

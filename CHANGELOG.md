@@ -1,3 +1,10 @@
+# 2.11.0 — Cuentas verificadas y juez unificado
+
+- Verificado y excepción privada de teléfono administrados por el Creador y ligados al sub de Cognito.
+- Selector de Argentina, Chile, Paraguay, Uruguay, Perú y Brasil con prefijo automático.
+- El juez también coordina el dinero en torneos nuevos; se conserva el historial anterior.
+- Apartado de reputación como juez en perfil y vista previa, sin puntajes inventados.
+
 # 2.10.0 — Premios y difusión de torneos
 
 - Premio provisional destacado, editable por jueces confirmados o por el organizador en torneos sin juez.

@@ -72,7 +72,7 @@ function updateSummary() {
   document.getElementById('participantCount').textContent = `${participants.size} / ${selectedFormat === 'DUEL' ? 'exactamente 2' : 'mínimo 2'}`;
   document.getElementById('judgeCount').textContent = `${judges.size} / ${noJudge() ? 'sin juez' : 'mínimo 1'}`;
   const format = formats.find(item => item.id === selectedFormat);
-  document.getElementById('tournamentSummary').textContent = `${format.name} · ${participants.size} participantes · ${noJudge() ? 'sin juez · decide el organizador' : judges.size+' jueces'} · ${treasurer.value ? 'con tesorero' : 'sin tesorero'}`;
+  document.getElementById('tournamentSummary').textContent = `${format.name} · ${participants.size} participantes · ${noJudge() ? 'sin juez · decide el organizador' : judges.size+' jueces'}`;
 }
 function selectFormat(id) {
   selectedFormat = id;
@@ -138,21 +138,6 @@ function renderPeople() {
       label.append(input,personAvatar(profile),name,badgeElements(owner(profile)),selectionState(input.checked)); list.append(label);
     }
     if (!filtered.length) { const empty = document.createElement('p'); empty.textContent = profiles.length ? 'No hay perfiles con ese nick.' : 'Todavía no hay perfiles para seleccionar.'; list.append(empty); }
-  }
-  // El tesorero usa tarjetas con radio: permite elegir una sola cuenta o ninguna.
-  const treasuryList = document.getElementById('treasurerList');
-  treasuryList.replaceChildren();
-  for (const profile of [null, ...filtered]) {
-    const id = profile?.id || '';
-    const label = document.createElement('label'); label.className = 'person-choice';
-    const input = document.createElement('input'); input.type = 'radio';
-    input.name = 'treasurerChoice'; input.value = id; input.checked = treasurer.value === id;
-    input.disabled = Boolean(profile && usedByOtherRole(profile, 'treasurer'));
-    input.addEventListener('change', () => { treasurer.value = id; renderPeople(); });
-    const name = document.createElement('span'); name.textContent = profile?.nickname || 'Sin tesorero';
-    const avatar = profile ? personAvatar(profile) : document.createElement('span');
-    if (!profile) { avatar.className = 'person-avatar'; avatar.textContent = '—'; avatar.setAttribute('aria-hidden','true'); }
-    label.append(input,avatar,name,badgeElements(profile ? owner(profile) : ''),selectionState(input.checked)); treasuryList.append(label);
   }
   updateSummary();
 }

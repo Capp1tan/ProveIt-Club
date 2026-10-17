@@ -1,3 +1,4 @@
+import { mountPhoneCountry } from './phone-country.js';
 import { mountBillingAdmin } from './billing-admin.js';
 import { mountAccountActions } from './account-actions.js';
 import { loadBadges, badgeElements, initializeAccess, mountBadgeAdmin } from './badges.js';
@@ -11,6 +12,7 @@ const preview = document.getElementById('avatarPreview');
 const avatarInput = document.getElementById('avatarInput');
 const bio = form.elements.bio;
 const bioCount = document.getElementById('bioCount');
+const phoneField=mountPhoneCountry();
 let profileId = null;
 let currentAvatarPath = '';
 let selectedAvatar = null;
@@ -63,7 +65,7 @@ form.addEventListener('submit', async event => {
       nickname: form.elements.nickname.value,
       bio: bio.value,
       avatarPath: currentAvatarPath,
-      phoneNumber: form.elements.phoneNumber.value,
+      phoneNumber: phoneField.value(),
     });
     profileId = saved.id;
     if (currentAvatarPath) setAvatar(await avatarUrl(currentAvatarPath), form.elements.nickname.value.trim().slice(0, 1).toUpperCase());
@@ -81,11 +83,13 @@ if (!ready) {
 } else {
   try {
     const { user, profile, account } = await loadProfile({ includePrivate: true });
-    form.elements.phoneNumber.value = account?.phoneNumber || '';
+    phoneField.load(account?.phoneNumber || '');
     if (!account?.phoneNumber) showNotice('Completá tu teléfono para guardar el perfil y participar en nuevos torneos.');
     // Las insignias se cargan aparte: un error no impide editar el perfil.
     void (async () => { try {
       const access = await initializeAccess();
+      phoneField.optional(Boolean(access.phoneOptional));
+      if(access.phoneOptional && !account?.phoneNumber)showNotice('Tu cuenta puede participar sin teléfono.');
       mountAccountActions(access.isCreator);
       await loadBadges();
       document.getElementById('profileBadges').replaceChildren(badgeElements(user.userId));

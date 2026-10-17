@@ -4,7 +4,7 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand, TransactWriteCommand } from '@aws-sdk/lib-dynamodb';
 
 import { read,fee,assertBillingAccess,ensureCheckout } from '../billing/common';
-import { assertActiveAccount } from '../lifecycle';
+import { phoneOptional, assertActiveAccount } from '../lifecycle';
 
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const formats = new Set(['DUEL', 'ROUND_ROBIN', 'SINGLE_ELIMINATION', 'DOUBLE_ELIMINATION', 'SWISS', 'FREE_FOR_ALL']);
@@ -58,7 +58,8 @@ export const handler = async (event: { arguments: Arguments; identity?: { sub?: 
   if (args.format === 'DUEL' && participantIds.length !== 2) throw new Error('El Duelo 1v1 requiere exactamente dos participantes.');
   const judgeIds = ids(args.judgeIds, noJudge ? 0 : 1, 16, 'Jueces');
   if (noJudge && judgeIds.length) throw new Error('Un torneo sin juez no puede tener jueces seleccionados.');
-  const treasurerId = args.treasurerId || null;
+  if(args.treasurerId)throw new Error('El juez también coordina el dinero. Actualizá el formulario para crear el torneo.');
+  const treasurerId = null;
   const allIds = [...participantIds, ...judgeIds, ...(treasurerId ? ids([treasurerId], 1, 1, 'Tesorero') : [])];
   if (new Set(allIds).size !== allIds.length) throw new Error('Cada persona debe tener un único rol en este torneo.');
   const profileTable = process.env.PROFILE_TABLE_NAME!;
@@ -74,7 +75,7 @@ export const handler = async (event: { arguments: Arguments; identity?: { sub?: 
   if (new Set(owners).size !== owners.length) throw new Error('Una misma cuenta no puede ocupar varios lugares ni roles.');
   for (const accountSub of new Set([sub, ...owners])) {
     const account = (await db.send(new GetCommand({ TableName: process.env.ACCOUNT_TABLE_NAME!, Key: { id: accountSub }, ConsistentRead: true }))).Item;
-    if (!account?.phoneNumber) throw new Error('Todos los integrantes y el organizador deben completar su teléfono en Mi perfil.');
+    if (!account?.phoneNumber && !await phoneOptional(accountSub)) throw new Error('Todos los integrantes y el organizador deben completar su teléfono en Mi perfil.');
   }
   const names = new Map(profiles.map(profile => [profile.id, profile.nickname]));
   const now = new Date().toISOString();

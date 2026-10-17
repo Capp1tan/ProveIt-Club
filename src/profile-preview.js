@@ -56,6 +56,7 @@ export class ProfilePreview {
     const title=document.createElement('h3');title.textContent=name;head.append(this.avatar(id,name),title);
     const bio=document.createElement('p');bio.className='profile-preview-bio';bio.textContent=profile ? profile.bio?.trim() || 'Todavía no agregó una biografía.' : 'Este perfil ya no está disponible. El nombre corresponde al registro del torneo.';
     this.card.append(close,head,this.badges(profile?.owner?.split('::')[0]),bio);
+    const reputation=document.createElement('div');reputation.className='judge-reputation';const repTitle=document.createElement('strong');repTitle.textContent='Reputación como juez';const repText=document.createElement('p');repText.textContent='Próximamente · todavía no se calculan valoraciones.';reputation.append(repTitle,repText);this.card.append(reputation);
     const help=document.createElement('small');help.textContent='Perfil del club';this.card.append(help);
     this.card.hidden=false;this.position();
   }

@@ -3,7 +3,7 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand, TransactWriteCommand } from '@aws-sdk/lib-dynamodb';
 import { recordDuelResult } from './result';
 import { prizeAction } from './prize';
-import { assertActiveAccount, assertActiveTournament } from '../lifecycle';
+import { phoneOptional, assertActiveAccount, assertActiveTournament } from '../lifecycle';
 import { createDraw } from './draw';
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 export const handler = async (event: { identity?: { sub?: string }; arguments: { prizeTitle?: string; prizeDescription?: string; prizeLinks?: string; prizeAttachments?: string; prizeRevision?: number; uploadContentType?: string; uploadSize?: number; invitationId?: string; accept?: boolean; tournamentId?: string; winnerProfileId?: string; acceptOrganizerDecision?: boolean } }) => {
@@ -46,7 +46,7 @@ export const handler = async (event: { identity?: { sub?: string }; arguments: {
   if(!sub || typeof invitationId!=='string' || invitationId.length>200 || typeof accept!=='boolean') throw new Error('Respuesta inválida.');
   if (accept) {
     const account = (await db.send(new GetCommand({ TableName: process.env.ACCOUNT_TABLE_NAME!, Key: { id: sub }, ConsistentRead: true }))).Item;
-    if (!account?.phoneNumber) throw new Error('Completá tu teléfono en Mi perfil antes de aceptar.');
+    if (!account?.phoneNumber && !await phoneOptional(sub)) throw new Error('Completá tu teléfono en Mi perfil antes de aceptar.');
   }
   const TableName=process.env.INVITATION_TABLE_NAME!, tournamentTable=process.env.TOURNAMENT_TABLE_NAME!;
   const read=()=>db.send(new GetCommand({TableName,Key:{id:invitationId},ConsistentRead:true}));

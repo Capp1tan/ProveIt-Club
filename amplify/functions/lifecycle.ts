@@ -9,3 +9,6 @@ export async function assertActiveAccount(sub: string) {
 export function assertActiveTournament(row: any) {
   if (!row || row.deletedAt || row.status === 'DELETED') throw new Error('Este torneo fue eliminado o ya no está disponible.');
 }
+
+// Excepción privada asignada por el Creador al sub inmutable de Cognito.
+export async function phoneOptional(sub:string){return Boolean((await db.send(new GetCommand({TableName:process.env.CLAIM_TABLE_NAME!,Key:{id:'phone-optional:'+sub},ConsistentRead:true}))).Item);}

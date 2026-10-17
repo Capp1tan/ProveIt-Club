@@ -153,7 +153,8 @@ function renderTournament(t) {
   else if(t.rosterStatuses) detail.append(element('p',status.includes('REJECTED')?'Una persona rechazó. El torneo no se sortea: por ahora es necesario crear otro con los integrantes que acepten.':'Esperando que todos los participantes, jueces y tesorero elegido confirmen. Los cruces se sortearán automáticamente después de la última aceptación.','tournament-notice'));
   else detail.append(element('p','Este torneo se creó antes del sistema de invitaciones; conserva sus integrantes históricos. El sorteo automático se aplica a los nuevos torneos.','tournament-notice'));
   const p=t.participantIds.length,j=p+t.judgeIds.length;
-  detail.append(roster('Participantes',t.participantIds,t.participantNames,status.slice(0,p)),roster('Jueces',t.judgeIds,t.judgeNames,status.slice(p,j)),roster('Tesorero',t.treasurerId?[t.treasurerId]:[],t.treasurerName?[t.treasurerName]:[],status.slice(j)));
+  detail.append(roster('Participantes',t.participantIds,t.participantNames,status.slice(0,p)),roster('Jueces',t.judgeIds,t.judgeNames,status.slice(p,j)),element('p',t.arbitrationMode==='ORGANIZER'?'El organizador también coordina el dinero.':'Los jueces también coordinan el dinero del torneo.','field-help'));
+  if(t.treasurerId)detail.append(roster('Tesorero (torneo anterior)',[t.treasurerId],[t.treasurerName],status.slice(j)));
   const refresh=element('button','Actualizar confirmaciones','format-choice');refresh.type='button';refresh.addEventListener('click',()=>void refreshTournament(true));
 
   if(t.format==='DUEL')detail.append(resultPanel(t));
