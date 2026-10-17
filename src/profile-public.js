@@ -1,8 +1,9 @@
 import {viewClubProfile} from './community-api.js';
 import {reputationPanel,socialLinks} from './profile-components.js';
-import {avatarUrl,getCurrentUser} from './auth-client.js';
+import {avatarUrl,getCurrentUser,signOut} from './auth-client.js';
 import {loadBadges,badgeElements,decorateAvatar} from './badges.js';
 export async function mountPublicProfile(id){
+ document.getElementById('signOutButton')?.addEventListener('click',async()=>{await signOut();location.href='/';});
  const main=document.querySelector('main');main.replaceChildren();
  const el=(tag,text,cls)=>{const n=document.createElement(tag);n.textContent=text;if(cls)n.className=cls;return n;};
  const status=el('p','Cargando perfil…');status.setAttribute('role','status');main.append(status);

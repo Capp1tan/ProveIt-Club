@@ -6,7 +6,7 @@ import '../community.css';
 const HOVER_DELAY = 500;
 export class ProfilePreview {
   constructor({ avatar, badges }) {
-    this.avatar=avatar;this.badges=badges;this.profiles=new Map();this.enabled=true;
+    this.avatar=avatar;this.badges=badges;this.profiles=new Map();this.enabled=true;this.generation=0;
     this.card=document.createElement('section');this.card.id='participantProfilePreview';
     this.card.className='profile-preview';this.card.hidden=true;
     this.card.setAttribute('role','dialog');this.card.setAttribute('aria-label','Vista previa de perfil');
@@ -47,13 +47,13 @@ export class ProfilePreview {
       this.dismiss();
     },180);
   }
-  dismiss() {clearTimeout(this.showTimer);clearTimeout(this.hideTimer);this.active?.setAttribute('aria-expanded','false');this.active=null;this.pinned=false;this.card.hidden=true;}
+  dismiss() {this.generation++;clearTimeout(this.showTimer);clearTimeout(this.hideTimer);this.active?.setAttribute('aria-expanded','false');this.active=null;this.pinned=false;this.card.hidden=true;}
   async show(button,id,historicalName,pin=false) {
     if(!this.enabled)return;
-    this.dismiss();this.active=button;this.pinned=pin;button.setAttribute('aria-expanded','true');
+    this.dismiss();const request=++this.generation;this.active=button;this.pinned=pin;button.setAttribute('aria-expanded','true');
     this.card.textContent='Cargando perfil…';this.card.hidden=false;this.position();
-    let profile;try{profile=await viewClubProfile(id);}catch{if(this.active===button)this.card.textContent='No pudimos cargar el perfil. Reintentá.';return;}
-    if(this.active!==button || !this.enabled)return;
+    let profile;try{profile=await viewClubProfile(id);}catch{if(this.active===button && request===this.generation)this.card.textContent='No pudimos cargar el perfil. Reintentá.';return;}
+    if(this.active!==button || request!==this.generation || !this.enabled)return;
     if(profile)this.profiles.set(id,profile);
     const name=profile?.nickname || historicalName;
     this.card.replaceChildren();this.card.setAttribute('aria-label','Perfil de '+name);
