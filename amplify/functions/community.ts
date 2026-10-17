@@ -40,7 +40,7 @@ export async function community(db:DynamoDBDocumentClient,sub:string,a:any){
  if(a.action==='COMMUNITY_DIRECTORY'){
   let key;try{key=a.cursor?JSON.parse(Buffer.from(a.cursor,'base64url').toString()):undefined;}catch{throw new Error('Página inválida.');}
   if(key && (typeof key.id!=='string' || Object.keys(key).length!==1))throw new Error('Página inválida.');
-  const result=await db.send(new ScanCommand({TableName:env('PROFILE_TABLE_NAME'),Limit:60,ExclusiveStartKey:key}));
+  const result=await db.send(new ScanCommand({TableName:env('PROFILE_TABLE_NAME'),ConsistentRead:true,Limit:60,ExclusiveStartKey:key}));
   const profiles=(await Promise.all((result.Items || []).map(p=>clean(p,false)))).filter(Boolean);
   return {profiles,cursor:result.LastEvaluatedKey?Buffer.from(JSON.stringify(result.LastEvaluatedKey)).toString('base64url'):null};
  }
@@ -54,7 +54,7 @@ export async function community(db:DynamoDBDocumentClient,sub:string,a:any){
  if(a.action==='COMMUNITY_AVATAR'){
   if(typeof a.path!=='string' || !/^(profile-pictures|profile-private)\//.test(a.path) || a.path.length>1024)throw new Error('Foto inválida.');
   let key,found:any;
-  do{const page=await db.send(new ScanCommand({TableName:env('PROFILE_TABLE_NAME'),FilterExpression:'avatarPath=:path',ExpressionAttributeValues:{':path':a.path},ExclusiveStartKey:key}));found=page.Items?.[0];key=page.LastEvaluatedKey;}while(!found && key);
+  do{const page=await db.send(new ScanCommand({TableName:env('PROFILE_TABLE_NAME'),ConsistentRead:true,FilterExpression:'avatarPath=:path',ExpressionAttributeValues:{':path':a.path},ExclusiveStartKey:key}));found=page.Items?.[0];key=page.LastEvaluatedKey;}while(!found && key);
   if(!found || !await visible(found) || await get('CLAIM_TABLE_NAME','deleted-account:'+owner(found)))throw new Error('Foto privada o no disponible.');
   return {url:await getSignedUrl(s3,new GetObjectCommand({Bucket:env('PROFILE_BUCKET_NAME'),Key:a.path}),{expiresIn:60})};
  }
