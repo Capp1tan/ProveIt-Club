@@ -57,10 +57,13 @@ export const handler=async(event:Event)=>{
    mine.incoming=remove(mine.incoming,id);other.outgoing=remove(other.outgoing,sub);
    if(!has(mine.friends,id))mine.friends.push(target);if(!has(other.friends,sub))other.friends.push(me);
   }else if(action==='DECLINE'){
+   if(!has(mine.incoming,id))return JSON.stringify({ok:true});
    mine.incoming=remove(mine.incoming,id);other.outgoing=remove(other.outgoing,sub);
   }else if(action==='CANCEL'){
+   if(!has(mine.outgoing,id))return JSON.stringify({ok:true});
    mine.outgoing=remove(mine.outgoing,id);other.incoming=remove(other.incoming,sub);
   }else{
+   if(!has(mine.friends,id))return JSON.stringify({ok:true});
    mine.friends=remove(mine.friends,id);other.friends=remove(other.friends,sub);
   }
   const checks:any[]=[active(sub)];if(['REQUEST','ACCEPT'].includes(action))checks.push(active(id));
@@ -74,11 +77,9 @@ export const handler=async(event:Event)=>{
  }else if(a.roomType==='TOURNAMENT' && uuid(a.roomId)){
   const t=await read('TOURNAMENT_TABLE_NAME',a.roomId);assertActiveTournament(t);
   const ids=[...t!.participantIds,...t!.judgeIds,...(t!.treasurerId?[t!.treasurerId]:[])];
-  let member=t!.createdBySub===sub;
-  for(let i=0;!member && i<ids.length;i++){
-   if(t!.rosterStatuses && t!.rosterStatuses[i]!=='ACCEPTED')continue;
-   const p=await read('PROFILE_TABLE_NAME',ids[i]);if(p?.owner?.split('::')[0]===sub)member=true;
-  }
+  // Ya comprobamos que este perfil pertenece al sub autenticado: no hace falta
+  // leer todos los perfiles de la sala en cada consulta de mensajes.
+  const member=t!.createdBySub===sub || ids.some((id:string,index:number)=>id===profile.id && (!t!.rosterStatuses || t!.rosterStatuses[index]==='ACCEPTED'));
   if(!member)throw new Error('El chat es sólo para el organizador e integrantes confirmados del torneo.');
   pk='TOURNAMENT#'+a.roomId;
   roomCheck={ConditionCheck:{TableName:process.env.TOURNAMENT_TABLE_NAME!,Key:{id:a.roomId},ConditionExpression:'attribute_not_exists(deletedAt) AND updatedAt=:v',ExpressionAttributeValues:{':v':t!.updatedAt}}};
