@@ -31,9 +31,9 @@ export async function recordDuelResult(db: DynamoDBDocumentClient, sub: string, 
   try {
     const result=await db.send(new UpdateCommand({TableName,Key:{id:tournamentId},
       UpdateExpression:'SET winnerProfileId = :winner, winnerName = :name, decidedBySub = :sub, decidedByLabel = :label, decidedAt = :now, updatedAt = :now, #status = :completed, resultReason=:reason, resultKind=:kind',
-      ConditionExpression:'attribute_not_exists(deletedAt) AND attribute_not_exists(winnerProfileId) AND #status = :ready AND membershipRevision = :revision',
+      ConditionExpression:'attribute_not_exists(deletedAt) AND attribute_not_exists(winnerProfileId) AND #status = :ready AND membershipRevision = :revision AND (attribute_not_exists(creationPaymentStatus) OR creationPaymentStatus=:paid)',
       ExpressionAttributeNames:{'#status':'status'},
-      ExpressionAttributeValues:{':reason':resultReason.trim(),':kind':resultKind,':winner':winnerProfileId,':name':winnerName,':sub':sub,':label':decidedByLabel,':now':now,':completed':'COMPLETED',':ready':'READY',':revision':t.membershipRevision || 0},ReturnValues:'ALL_NEW'}));
+      ExpressionAttributeValues:{':paid':'APPROVED',':reason':resultReason.trim(),':kind':resultKind,':winner':winnerProfileId,':name':winnerName,':sub':sub,':label':decidedByLabel,':now':now,':completed':'COMPLETED',':ready':'READY',':revision':t.membershipRevision || 0},ReturnValues:'ALL_NEW'}));
     return result.Attributes;
   } catch(error) {
     if((error as Error).name!=='ConditionalCheckFailedException') throw error;
