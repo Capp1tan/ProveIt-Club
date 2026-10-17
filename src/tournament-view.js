@@ -1,7 +1,7 @@
 import { prizePanel } from './tournament-prize.js';
 import { sharePanel } from './tournament-share.js';
 import { myPendingPayments, money } from './billing-api.js';
-import { loadBadges, badgeElements, initializeAccess } from './badges.js';
+import { loadBadges, badgeElements, decorateAvatar, initializeAccess } from './badges.js';
 import { deleteTournament } from './maintenance-api.js';
 import { ProfilePreview } from './profile-preview.js';
 import { connectBracket } from './bracket-lines.js';
@@ -23,6 +23,7 @@ Hub.listen('auth',({payload})=>{if(payload.event==='signedOut')profilePreview?.l
 function avatar(id,name) {
   const node=element('span',Array.from(name.trim())[0]?.toUpperCase() || '?','person-avatar');
   node.setAttribute('aria-hidden','true');
+  decorateAvatar(node, profiles.get(id)?.owner?.split('::')[0]);
   const path=profiles.get(id)?.avatarPath;
   if(path?.startsWith('profile-pictures/')) {
     if(!photoRequests.has(path)) photoRequests.set(path,avatarUrl(path).catch(()=>''));

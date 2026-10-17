@@ -1,3 +1,10 @@
+# 2.11.2 — Verificado y aros de perfil
+
+- Roseta azul con tilde y nombre accesible en lugar de etiqueta de verificado.
+- Aro dorado con animación suave para el Creador y azul para cuentas verificadas.
+- Aros en encabezado, perfil, selección de personas y vistas previas; respeta movimiento reducido.
+- Se retira Volver al inicio del perfil: el logo conserva el enlace al inicio.
+
 # 2.11.1 — Avatar del encabezado contenido
 
 - Restaura tamaño fijo y recorte circular del avatar en todas las páginas.

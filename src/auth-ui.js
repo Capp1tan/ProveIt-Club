@@ -1,5 +1,6 @@
 // Acceso y estado de cuenta en la navegación.
 import { Hub } from 'aws-amplify/utils';
+import { loadBadges, decorateAvatar } from './badges.js';
 import {
   avatarUrl,
   configureAmplify,
@@ -39,6 +40,8 @@ function clearMessage() {
 }
 function displayAccount(user, profile = null) {
   if (!profileLink) return;
+  profileLink.dataset.accountSub = user.userId;
+  decorateAvatar(profileLink, user.userId);
   const name = profile?.nickname || user.username || 'Mi perfil';
   const fallback = document.createElement('span');
   fallback.className = 'profile-avatar-fallback';
@@ -68,6 +71,10 @@ async function syncAccountControl() {
   try {
     const user = await getCurrentUser();
     displayAccount(user);
+    // El aro llega en paralelo y no retrasa el inicio de sesión ni la foto.
+    void loadBadges().then(() => {
+      if (profileLink?.dataset.accountSub === user.userId) decorateAvatar(profileLink, user.userId);
+    }).catch(() => {});
     // Google vuelve al inicio: retomamos la creación sin perder el borrador.
     try {
       if (location.pathname === '/' || location.pathname === '/index.html') {
@@ -83,7 +90,7 @@ async function syncAccountControl() {
       if (profile) displayAccount(user, profile);
     } catch { /* El avatar con inicial sigue sirviendo aunque tarde o falle la lectura del perfil. */ }
   } catch {
-    if (profileLink) profileLink.hidden = true;
+    if (profileLink) { profileLink.hidden = true; delete profileLink.dataset.accountSub; decorateAvatar(profileLink, null); }
     if (loginControl) loginControl.hidden = false;
   }
 }

@@ -1,6 +1,6 @@
 import { tournamentFee, money } from './billing-api.js';
 import { noJudgeConsent, timeZones, zoneLabel, localToUtc, scheduleLabel } from './tournament-schedule.js';
-import { loadBadges, badgeElements } from './badges.js';
+import { loadBadges, badgeElements, decorateAvatar } from './badges.js';
 import { Hub } from 'aws-amplify/utils';
 import { avatarUrl, configureAmplify, getCurrentUser } from './auth-client.js';
 import { formats, formatImage } from './tournament-formats.js';
@@ -98,6 +98,7 @@ const avatarRequests = new Map();
 function personAvatar(profile) {
   const avatar = document.createElement('span');
   avatar.className = 'person-avatar'; avatar.setAttribute('aria-hidden', 'true');
+  decorateAvatar(avatar, owner(profile));
   const initial = Array.from(profile.nickname.trim())[0]?.toLocaleUpperCase('es') || '?';
   avatar.textContent = initial;
   if (profile.avatarPath?.startsWith('profile-pictures/')) {

@@ -1,7 +1,7 @@
 import { mountPhoneCountry } from './phone-country.js';
 import { mountBillingAdmin } from './billing-admin.js';
 import { mountAccountActions } from './account-actions.js';
-import { loadBadges, badgeElements, initializeAccess, mountBadgeAdmin } from './badges.js';
+import { loadBadges, badgeElements, decorateAvatar, initializeAccess, mountBadgeAdmin } from './badges.js';
 // Edición del perfil. El archivo no almacena imágenes ni datos en el navegador:
 // Amplify los envía a S3 y a la base de datos cuando el backend esté desplegado.
 import { avatarUrl, configureAmplify, loadProfile, saveAvatar, saveProfile, signOut } from './auth-client.js';
@@ -92,6 +92,7 @@ if (!ready) {
       if(access.phoneOptional && !account?.phoneNumber)showNotice('Tu cuenta puede participar sin teléfono.');
       mountAccountActions(access.isCreator);
       await loadBadges();
+      decorateAvatar(preview, user.userId);
       document.getElementById('profileBadges').replaceChildren(badgeElements(user.userId));
       if (access.isCreator) { await mountBadgeAdmin(); await mountBillingAdmin(); }
     } catch { showNotice('No pudimos cargar las insignias. Podés editar tu perfil y recargar para reintentar.', true); } })();

@@ -24,10 +24,31 @@ export function badgeElements(sub) {
   for (const badge of badges.filter(item => item.accountSub === sub || item.accountUsername === sub)) {
     const text = { CREATOR: '★ Creador', BETA_TESTER: '✦ Betatester', VERIFIED:'✓ Verificado' }[badge.code];
     if (!text) continue;
-    const node = document.createElement('span'); node.className = 'club-badge'; node.dataset.code = badge.code; node.textContent = text;
+    const node = document.createElement('span'); node.className = 'club-badge'; node.dataset.code = badge.code;
+    if (badge.code === 'VERIFIED') {
+      // Roseta azul con tilde: el nombre accesible reemplaza la etiqueta visible.
+      node.classList.add('verified-icon');
+      node.setAttribute('role', 'img'); node.setAttribute('aria-label', 'Cuenta verificada'); node.title = 'Cuenta verificada';
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('aria-hidden', 'true');
+      const seal = document.createElementNS(svg.namespaceURI, 'path');
+      seal.setAttribute('fill', 'currentColor');
+      seal.setAttribute('d', 'M12 1.5 15 3l3.4.2 1.4 3.1 2.4 2.4-.8 3.3.8 3.3-2.4 2.4-1.4 3.1L15 21l-3 1.5L9 21l-3.4-.2-1.4-3.1-2.4-2.4.8-3.3-.8-3.3 2.4-2.4 1.4-3.1L9 3Z');
+      const check = document.createElementNS(svg.namespaceURI, 'path');
+      check.setAttribute('d', 'm7.3 12 3.1 3.1 6.3-6.3'); check.setAttribute('fill', 'none'); check.setAttribute('stroke', '#fff'); check.setAttribute('stroke-width', '2.2'); check.setAttribute('stroke-linecap', 'round'); check.setAttribute('stroke-linejoin', 'round');
+      svg.append(seal, check); node.append(svg);
+    } else node.textContent = text;
     wrapper.append(node);
   }
   return wrapper;
+}
+// La identidad de AWS y las insignias guardadas deciden el aro, nunca el nick editable.
+export function decorateAvatar(node, sub) {
+  if (!node) return;
+  const codes = badges.filter(item => sub && (item.accountSub === sub || item.accountUsername === sub)).map(item => item.code);
+  const accent = codes.includes('CREATOR') ? 'creator' : codes.includes('VERIFIED') ? 'verified' : '';
+  if (accent) node.dataset.accountAccent = accent;
+  else delete node.dataset.accountAccent;
 }
 export async function mountBadgeAdmin() {
   const section = document.getElementById('badgeAdmin'), people = document.getElementById('badgePeople'), search = document.getElementById('badgeSearch'), notice = document.getElementById('badgeNotice');
