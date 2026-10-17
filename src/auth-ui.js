@@ -53,6 +53,8 @@ function displayAccount(user, profile = null) {
   if (profile?.avatarPath) {
     avatarUrl(profile.avatarPath).then(url => {
       const image = document.createElement('img');
+      // Reserva el tamaño incluso antes de cargar los estilos o la foto.
+      image.width = 42; image.height = 42; image.decoding = 'async';
       image.src = url;
       image.alt = '';
       image.setAttribute('aria-hidden', 'true');

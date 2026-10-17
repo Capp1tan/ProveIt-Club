@@ -1,3 +1,8 @@
+# 2.11.1 — Avatar del encabezado contenido
+
+- Restaura tamaño fijo y recorte circular del avatar en todas las páginas.
+- Reserva dimensiones en la imagen y mantiene el tamaño adaptable en móviles.
+
 # 2.11.0 — Cuentas verificadas y juez unificado
 
 - Verificado y excepción privada de teléfono administrados por el Creador y ligados al sub de Cognito.

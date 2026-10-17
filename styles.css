@@ -22,3 +22,12 @@
 .sponsor-partner img{display:block;width:100%;height:100%;object-fit:contain}
 .sponsor-black-line{width:190px}
 @media(max-width:640px){.sponsor-partner{width:164px;height:112px}.sponsor-black-line{width:154px}}
+/* Avatar del encabezado: tamaño fijo, recorte circular y reserva de espacio.
+   Las dimensiones no dependen del tamaño original de la foto. */
+.profile-avatar-link{box-sizing:border-box;flex:0 0 42px;width:42px;height:42px;min-width:42px;max-width:42px;min-height:42px;max-height:42px;border:1px solid #6f943b;border-radius:50%;padding:0;overflow:hidden;contain:paint;background:#25311e;color:#c1f36b;vertical-align:middle}
+.profile-avatar-link:not([hidden]){display:inline-flex;align-items:center;justify-content:center}
+.profile-avatar-link[hidden]{display:none}
+.profile-avatar-link>img{display:block;width:100%;height:100%;max-width:100%;max-height:100%;min-width:0;min-height:0;object-fit:cover;border-radius:inherit;flex:0 0 100%}
+.profile-avatar-fallback{display:grid;place-items:center;width:100%;height:100%;font-size:17px;font-weight:700;line-height:1}
+.profile-avatar-link:focus-visible{outline:2px solid #c1f36b;outline-offset:4px}
+@media(max-width:640px){.profile-avatar-link{flex-basis:38px;width:38px;height:38px;min-width:38px;max-width:38px;min-height:38px;max-height:38px}}
