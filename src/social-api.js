@@ -6,7 +6,7 @@ Hub.listen('auth',({payload})=>{if(payload.event==='signedOut'){identitySub='';p
 // AWS comprueba identidad, amistad, cupos y pertenencia a cada sala.
 export async function socialAction(action,args={}) {
  const client=await tournamentClient();let selfProfileId;
- if(action!=='STATE'){
+ if(!['STATE','INBOX'].includes(action)){
   const user=await getCurrentUser();
   if(identitySub!==user.userId){identitySub=user.userId;profilePromise=undefined;}
   if(!profilePromise)profilePromise=loadProfile().then(({profile})=>{if(!profile)throw new Error('Guardá tu perfil antes de usar amigos y chats.');return profile.id;}).catch(error=>{profilePromise=undefined;throw error;});

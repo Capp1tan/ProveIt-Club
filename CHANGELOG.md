@@ -1,3 +1,11 @@
+# 2.13.0 — Bandeja de mensajes
+
+- Chat privado flotante y minimizable abajo a la derecha en todas las páginas.
+- Contadores por conversación y total de mensajes recibidos sin leer, guardados en AWS.
+- Marcado de lectura al ver el final de una conversación activa; minimizar conserva los no leídos.
+- Enviar un mensaje no aumenta el contador propio; conteo y envío se guardan en la misma transacción.
+- Se conserva la sala y la posición minimizada al navegar; no se guardan mensajes en sessionStorage.
+
 # 2.12.0 — Amigos y chats
 
 - Solicitudes de amistad con aceptación, rechazo, cancelación y eliminación.

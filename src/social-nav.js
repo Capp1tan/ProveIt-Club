@@ -1,3 +1,4 @@
+import './chat-dock.js';
 import '../social.css';
 import { Hub } from 'aws-amplify/utils';
 import { configureAmplify,getCurrentUser } from './auth-client.js';

@@ -3,21 +3,21 @@ import { configureAmplify,getCurrentUser,avatarUrl } from './auth-client.js';
 import { registeredProfiles } from './tournaments-api.js';
 import { loadBadges,badgeElements,decorateAvatar } from './badges.js';
 import { socialAction } from './social-api.js';
-import { mountChat } from './chat-ui.js';
+import { openDirectChat } from './chat-dock.js';
 import { Hub } from 'aws-amplify/utils';
 const root=document.getElementById('friendsApp'),notice=document.getElementById('friendsNotice');
 const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text)n.textContent=text;if(cls)n.className=cls;return n;};
-let user,state,profiles=[],chatStop,activeId='',busy=false,closed=false,refreshing=false,timer;
+let user,state,profiles=[],busy=false,closed=false,refreshing=false,timer;
 // Bloquear también las respuestas que lleguen después de cerrar la sesión.
-Hub.listen('auth',({payload})=>{if(payload.event==='signedOut'){closed=true;chatStop?.();clearInterval(timer);root.replaceChildren();notice.textContent='Ingresá para ver tus amigos.';}if(payload.event==='signedIn' && !user)location.reload();});
+Hub.listen('auth',({payload})=>{if(payload.event==='signedOut'){closed=true;clearInterval(timer);root.replaceChildren();notice.textContent='Ingresá para ver tus amigos.';}if(payload.event==='signedIn' && !user)location.reload();});
 const target=new URLSearchParams(location.search).get('persona');
 const counter=el('p','','social-help'),search=el('input'),directory=el('div','','social-people'),incoming=el('div','','social-people'),outgoing=el('div','','social-people'),friends=el('div','','social-people');
 search.type='search';search.placeholder='Buscar personas por nick';search.setAttribute('aria-label','Buscar personas por nick');search.maxLength=24;
-const sidebar=el('div','','social-sidebar'),conversation=el('section','','social-conversation');conversation.append(el('h2','Tus conversaciones'),el('p','Elegí un amigo para abrir un chat privado.','social-help'));
+const sidebar=el('div','','social-sidebar');
 function section(title,content){const s=el('section','','social-section');s.append(el('h2',title),content);return s;}
 const directorySection=section('Encontrar personas',directory);directorySection.insertBefore(search,directory);
 sidebar.append(counter,section('Solicitudes recibidas',incoming),section('Solicitudes enviadas',outgoing),section('Mis amigos',friends),directorySection);
-const layout=el('div','','social-layout');layout.append(sidebar,conversation);
+const layout=el('div','','social-layout social-friends-layout');layout.append(sidebar);
 const find=id=>profiles.find(p=>p.id===id);
 const photos=new Map();
 function button(label,action){const b=el('button',label,'social-button');b.type='button';b.disabled=busy;b.addEventListener('click',action);return b;}
@@ -29,7 +29,7 @@ function person(ref,actions){const p=find(ref.profileId),name=p?.nickname || 'Cu
 async function act(action,id){if(busy)return;busy=true;render();notice.textContent='Guardando…';
  try{await socialAction(action,{targetProfileId:id});if(closed)return;await refresh();notice.textContent=action==='REQUEST'?'Solicitud enviada.':action==='ACCEPT'?'Ahora son amigos. Ya pueden chatear.':'Cambio guardado.';window.dispatchEvent(new Event('proveit:social-updated'));}
  catch(error){notice.textContent=error.message;}finally{busy=false;if(!closed)render();}}
-function openChat(ref){activeId=ref.profileId;chatStop?.();chatStop=mountChat(conversation,{roomType:'DIRECT',targetProfileId:ref.profileId,title:find(ref.profileId)?.nickname || 'Chat privado'});}
+function openChat(ref){openDirectChat({profileId:ref.profileId,name:find(ref.profileId)?.nickname || 'Chat privado'});}
 function render(){if(!state || closed)return;
  counter.textContent=state.friends.length+' amigos · '+(state.limit===null?'sin límite para tu cuenta':state.limit+' como máximo');
  incoming.replaceChildren(...state.incoming.map(r=>person(r,[['Aceptar',()=>void act('ACCEPT',r.profileId)],['Rechazar',()=>void act('DECLINE',r.profileId)]])));
@@ -41,7 +41,6 @@ function render(){if(!state || closed)return;
  const matches=profiles.filter(p=>p.id!==user.userId && p.owner!==user.username && !p.owner.startsWith(user.userId+'::') && !existing.has(p.id) && (q?p.nickname.toLocaleLowerCase('es').includes(q):p.id===target)).slice(0,20);
  directory.replaceChildren(...matches.map(p=>person({profileId:p.id},[['Agregar amigo',()=>void act('REQUEST',p.id)]])));
  if(!matches.length)directory.append(el('p',q?'No encontramos personas disponibles con ese nick.':'Buscá un nick para enviar una solicitud.','social-help'));
- if(activeId && !state.friends.some(r=>r.profileId===activeId)){chatStop?.();chatStop=null;activeId='';conversation.replaceChildren(el('p','La amistad terminó. El chat privado ya no está disponible.','social-help'));}
 }
 async function refresh(){if(refreshing || closed)return;refreshing=true;try{const next=await socialAction('STATE');if(closed)return;state=next;render();}finally{refreshing=false;}}
 search.addEventListener('input',render);
