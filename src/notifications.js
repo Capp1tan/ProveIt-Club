@@ -71,16 +71,17 @@ if (nav) {
       const schedule=document.createElement('p'); schedule.className='notification-help'; schedule.textContent=scheduleLabel(invitation.startsAt,invitation.timeZone);
       card.append(link,role,schedule);
       if(invitation.rulesSnapshot) { const rules=document.createElement('p'); rules.className='invitation-rules'; rules.textContent='Reglas: '+invitation.rulesSnapshot; card.append(rules); }
+      if(invitation.conflictsSnapshot){const conflicts=document.createElement('p');conflicts.className='arbitration-warning';conflicts.textContent='Conflictos de interés: '+invitation.conflictsSnapshot;card.append(conflicts);}
       let agreement;
-      if(noJudge) {
+      {
         const warning=document.createElement('p'); warning.className='arbitration-warning'; warning.textContent='Sin juez · decide el organizador, incluso si participa.';
         const label=document.createElement('label'); label.className='invitation-consent'; agreement=document.createElement('input'); agreement.type='checkbox'; agreement.checked=consentChecks.has(invitation.id);
-        const text=document.createElement('span'); text.textContent=noJudgeConsent; label.append(agreement,text); card.append(warning,label);
+        const text=document.createElement('span'); text.textContent=(noJudge?noJudgeConsent+' ':'')+(invitation.role==='JUDGE'?'Acepto el cargo de juez, entiendo las reglas y los conflictos declarados, y coordinaré el premio según sus condiciones.':'Leí y acepto las reglas, los conflictos de interés declarados y las condiciones del premio.'); label.append(agreement,text); card.append(warning,label);
       }
       const actions = document.createElement('div'); actions.className = 'notification-actions';
       for (const accept of [true,false]) {
         const button = document.createElement('button'); button.type = 'button'; button.textContent = accept ? 'Aceptar' : 'Rechazar';
-        if(accept && noJudge) {
+        if(accept) {
           button.disabled=!agreement.checked;
           agreement.addEventListener('change',()=>{agreement.checked ? consentChecks.add(invitation.id) : consentChecks.delete(invitation.id);button.disabled=!agreement.checked;});
         }
@@ -91,7 +92,7 @@ if (nav) {
           panel.querySelectorAll('.notification-actions button').forEach(control => { control.disabled = true; });
           message.textContent = 'Guardando respuesta…';
           try {
-            await respondInvitation(invitation.id,accept,noJudge && agreement.checked);
+            await respondInvitation(invitation.id,accept,noJudge && agreement.checked,agreement.checked,invitation.termsVersion || 0);
             consentChecks.delete(invitation.id);
             if (activeGeneration !== generation) return;
             invitations = invitations.filter(item => item.id !== invitation.id); render();

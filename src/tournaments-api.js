@@ -1,3 +1,4 @@
+import {clubDirectory} from './community-api.js';
 import { configureAmplify, getCurrentUser, profileClient } from './auth-client.js';
 
 export async function tournamentClient() {
@@ -10,17 +11,7 @@ function resultData(result) {
   return result.data;
 }
 // Paginamos para no ocultar cuentas o torneos después de la primera página.
-export async function registeredProfiles({ includeBio = false } = {}) {
-  const client = await tournamentClient();
-  const profiles = [];
-  let nextToken;
-  do {
-    const result = await client.models.Profile.list({ limit: 100, nextToken, selectionSet: ['id', 'nickname', 'owner', 'avatarPath', 'accountComplete', ...(includeBio ? ['bio'] : [])] });
-    profiles.push(...(resultData(result) || []));
-    nextToken = result.nextToken;
-  } while (nextToken);
-  return profiles.filter(profile => profile.nickname && profile.owner).sort((a,b) => a.nickname.localeCompare(b.nickname, 'es'));
-}
+export async function registeredProfiles(){return clubDirectory();}
 export async function createClubTournament(values) {
   const client = await tournamentClient();
   const result = resultData(await client.mutations.createClubTournament(values));
@@ -58,12 +49,12 @@ export async function pendingInvitations() {
     invitations.push(...(resultData(result) || [])); nextToken = result.nextToken;
   } while (nextToken);
   // No mostrar invitaciones de torneos retirados aunque la campana estuviera abierta.
-  const live=new Map(await Promise.all([...new Set(invitations.map(i=>i.tournamentId))].map(async id=>[id,Boolean(await getClubTournament(id))])));
-  return invitations.filter(i=>live.get(i.tournamentId)).sort((a,b) => b.createdAt.localeCompare(a.createdAt));
+  const live=new Map(await Promise.all([...new Set(invitations.map(i=>i.tournamentId))].map(async id=>[id,await getClubTournament(id)])));
+  return invitations.filter(i=>{const t=live.get(i.tournamentId);return t && (i.termsVersion || 0)===(t.termsVersion || 0) && (!t.rosterStatuses || t.rosterStatuses[i.rosterIndex]==='PENDING');}).sort((a,b) => b.createdAt.localeCompare(a.createdAt));
 }
-export async function respondInvitation(invitationId, accept, acceptOrganizerDecision = false) {
+export async function respondInvitation(invitationId, accept, acceptOrganizerDecision = false,acceptTerms=false,termsVersion=null) {
   const client = await tournamentClient();
-  const result = resultData(await client.mutations.respondToTournamentInvitation({ invitationId, accept, acceptOrganizerDecision }));
+  const result = resultData(await client.mutations.respondToTournamentInvitation({ invitationId, accept, acceptOrganizerDecision,acceptTerms,termsVersion }));
   if (!result?.id) throw new Error('No se pudo confirmar la respuesta. Actualizá para revisar su estado.');
   return result;
 }
@@ -73,9 +64,9 @@ export async function ensureClubTournamentDraw(tournamentId) {
   return resultData(await client.mutations.prepareTournamentDraw({ tournamentId }));
 }
 
-export async function recordClubDuelResult(tournamentId, winnerProfileId) {
+export async function recordClubDuelResult(tournamentId, winnerProfileId,resultReason='',resultKind='NORMAL') {
   const client = await tournamentClient();
-  return resultData(await client.mutations.recordClubDuelResult({ tournamentId, winnerProfileId }));
+  return resultData(await client.mutations.recordClubDuelResult({ tournamentId, winnerProfileId,resultReason,resultKind }));
 }
 
 // Los permisos del premio se validan en AWS, no por los botones visibles.

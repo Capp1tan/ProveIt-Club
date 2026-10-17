@@ -1,3 +1,6 @@
+import {viewClubProfile} from './community-api.js';
+import {reputationPanel,socialLinks} from './profile-components.js';
+import '../community.css';
 // Tarjeta pública compartida: no consulta teléfonos, correos ni datos privados.
 // Cambiá este valor si querés ajustar el tiempo de espera al pasar el cursor.
 const HOVER_DELAY = 500;
@@ -45,20 +48,24 @@ export class ProfilePreview {
     },180);
   }
   dismiss() {clearTimeout(this.showTimer);clearTimeout(this.hideTimer);this.active?.setAttribute('aria-expanded','false');this.active=null;this.pinned=false;this.card.hidden=true;}
-  show(button,id,historicalName,pin=false) {
+  async show(button,id,historicalName,pin=false) {
     if(!this.enabled)return;
     this.dismiss();this.active=button;this.pinned=pin;button.setAttribute('aria-expanded','true');
-    const profile=this.profiles.get(id), name=profile?.nickname || historicalName;
+    this.card.textContent='Cargando perfil…';this.card.hidden=false;this.position();
+    let profile;try{profile=await viewClubProfile(id);}catch{if(this.active===button)this.card.textContent='No pudimos cargar el perfil. Reintentá.';return;}
+    if(this.active!==button || !this.enabled)return;
+    if(profile)this.profiles.set(id,profile);
+    const name=profile?.nickname || historicalName;
     this.card.replaceChildren();this.card.setAttribute('aria-label','Perfil de '+name);
     const close=document.createElement('button');close.type='button';close.className='profile-preview-close';close.textContent='×';close.setAttribute('aria-label','Cerrar vista previa');
     close.addEventListener('click',()=>{this.suppressFocus=button;this.dismiss();button.focus({preventScroll:true});});
     const head=document.createElement('div');head.className='profile-preview-heading';
     const title=document.createElement('h3');title.textContent=name;head.append(this.avatar(id,name),title);
-    const bio=document.createElement('p');bio.className='profile-preview-bio';bio.textContent=profile ? profile.bio?.trim() || 'Todavía no agregó una biografía.' : 'Este perfil ya no está disponible. El nombre corresponde al registro del torneo.';
+    const bio=document.createElement('p');bio.className='profile-preview-bio';bio.textContent=profile ? (!profile.canView?'Perfil privado · sólo amigos':profile.bio?.trim() || 'Todavía no agregó una biografía.') : 'Este perfil ya no está disponible. El nombre corresponde al registro del torneo.';
     this.card.append(close,head,this.badges(profile?.owner?.split('::')[0]),bio);
-    const reputation=document.createElement('div');reputation.className='judge-reputation';const repTitle=document.createElement('strong');repTitle.textContent='Reputación como juez';const repText=document.createElement('p');repText.textContent='Próximamente · todavía no se calculan valoraciones.';reputation.append(repTitle,repText);this.card.append(reputation);
+    if(profile)this.card.append(reputationPanel(profile.reputation,profile.judgeEnabled),socialLinks(profile));
     const help=document.createElement('small');help.textContent='Perfil del club';this.card.append(help);
-    if(profile){const friend=document.createElement('a');friend.className='friend-preview-link';friend.href='/amigos.html?persona='+encodeURIComponent(profile.id);friend.textContent='Amistad y mensajes ↗';this.card.append(friend);}
+    if(profile){const full=document.createElement('a');full.href='/perfil.html?id='+encodeURIComponent(id);full.textContent=profile.canView?'Ver perfil completo ↗':'Ver ficha del perfil ↗';this.card.append(full);const friend=document.createElement('a');friend.className='friend-preview-link';friend.href='/amigos.html?persona='+encodeURIComponent(profile.id);friend.textContent='Amistad y mensajes ↗';this.card.append(friend);}
     this.card.hidden=false;this.position();
   }
   position() {

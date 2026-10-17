@@ -10,7 +10,7 @@ const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const formats = new Set(['DUEL', 'ROUND_ROBIN', 'SINGLE_ELIMINATION', 'DOUBLE_ELIMINATION', 'SWISS', 'FREE_FOR_ALL']);
 type Arguments = {
   tournamentId: string; name: string; activity: string; format: string;
-  description?: string | null; participantIds: string[]; judgeIds: string[];
+  description?: string | null; conflicts?:string; participantIds: string[]; judgeIds: string[];
   treasurerId?: string | null;
   arbitrationMode: string; startsAt: string; timeZone: string; acceptOrganizerDecision?: boolean;
 };
@@ -43,7 +43,8 @@ export const handler = async (event: { arguments: Arguments; identity?: { sub?: 
   catch { throw new Error('Elegí una zona horaria válida.'); }
   const name = text(args.name, 3, 80, 'Nombre');
   const activity = text(args.activity, 2, 80, 'Actividad');
-  const description = text(args.description ?? '', noJudge ? 10 : 0, 1000, 'Reglas');
+  const description = text(args.description ?? '',10,1000,'Reglas');
+  const conflicts=text(args.conflicts ?? '',0,500,'Conflictos de interés');
   if (!formats.has(args.format)) throw new Error('Elegí un formato válido.');
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(args.tournamentId)) {
     throw new Error('Identificador de torneo inválido.');
@@ -61,7 +62,7 @@ export const handler = async (event: { arguments: Arguments; identity?: { sub?: 
   if(args.treasurerId)throw new Error('El juez también coordina el dinero. Actualizá el formulario para crear el torneo.');
   const treasurerId = null;
   const allIds = [...participantIds, ...judgeIds, ...(treasurerId ? ids([treasurerId], 1, 1, 'Tesorero') : [])];
-  if (new Set(allIds).size !== allIds.length) throw new Error('Cada persona debe tener un único rol en este torneo.');
+  if (new Set(participantIds).size !== participantIds.length || new Set(judgeIds).size !== judgeIds.length) throw new Error('Cada persona debe tener un único rol en este torneo.');
   const profileTable = process.env.PROFILE_TABLE_NAME!;
   const tournamentTable = process.env.TOURNAMENT_TABLE_NAME!;
   // Lecturas consistentes por ID: no se aceptan nombres escritos a mano.
@@ -72,7 +73,10 @@ export const handler = async (event: { arguments: Arguments; identity?: { sub?: 
     return profile;
   }));
   const owners = profiles.map(profile => profile.owner.split('::')[0]);
-  if (new Set(owners).size !== owners.length) throw new Error('Una misma cuenta no puede ocupar varios lugares ni roles.');
+  if(profiles.some((p,i)=>i<participantIds.length && profiles.slice(0,i).some(q=>q.owner.split('::')[0]===p.owner.split('::')[0])) || profiles.some((p,i)=>i>=participantIds.length && profiles.slice(participantIds.length,i).some(q=>q.owner.split('::')[0]===p.owner.split('::')[0])))throw new Error('No se puede repetir una cuenta dentro del mismo rol.');
+  if(profiles.slice(participantIds.length).some(p=>!p.judgeEnabled))throw new Error('Un juez seleccionado no habilitó el rol en su perfil.');
+  const hasDual=judgeIds.some(id=>participantIds.includes(id));
+  const declaration=[hasDual?'Un juez también participa en el torneo.':'',conflicts].filter(Boolean).join(' ');
   for (const accountSub of new Set([sub, ...owners])) {
     const account = (await db.send(new GetCommand({ TableName: process.env.ACCOUNT_TABLE_NAME!, Key: { id: accountSub }, ConsistentRead: true }))).Item;
     if (!account?.phoneNumber && !await phoneOptional(accountSub)) throw new Error('Todos los integrantes y el organizador deben completar su teléfono en Mi perfil.');
@@ -80,25 +84,25 @@ export const handler = async (event: { arguments: Arguments; identity?: { sub?: 
   const names = new Map(profiles.map(profile => [profile.id, profile.nickname]));
   const now = new Date().toISOString();
   const item = {
-    id: args.tournamentId, name, activity, description, format: args.format,
+    id: args.tournamentId, termsVersion:1,conflicts:declaration,clubRewards:false,name, activity, description, format: args.format,
     participantIds, participantNames: participantIds.map(id => names.get(id)),
     judgeIds, judgeNames: judgeIds.map(id => names.get(id)),
     treasurerId, treasurerName: treasurerId ? names.get(treasurerId) : null,
     arbitrationMode: args.arbitrationMode, startsAt: args.startsAt, timeZone: args.timeZone,
     consentVersion: noJudge ? 'NO_JUDGE_V1' : null, organizerConsentAt: noJudge ? now : null,
     createdBySub: sub, status: 'AWAITING_RESPONSES', membershipRevision: 0,
-    rosterStatuses: owners.map(recipient => recipient === sub ? 'ACCEPTED' : 'PENDING'), createdAt: now, updatedAt: now,
+    rosterStatuses: owners.map(() => 'PENDING'), createdAt: now, updatedAt: now,
     __typename: 'Tournament',
   };
     const invites = profiles.map((profile, index) => ({
-      id: args.tournamentId + ':' + profile.id,
+      id: args.tournamentId + ':' + index,termsVersion:1,conflictsSnapshot:declaration,
       tournamentId: args.tournamentId, tournamentName: name,
       recipientSub: owners[index], profileId: profile.id, rosterIndex: index,
       role: index < participantIds.length ? 'PARTICIPANT' : index < participantIds.length + judgeIds.length ? 'JUDGE' : 'TREASURER',
-      status: owners[index] === sub ? 'ACCEPTED' : 'PENDING',
+      status:'PENDING',
       arbitrationMode: args.arbitrationMode, startsAt: args.startsAt, timeZone: args.timeZone,
       rulesSnapshot: description, consentVersion: noJudge ? 'NO_JUDGE_V1' : null,
-      consentAcceptedAt: noJudge && owners[index] === sub ? now : null,
+      consentAcceptedAt:null,
       invitedBySub: sub, createdAt: now, updatedAt: now, __typename: 'TournamentInvitation',
     }));
   // El borrador es privado. No existen torneo ni invitaciones antes del pago.

@@ -23,11 +23,11 @@ const photos=new Map();
 function button(label,action){const b=el('button',label,'social-button');b.type='button';b.disabled=busy;b.addEventListener('click',action);return b;}
 function person(ref,actions){const p=find(ref.profileId),name=p?.nickname || 'Cuenta no disponible',row=el('article','','social-person'),photo=el('span',Array.from(name)[0],'person-avatar social-avatar');
  decorateAvatar(photo,p?.owner?.split('::')[0]);if(p?.avatarPath){if(!photos.has(p.avatarPath))photos.set(p.avatarPath,avatarUrl(p.avatarPath).catch(()=>''));void photos.get(p.avatarPath).then(url=>{if(closed || !url)return;const img=el('img');img.alt='';img.width=36;img.height=36;img.loading='lazy';img.src=url;photo.replaceChildren(img);});}
- const label=el('div','','social-person-name');label.append(el('strong',name),badgeElements(p?.owner?.split('::')[0]));
+ const label=el('div','','social-person-name');const profileLink=el('a',name);profileLink.href='/perfil.html?id='+encodeURIComponent(ref.profileId);label.append(profileLink,badgeElements(p?.owner?.split('::')[0]));
  const controls=el('div','','social-person-actions');for(const [title,fn] of actions)controls.append(button(title,fn));row.append(photo,label,controls);return row;
 }
 async function act(action,id){if(busy)return;busy=true;render();notice.textContent='Guardando…';
- try{await socialAction(action,{targetProfileId:id});if(closed)return;await refresh();notice.textContent=action==='REQUEST'?'Solicitud enviada.':action==='ACCEPT'?'Ahora son amigos. Ya pueden chatear.':'Cambio guardado.';window.dispatchEvent(new Event('proveit:social-updated'));}
+ try{await socialAction(action,{targetProfileId:id});profiles=await registeredProfiles();photos.clear();if(closed)return;await refresh();notice.textContent=action==='REQUEST'?'Solicitud enviada.':action==='ACCEPT'?'Ahora son amigos. Ya pueden chatear.':'Cambio guardado.';window.dispatchEvent(new Event('proveit:social-updated'));}
  catch(error){notice.textContent=error.message;}finally{busy=false;if(!closed)render();}}
 function openChat(ref){openDirectChat({profileId:ref.profileId,name:find(ref.profileId)?.nickname || 'Chat privado'});}
 function render(){if(!state || closed)return;

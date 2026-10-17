@@ -1,3 +1,4 @@
+import {judgePanel} from './judge-ui.js';
 import { mountChat } from './chat-ui.js';
 import { prizePanel } from './tournament-prize.js';
 import { sharePanel } from './tournament-share.js';
@@ -28,7 +29,7 @@ function avatar(id,name) {
   node.setAttribute('aria-hidden','true');
   decorateAvatar(node, profiles.get(id)?.owner?.split('::')[0]);
   const path=profiles.get(id)?.avatarPath;
-  if(path?.startsWith('profile-pictures/')) {
+  if(/^(profile-pictures|profile-private)\//.test(path || '')) {
     if(!photoRequests.has(path)) photoRequests.set(path,avatarUrl(path).catch(()=>''));
     void photoRequests.get(path).then(url=>{if(!url)return;const img=document.createElement('img');img.alt='';img.loading='lazy';img.src=url;img.addEventListener('error',()=>{node.textContent=Array.from(name)[0] || '?';},{once:true});node.replaceChildren(img);});
   }
@@ -108,7 +109,7 @@ function schedulePanel(t) {
   return section;
 }
 function resultPanel(t) {
-  const section=element('section','','tournament-panel');section.append(element('h2','Resultado del duelo'));
+  const section=element('section','','tournament-panel');section.append(element('h2','Resultado del torneo'));
   if(t.winnerProfileId) {
     section.append(element('p','🏆 '+t.winnerName,'duel-winner'),element('p','Decidido por '+(t.decidedByLabel || 'el árbitro acordado')+' · '+scheduleLabel(t.decidedAt,t.timeZone)),element('p','Resultado definitivo. No se puede cambiar desde esta pantalla.','field-help'));
     return section;
@@ -126,13 +127,15 @@ function resultPanel(t) {
   t.participantIds.forEach((id,index)=>{const option=element('option',t.participantNames[index]);option.value=id;select.append(option);});
   const button=element('button','Confirmar ganador','primary-button');button.id='recordDuelWinner';button.type='submit';
   const message=element('p','','field-help');message.setAttribute('role','status');
-  form.append(label,select,element('p','Podrás confirmar después del horario de inicio. La decisión será definitiva.','field-help'),button,message);
+  const kind=element('select'),reason=element('textarea'),kindLabel=element('label','Tipo de decisión'),reasonLabel=element('label','Motivo de la decisión');
+  for(const [v,n] of [['NORMAL','Resultado normal'],['DISPUTED','Resultado discutido'],['SANCTION','Sanción']]){const o=element('option',n);o.value=v;kind.append(o);}reason.maxLength=500;reason.rows=3;reason.placeholder='Obligatorio si hubo discusión o sanción';kind.addEventListener('change',()=>{reason.required=kind.value!=='NORMAL';reason.minLength=kind.value!=='NORMAL'?10:0;});kindLabel.append(kind);reasonLabel.append(reason);
+  form.append(kindLabel,reasonLabel,label,select,element('p','Podrás confirmar después del horario de inicio. La decisión será definitiva.','field-help'),button,message);
   form.addEventListener('submit',async event=>{
     event.preventDefault();if(button.disabled || !select.value)return;
     const name=t.participantNames[t.participantIds.indexOf(select.value)];
     if(!window.confirm('¿Confirmar a '+name+' como ganador? Esta decisión quedará registrada y no se podrá cambiar desde el sitio.'))return;
     button.disabled=true;button.dataset.saving='true';message.textContent='Guardando resultado…';
-    try {const saved=await recordClubDuelResult(t.id,select.value);if(!saved?.winnerProfileId)throw new Error('AWS no confirmó el resultado. Actualizá para revisar su estado.');currentTournament=saved;renderTournament(saved);lastVersion=saved.updatedAt+String(saved.draw);}
+    try {const saved=await recordClubDuelResult(t.id,select.value,reason.value,kind.value);if(!saved?.winnerProfileId)throw new Error('AWS no confirmó el resultado. Actualizá para revisar su estado.');currentTournament=saved;renderTournament(saved);lastVersion=saved.updatedAt+String(saved.draw);}
     catch(error) {message.textContent=error.message;delete button.dataset.saving;updateClock();}
   });section.append(form);return section;
 }
@@ -143,7 +146,7 @@ function renderTournament(t) {
   if(chatRoot && chatId!==t.id){closeTournamentChat();chatRoot.hidden=false;chatId=t.id;chatCleanup=mountChat(chatRoot,{roomType:'TOURNAMENT',roomId:t.id});}
   detail.replaceChildren();
   const status=states(t),format=formats.find(f=>f.id===t.format);
-  const label=t.winnerProfileId?'DUELO FINALIZADO':t.draw?'TODOS CONFIRMADOS · SORTEO GUARDADO':status.includes('REJECTED')?'INVITACIÓN RECHAZADA · SORTEO DETENIDO':t.rosterStatuses?'SALA DE ESPERA':'TORNEO ANTERIOR · EN PREPARACIÓN';
+  const label=t.winnerProfileId?'TORNEO FINALIZADO':t.draw && t.status==='READY'?'TODOS CONFIRMADOS · SORTEO GUARDADO':status.includes('REJECTED')?'INVITACIÓN RECHAZADA · SORTEO DETENIDO':t.rosterStatuses?'SALA DE ESPERA':'TORNEO ANTERIOR · EN PREPARACIÓN';
   detail.append(element('p',label,'eyebrow'),element('h1',t.name),element('p',t.activity));
   if(t.paymentMode==='TEST')detail.append(element('p','TORNEO DE PRUEBA · no corresponde a un cobro real','tournament-notice'));
   if(t.creationPaymentStatus==='REVERSED')detail.append(element('p','El pago de creación fue revertido. Contactá al administrador.','tournament-notice'));
@@ -155,7 +158,7 @@ function renderTournament(t) {
   const info=element('section','','tournament-panel');info.append(element('h2',format?.name || t.format));
   if(format && !t.draw){const image=element('div','','format-preview');image.innerHTML=formatImage(format.id);image.append(element('p',format.description));info.append(image);}
   const rules=element('p',t.description || 'El organizador todavía no agregó reglas.');rules.style.whiteSpace='pre-wrap';info.append(rules);detail.append(info);
-  if(t.draw) detail.append(drawBoard(t));
+  if(t.draw && (t.status==='READY' || t.status==='COMPLETED')) detail.append(drawBoard(t));
   else if(t.rosterStatuses) detail.append(element('p',status.includes('REJECTED')?'Una persona rechazó. El torneo no se sortea: por ahora es necesario crear otro con los integrantes que acepten.':'Esperando que todos los participantes, jueces y tesorero elegido confirmen. Los cruces se sortearán automáticamente después de la última aceptación.','tournament-notice'));
   else detail.append(element('p','Este torneo se creó antes del sistema de invitaciones; conserva sus integrantes históricos. El sorteo automático se aplica a los nuevos torneos.','tournament-notice'));
   const p=t.participantIds.length,j=p+t.judgeIds.length;
@@ -163,8 +166,8 @@ function renderTournament(t) {
   if(t.treasurerId)detail.append(roster('Tesorero (torneo anterior)',[t.treasurerId],[t.treasurerName],status.slice(j)));
   const refresh=element('button','Actualizar confirmaciones','format-choice');refresh.type='button';refresh.addEventListener('click',()=>void refreshTournament(true));
 
-  if(t.format==='DUEL')detail.append(resultPanel(t));
-  detail.append(sharePanel(t),refresh,element('p','El registro de ganador está disponible en Duelo 1v1. La gestión del dinero y los resultados de otros formatos siguen pendientes.','field-help'));
+  detail.append(resultPanel(t),judgePanel(t,{isOrganizer:currentUser?.userId===t.createdBySub,onChanged:()=>refreshTournament(true)}));
+  detail.append(sharePanel(t),refresh,element('p','El juez registra al ganador general. Los resultados de cada cruce aún no se actualizan individualmente. El premio se gestiona externamente.','field-help'));
   if(isClubAdmin || currentUser?.userId===t.createdBySub) {
     const remove=element('button','Eliminar torneo','danger-button');remove.type='button';
     remove.addEventListener('click',async()=>{
@@ -183,7 +186,7 @@ async function refreshTournament(force=false) {
     let t=await getClubTournament(id);if(!t){closeTournamentChat();profilePreview?.lock();drawCleanup?.();detail.replaceChildren();currentTournament=null;throw new Error('Este torneo fue eliminado o ya no está disponible.');}
     if (!t.draw && t.rosterStatuses?.length && t.rosterStatuses.every(state=>state==='ACCEPTED') && (await getCurrentUser()).userId===t.createdBySub) t=await ensureClubTournamentDraw(id) || t;
     const version=t.updatedAt+String(t.draw);
-    if((force || version!==lastVersion) && !detail.querySelector('[data-prize-editing="true"]')){renderTournament(t);lastVersion=version;}
+    if((force || version!==lastVersion) && !detail.querySelector('[data-prize-editing="true"]') && !detail.querySelector('.community-form:focus-within,.duel-result-form:focus-within')){renderTournament(t);lastVersion=version;}
     notice.hidden=true;
   }catch(error){notice.hidden=false;notice.textContent=error.message;notice.dataset.error='true';}
   finally{refreshing=false;}

@@ -1,8 +1,9 @@
 // Las reservas privadas y el perfil se modifican en una sola transacción.
+import {S3Client,HeadObjectCommand} from '@aws-sdk/client-s3';
 import { createHash } from 'node:crypto';
 import { assertActiveAccount, phoneOptional } from '../lifecycle';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, GetCommand, PutCommand, DeleteCommand, TransactWriteCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, ScanCommand, GetCommand, PutCommand, DeleteCommand, TransactWriteCommand } from '@aws-sdk/lib-dynamodb';
 import { CognitoIdentityProviderClient, AdminGetUserCommand } from '@aws-sdk/client-cognito-identity-provider';
 import { parsePhoneNumberFromString } from 'libphonenumber-js/max';
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
@@ -72,7 +73,7 @@ export const handler = async (event: Event) => {
   const bio = String(args.bio || '').trim();
   const avatarPath = String(args.avatarPath || '');
   if (nickname.length < 3 || nickname.length > 24 || bio.length > 200) throw new Error('Revisá el nick (3–24 caracteres) y la biografía (máximo 200).');
-  if (avatarPath && (!avatarPath.startsWith('profile-pictures/') || avatarPath.length > 1024)) throw new Error('Foto inválida.');
+  if (avatarPath && (!(avatarPath.startsWith('profile-pictures/') || avatarPath.startsWith('profile-private/')) || avatarPath.length > 1024)) throw new Error('Foto inválida.');
   const raw = String(args.phoneNumber || '').trim();
   const phone = raw.startsWith('+') ? parsePhoneNumberFromString(raw) : undefined;
   const optional=await phoneOptional(sub);
@@ -82,10 +83,33 @@ export const handler = async (event: Event) => {
   if (existing && existing.owner?.split('::')[0] !== sub) throw new Error('No podés editar este perfil.');
   const account = await get('ACCOUNT_TABLE_NAME', sub);
   const revision = account?.revision || 0;
-  const item = { ...existing, id, nickname, bio, avatarPath, accountComplete: true, owner: existing?.owner || sub + '::' + event.identity!.username, createdAt: existing?.createdAt || now, updatedAt: now, __typename: 'Profile' };
+  const visibility=args.visibility==='PUBLIC'?'PUBLIC':'PRIVATE';
+  const judgeEnabled=args.judgeEnabled===true;
+  let links:any;try{links=JSON.parse(args.socialLinks || '{}');}catch{throw new Error('Redes inválidas.');}
+  const allowed:Record<string,string[] | null>={instagram:['instagram.com','www.instagram.com'],twitch:['twitch.tv','www.twitch.tv'],discord:['discord.com','discord.gg','www.discord.com'],custom:null};
+  const socialLinks:Record<string,string>={};
+  if(!links || Array.isArray(links) || typeof links!=='object')throw new Error('Redes inválidas.');
+  for(const [key,raw] of Object.entries(links)){
+   if(!(key in allowed) || typeof raw!=='string' || raw.length>500)throw new Error('Red social inválida.');if(!raw.trim())continue;
+   if(key==='discord' && !raw.includes('://')){if(!/^[a-zA-Z0-9_.]{2,32}$/.test(raw))throw new Error('Usuario de Discord inválido.');socialLinks[key]=raw;continue;}
+   let u:URL;try{u=new URL(raw);}catch{throw new Error('Usá enlaces completos con https://.');}
+   if(u.protocol!=='https:' || u.username || u.password || (allowed[key] && !allowed[key]!.includes(u.hostname)))throw new Error('Revisá el dominio del enlace.');
+   socialLinks[key]=u.href;
+  }
+  if(avatarPath && avatarPath!==existing?.avatarPath){
+   if(!avatarPath.startsWith('profile-private/'+sub+'/'))throw new Error('La foto no pertenece a tu cuenta. Volvé a subirla.');
+   const h=await new S3Client({}).send(new HeadObjectCommand({Bucket:process.env.PROFILE_BUCKET_NAME,Key:avatarPath}));
+   if(!['image/jpeg','image/png','image/webp'].includes(h.ContentType || '') || !h.ContentLength || h.ContentLength>2097152)throw new Error('Foto inválida o mayor a 2 MB.');
+  }
+  const nickClaim='nickname:'+createHash('sha256').update(nickname.normalize('NFKC').toLocaleLowerCase('es')).digest('hex');
+  // También comprobar nicks anteriores a las reservas de 3.0.
+  let scanKey;
+  do{const page=await db.send(new ScanCommand({TableName:table('PROFILE_TABLE_NAME'),ProjectionExpression:'id,nickname',ExclusiveStartKey:scanKey}));if(page.Items?.some(p=>p.id!==id && p.nickname?.normalize('NFKC').toLocaleLowerCase('es')===nickname.normalize('NFKC').toLocaleLowerCase('es')))throw new Error('Ese nick ya está en uso.');scanKey=page.LastEvaluatedKey;}while(scanKey);
+  const item = { ...existing, id, visibility,socialLinks:JSON.stringify(socialLinks),judgeEnabled,nickname, bio, avatarPath, accountComplete: true, owner: existing?.owner || sub + '::' + event.identity!.username, createdAt: existing?.createdAt || now, updatedAt: now, __typename: 'Profile' };
   const number=phone?.number || "";
   const newClaim = number ? phoneKey(number) : null;
   const transactions: any[] = [
+    {Put:{TableName:table('CLAIM_TABLE_NAME'),Item:{id:nickClaim,accountSub:sub,createdAt:now,updatedAt:now,__typename:'UniqueClaim'},ConditionExpression:'attribute_not_exists(id) OR accountSub=:sub',ExpressionAttributeValues:{':sub':sub}}},
     { ConditionCheck: { TableName: table('CLAIM_TABLE_NAME'), Key: { id: 'deleted-account:' + sub }, ConditionExpression: 'attribute_not_exists(id)' } },
     ...(newClaim ? [{ Put: { TableName: table('CLAIM_TABLE_NAME'), Item: { id: newClaim, accountSub: sub, createdAt: now, updatedAt: now, __typename: 'UniqueClaim' }, ConditionExpression: 'attribute_not_exists(id) OR accountSub = :sub', ExpressionAttributeValues: { ':sub': sub } } }] : []),
     { Put: { TableName: table('ACCOUNT_TABLE_NAME'), Item: { id: sub, accountSub: sub, phoneNumber: number, phoneVerified: false, revision: revision + 1, createdAt: account?.createdAt || now, updatedAt: now, __typename: 'PrivateAccount' }, ConditionExpression: account ? 'revision = :revision' : 'attribute_not_exists(id)', ...(account ? { ExpressionAttributeValues: { ':revision': revision } } : {}) } },
@@ -95,6 +119,7 @@ export const handler = async (event: Event) => {
   try { await db.send(new TransactWriteCommand({ TransactItems: transactions })); }
   catch (error) {
     if ((error as Error).name !== 'TransactionCanceledException') throw error;
+    const occupied=await get('CLAIM_TABLE_NAME',nickClaim);if(occupied && occupied.accountSub!==sub)throw new Error('Ese nick ya está en uso o reservado.');
     const reservation = newClaim ? await get('CLAIM_TABLE_NAME', newClaim) : null;
     if (reservation && reservation.accountSub !== sub) throw new Error('Ese teléfono ya está asociado a otra cuenta.');
     throw new Error('El perfil cambió durante el guardado. Recargá y volvé a intentarlo.');

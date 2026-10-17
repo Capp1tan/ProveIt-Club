@@ -1,13 +1,14 @@
 // El resultado 1v1 es definitivo: sólo el árbitro acordado puede registrarlo.
 import { DynamoDBDocumentClient, GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { assertActiveTournament } from '../lifecycle';
-export async function recordDuelResult(db: DynamoDBDocumentClient, sub: string, tournamentId: string, winnerProfileId: string) {
+export async function recordDuelResult(db: DynamoDBDocumentClient, sub: string, tournamentId: string, winnerProfileId: string,resultReason='',resultKind='NORMAL') {
   const TableName=process.env.TOURNAMENT_TABLE_NAME!;
   const read=async()=> (await db.send(new GetCommand({TableName,Key:{id:tournamentId},ConsistentRead:true}))).Item;
   const t=await read();
   assertActiveTournament(t);
   if(t?.creationPaymentStatus==='REVERSED')throw new Error('El pago de creación fue revertido. Contactá al administrador.');
-  if(!t || t.format!=='DUEL' || t.participantIds.length!==2) throw new Error('El registro de ganador está disponible para Duelo 1v1.');
+  if(!t || !t.participantIds?.length)throw new Error('Torneo inválido.');
+  if(!['NORMAL','DISPUTED','SANCTION'].includes(resultKind) || typeof resultReason!=='string' || resultReason.length>500 || (resultKind!=='NORMAL' && resultReason.trim().length<10))throw new Error('Los resultados discutidos y las sanciones necesitan un motivo de 10 a 500 caracteres.');
   if(!t.startsAt || !Number.isFinite(Date.parse(t.startsAt)) || Date.now()<Date.parse(t.startsAt)) throw new Error('Todavía no llegó el horario de inicio.');
   if(!t.participantIds.includes(winnerProfileId)) throw new Error('Elegí uno de los participantes del duelo.');
   let decidedByLabel='Organizador';
@@ -16,6 +17,7 @@ export async function recordDuelResult(db: DynamoDBDocumentClient, sub: string, 
   } else {
     const judges=await Promise.all((t.judgeIds || []).map(async(id:string)=>(await db.send(new GetCommand({TableName:process.env.PROFILE_TABLE_NAME!,Key:{id},ConsistentRead:true}))).Item));
     const judge=judges.find(profile=>profile?.owner?.split('::')[0]===sub);
+    if(judge && t.rosterStatuses?.[t.participantIds.length+t.judgeIds.indexOf(judge.id)]!=='ACCEPTED')throw new Error('Aceptá las condiciones vigentes antes de registrar resultados.');
     if(!judge) throw new Error('Sólo un juez designado puede registrar el resultado.');
     decidedByLabel='Juez: '+judge.nickname;
   }
@@ -28,10 +30,10 @@ export async function recordDuelResult(db: DynamoDBDocumentClient, sub: string, 
   const winnerName=t.participantNames[t.participantIds.indexOf(winnerProfileId)],now=new Date().toISOString();
   try {
     const result=await db.send(new UpdateCommand({TableName,Key:{id:tournamentId},
-      UpdateExpression:'SET winnerProfileId = :winner, winnerName = :name, decidedBySub = :sub, decidedByLabel = :label, decidedAt = :now, updatedAt = :now, #status = :completed',
+      UpdateExpression:'SET winnerProfileId = :winner, winnerName = :name, decidedBySub = :sub, decidedByLabel = :label, decidedAt = :now, updatedAt = :now, #status = :completed, resultReason=:reason, resultKind=:kind',
       ConditionExpression:'attribute_not_exists(deletedAt) AND attribute_not_exists(winnerProfileId) AND #status = :ready AND membershipRevision = :revision',
       ExpressionAttributeNames:{'#status':'status'},
-      ExpressionAttributeValues:{':winner':winnerProfileId,':name':winnerName,':sub':sub,':label':decidedByLabel,':now':now,':completed':'COMPLETED',':ready':'READY',':revision':t.membershipRevision || 0},ReturnValues:'ALL_NEW'}));
+      ExpressionAttributeValues:{':reason':resultReason.trim(),':kind':resultKind,':winner':winnerProfileId,':name':winnerName,':sub':sub,':label':decidedByLabel,':now':now,':completed':'COMPLETED',':ready':'READY',':revision':t.membershipRevision || 0},ReturnValues:'ALL_NEW'}));
     return result.Attributes;
   } catch(error) {
     if((error as Error).name!=='ConditionalCheckFailedException') throw error;

@@ -1,3 +1,4 @@
+import {S3Client,ListObjectsV2Command,DeleteObjectsCommand} from '@aws-sdk/client-s3';
 import { createHash } from 'node:crypto';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand, ScanCommand, DeleteCommand, PutCommand, UpdateCommand, TransactWriteCommand } from '@aws-sdk/lib-dynamodb';
@@ -77,6 +78,11 @@ export const handler=async(event:Event)=>{
   }
   await db.send(new DeleteCommand({TableName:table('ACCOUNT_TABLE_NAME'),Key:{id:sub}}));
   for(const badge of await matching('BADGE_TABLE_NAME','accountSub',sub))await db.send(new DeleteCommand({TableName:table('BADGE_TABLE_NAME'),Key:{id:badge.id}}));
+  // Las fotos nuevas no tienen acceso directo del navegador: se limpian por prefijo propio.
+  let continuation;
+  do{const page=await new S3Client({}).send(new ListObjectsV2Command({Bucket:process.env.PROFILE_BUCKET_NAME,Prefix:'profile-private/'+sub+'/',ContinuationToken:continuation}));
+   if(page.Contents?.length)await new S3Client({}).send(new DeleteObjectsCommand({Bucket:process.env.PROFILE_BUCKET_NAME,Delete:{Objects:page.Contents.map(o=>({Key:o.Key!}))}}));continuation=page.NextContinuationToken;
+  }while(continuation);
   try {await cognito.send(new AdminDeleteUserCommand({UserPoolId:process.env.USER_POOL_ID,Username:username}));}
   catch(error){if((error as Error).name!=='UserNotFoundException')throw error;}
   return true;

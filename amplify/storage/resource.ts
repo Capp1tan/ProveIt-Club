@@ -11,7 +11,6 @@ export const storage = defineStorage({
     'prize-media/*': [allow.authenticated.to(['read'])],
     'profile-pictures/{entity_id}/*': [
       allow.entity('identity').to(['read', 'write', 'delete']),
-      allow.authenticated.to(['read']),
     ],
   }),
 });

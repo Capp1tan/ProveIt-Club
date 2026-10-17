@@ -6,14 +6,14 @@ import { prizeAction } from './prize';
 import { phoneOptional, assertActiveAccount, assertActiveTournament } from '../lifecycle';
 import { createDraw } from './draw';
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
-export const handler = async (event: { identity?: { sub?: string }; arguments: { prizeTitle?: string; prizeDescription?: string; prizeLinks?: string; prizeAttachments?: string; prizeRevision?: number; uploadContentType?: string; uploadSize?: number; invitationId?: string; accept?: boolean; tournamentId?: string; winnerProfileId?: string; acceptOrganizerDecision?: boolean } }) => {
+export const handler = async (event: { identity?: { sub?: string }; arguments: { prizeTitle?: string; prizeDescription?: string; prizeLinks?: string; prizeAttachments?: string; prizeRevision?: number; uploadContentType?: string; uploadSize?: number; invitationId?: string; accept?: boolean; tournamentId?: string; winnerProfileId?: string;resultReason?:string;resultKind?:string;acceptTerms?:boolean;termsVersion?:number;prizeHolder?:string;prizeFunder?:string;prizeFundingStatus?:string; acceptOrganizerDecision?: boolean } }) => {
   const sub=event.identity?.sub;
   if(!sub)throw new Error('Iniciá sesión.');
   await assertActiveAccount(sub);
   if ('prizeTitle' in event.arguments || 'uploadContentType' in event.arguments) return prizeAction(db,sub,event.arguments);
   if (event.arguments.winnerProfileId) {
     if (!sub || !event.arguments.tournamentId || typeof event.arguments.winnerProfileId !== 'string' || event.arguments.winnerProfileId.length>128) throw new Error('Resultado inválido.');
-    return recordDuelResult(db, sub, event.arguments.tournamentId, event.arguments.winnerProfileId);
+    return recordDuelResult(db, sub, event.arguments.tournamentId, event.arguments.winnerProfileId,event.arguments.resultReason,event.arguments.resultKind);
   }
   // Recupera también un torneo de 2.2.0 que ya tenía todas sus invitaciones aceptadas.
   if (event.arguments.tournamentId) {
@@ -65,6 +65,7 @@ export const handler = async (event: { identity?: { sub?: string }; arguments: {
     if(!tournament || !Array.isArray(tournament.rosterStatuses) || tournament.rosterStatuses[index]!=='PENDING') throw new Error('El torneo ya no espera esta respuesta.');
     if(tournament.creationPaymentStatus==='REVERSED')throw new Error('El pago de creación fue revertido. Contactá al administrador.');
     const noJudge = tournament.arbitrationMode === 'ORGANIZER';
+    if(accept && (event.arguments.acceptTerms!==true || event.arguments.termsVersion!==(tournament.termsVersion || 0) || (invitation.termsVersion || 0)!==(tournament.termsVersion || 0)))throw new Error('Leé y aceptá las condiciones vigentes. Actualizá la invitación si cambiaron.');
     if (accept && noJudge && (event.arguments.acceptOrganizerDecision !== true || invitation.consentVersion !== 'NO_JUDGE_V1' || tournament.consentVersion !== 'NO_JUDGE_V1')) throw new Error('Para unirte, aceptá que este torneo no tiene juez y el organizador decide el resultado.');
     const statuses=[...tournament.rosterStatuses]; statuses[index]=status;
     const allAccepted=statuses.every(value=>value==='ACCEPTED');
@@ -76,14 +77,14 @@ export const handler = async (event: { identity?: { sub?: string }; arguments: {
     if(draw) { update+=', #draw = :draw'; names['#draw']='draw'; values[':draw']=draw; }
     try {
       await db.send(new TransactWriteCommand({TransactItems:[
-        {Update:{TableName,Key:{id:invitationId},UpdateExpression:accept && noJudge ? 'SET #status = :status, updatedAt = :now, consentAcceptedAt = :now' : 'SET #status = :status, updatedAt = :now',
-          ConditionExpression:'recipientSub = :sub AND #status = :pending',ExpressionAttributeNames:{'#status':'status'},
-          ExpressionAttributeValues:{':status':status,':now':now,':sub':sub,':pending':'PENDING'}}},
+        {Update:{TableName,Key:{id:invitationId},UpdateExpression:accept ? 'SET #status = :status, updatedAt = :now, consentAcceptedAt = :now, termsAcceptedAt=:now' : 'SET #status = :status, updatedAt = :now',
+          ConditionExpression:'recipientSub = :sub AND #status = :pending AND (attribute_not_exists(termsVersion) OR termsVersion=:tv)',ExpressionAttributeNames:{'#status':'status'},
+          ExpressionAttributeValues:{':status':status,':now':now,':sub':sub,':pending':'PENDING',':tv':invitation.termsVersion || 0}}},
         {Update:{TableName:tournamentTable,Key:{id:invitation.tournamentId},UpdateExpression:update,
           ConditionExpression:'attribute_exists(id) AND attribute_not_exists(deletedAt) AND (attribute_not_exists(membershipRevision) OR membershipRevision = :previous)',
           ExpressionAttributeNames:names,ExpressionAttributeValues:values}},
       ]}));
-      return {...invitation,status,updatedAt:now};
+      return {...invitation,status,updatedAt:now,...(accept?{termsAcceptedAt:now}: {})};
     } catch(error) {
       if((error as Error).name!=='TransactionCanceledException') throw error;
       // Otra respuesta avanzó la revisión: volver a leer, sin sobrescribirla ni sortear de nuevo.

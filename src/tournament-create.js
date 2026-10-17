@@ -101,7 +101,7 @@ function personAvatar(profile) {
   decorateAvatar(avatar, owner(profile));
   const initial = Array.from(profile.nickname.trim())[0]?.toLocaleUpperCase('es') || '?';
   avatar.textContent = initial;
-  if (profile.avatarPath?.startsWith('profile-pictures/')) {
+  if (/^(profile-pictures|profile-private)\//.test(profile.avatarPath || '')) {
     if (!avatarRequests.has(profile.avatarPath)) {
       avatarRequests.set(profile.avatarPath, avatarUrl(profile.avatarPath).catch(() => ''));
     }
@@ -126,10 +126,10 @@ function renderPeople() {
   const filtered = profiles.filter(profile => profile.nickname.toLocaleLowerCase('es').includes(query));
   for (const [role, target, selected] of [['participant','participantsList',participants],['judge','judgesList',judges]]) {
     const list = document.getElementById(target); list.replaceChildren();
-    for (const profile of filtered) {
+    for (const profile of filtered.filter(p=>role!=='judge' || p.judgeEnabled)) {
       const label = document.createElement('label'); label.className = 'person-choice';
       const input = document.createElement('input'); input.type = 'checkbox'; input.value = profile.id; input.checked = selected.has(profile.id);
-      input.disabled = (role === 'participant' && selectedFormat === 'DUEL' && !input.checked && selected.size >= 2) || usedByOtherRole(profile, role) || profiles.some(other => other.id !== profile.id && selected.has(other.id) && owner(other) === owner(profile));
+      input.disabled = (role === 'participant' && selectedFormat === 'DUEL' && !input.checked && selected.size >= 2) || profiles.some(other => other.id !== profile.id && selected.has(other.id) && owner(other) === owner(profile));
       input.addEventListener('change', () => {
         if (input.checked && selected.size >= (role === 'participant' ? (selectedFormat === 'DUEL' ? 2 : 64) : 16)) { input.checked = false; return show('Llegaste al máximo de personas para ese rol.', true); }
         input.checked ? selected.add(profile.id) : selected.delete(profile.id);
@@ -217,7 +217,7 @@ form.addEventListener('submit', async event => {
   saving = true; submit.disabled = true; show('Preparando el pago del torneo…');
   try {
     // El mismo identificador permite reintentar si AWS respondió después del límite de espera.
-    const result = await withDeadline(createClubTournament({ tournamentId, arbitrationMode: mode.value, startsAt, timeZone: zone.value, acceptOrganizerDecision: noJudge() && consent.checked, name: form.elements.name.value.trim(), activity: form.elements.activity.value.trim(), description: form.elements.description.value.trim(), format: selectedFormat, participantIds: [...participants], judgeIds: [...judges], treasurerId: treasurer.value || null }), 'La preparación del pago tardó demasiado. Podés reintentar desde este formulario; conservamos el identificador para no duplicar la solicitud.', 45000);
+    const result = await withDeadline(createClubTournament({ tournamentId, arbitrationMode: mode.value, startsAt, timeZone: zone.value, acceptOrganizerDecision: noJudge() && consent.checked, name: form.elements.name.value.trim(), activity: form.elements.activity.value.trim(), description: form.elements.description.value.trim(),conflicts:form.elements.conflicts.value.trim(), format: selectedFormat, participantIds: [...participants], judgeIds: [...judges], treasurerId: treasurer.value || null }), 'La preparación del pago tardó demasiado. Podés reintentar desde este formulario; conservamos el identificador para no duplicar la solicitud.', 45000);
     try { sessionStorage.removeItem(draftKey); } catch {}
     location.href = `/pago.html?id=${encodeURIComponent(result.id)}`;
   } catch (error) { show(error.message || 'No se pudo guardar. Podés reintentar.', true); }

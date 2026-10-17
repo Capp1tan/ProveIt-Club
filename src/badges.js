@@ -13,15 +13,7 @@ export function loadBadges() {
   if(!badgePromise)badgePromise=readBadges().finally(()=>{badgePromise=undefined;});
   return badgePromise;
 }
-async function readBadges() {
-  const client = await profileClient();
-  const items = []; let nextToken;
-  do {
-    const result = await client.models.ClubBadge.list({ limit: 100, nextToken });
-    items.push(...(data(result) || [])); nextToken = result.nextToken;
-  } while (nextToken);
-  badges = items;
-}
+async function readBadges(){const {communityAction}=await import('./community-api.js');badges=(await communityAction('BADGES')).badges;}
 export function badgeElements(sub) {
   const wrapper = document.createElement('span'); wrapper.className = 'club-badges';
   if (!sub) return wrapper;
@@ -56,11 +48,7 @@ export function decorateAvatar(node, sub) {
 }
 export async function mountBadgeAdmin() {
   const section = document.getElementById('badgeAdmin'), people = document.getElementById('badgePeople'), search = document.getElementById('badgeSearch'), notice = document.getElementById('badgeNotice');
-  const client = await profileClient(); let nextToken; const profiles = [];
-  do {
-    const result = await client.models.Profile.list({ limit: 100, nextToken });
-    profiles.push(...(data(result) || [])); nextToken = result.nextToken;
-  } while (nextToken);
+  const client=await profileClient();const {clubDirectory}=await import('./community-api.js');const profiles=await clubDirectory();
   function render() {
     people.replaceChildren();
     const query = search.value.trim().toLocaleLowerCase('es');

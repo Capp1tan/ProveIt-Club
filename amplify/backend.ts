@@ -103,3 +103,21 @@ for(const fn of [backend.billing,backend.paymentWebhook]) {
 backend.storage.resources.bucket.grantPut(backend.respondInvitation.resources.lambda,'prize-media/*');
 backend.storage.resources.bucket.grantRead(backend.respondInvitation.resources.lambda,'prize-media/*');
 backend.respondInvitation.addEnvironment('PRIZE_BUCKET_NAME',backend.storage.resources.bucket.bucketName);
+
+// Comunidad 3.0: la función devuelve sólo campos autorizados; Profile ya no es público.
+backend.data.resources.tables['ClubBadge'].grantReadData(backend.social.resources.lambda);
+backend.social.addEnvironment('BADGE_TABLE_NAME',backend.data.resources.tables['ClubBadge'].tableName);
+invitations.grantReadWriteData(backend.social.resources.lambda);
+tournaments.grantReadWriteData(backend.social.resources.lambda);
+backend.social.addEnvironment('INVITATION_TABLE_NAME',invitations.tableName);
+backend.social.addEnvironment('PROFILE_BUCKET_NAME',backend.storage.resources.bucket.bucketName);
+backend.storage.resources.bucket.grantRead(backend.social.resources.lambda,'profile-pictures/*');
+backend.storage.resources.bucket.grantReadWrite(backend.social.resources.lambda,'profile-private/*');
+backend.storage.resources.bucket.grantRead(accountFunction,'profile-private/*');
+backend.clubAccount.addEnvironment('PROFILE_BUCKET_NAME',backend.storage.resources.bucket.bucketName);
+profiles.grant(accountFunction,'dynamodb:Scan');
+
+invitations.grant(backend.respondInvitation.resources.lambda,'dynamodb:PutItem');
+
+backend.storage.resources.bucket.grantReadWrite(backend.maintenance.resources.lambda,'profile-private/*');
+backend.maintenance.addEnvironment('PROFILE_BUCKET_NAME',backend.storage.resources.bucket.bucketName);

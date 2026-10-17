@@ -16,7 +16,8 @@ async function showAttachment(item,container){
 }
 export function prizePanel(t,{canEdit,onSaved}){
   const section=el('section','','prize-showcase');
-  section.append(el('p','ESTO ESTÁ EN JUEGO','prize-kicker'),el('h2',t.prizeTitle || 'El premio está por anunciarse'),el('span','PREMIO PROVISIONAL','prize-provisional'));
+  section.append(el('p','ESTO ESTÁ EN JUEGO','prize-kicker'),el('h2',t.prizeTitle || 'El premio está por anunciarse'),el('span',t.prizeFundingStatus==='CONFIRMED'?'CONFIRMADO POR EL RESPONSABLE':'PENDIENTE DE CONFIRMACIÓN · NO DISPONIBLE','prize-provisional'));
+  section.append(el('p','Posee o entrega: '+(t.prizeHolder || 'Sin declarar')+' · Financia: '+(t.prizeFunder || 'Sin declarar'),'field-help'),el('p','La gestión del premio es externa a ProveIt. La confirmación es una declaración del responsable; no implica custodia ni garantía de la plataforma.','field-help'));
   if(t.prizeDescription)section.append(el('p',t.prizeDescription,'prize-description'));
   const attachments=parse(t.prizeAttachments),links=parse(t.prizeLinks);
   if(attachments.length){const gallery=el('div','','prize-gallery');for(const item of attachments){const tile=el('div','Cargando adjunto…','prize-media');gallery.append(tile);void showAttachment(item,tile);}section.append(gallery);}
@@ -33,6 +34,10 @@ function prizeForm(t,attachments,{onSaved,onCancel}){
   const field=(text,input)=>{const label=el('label',text);label.append(input);form.append(label);};
   const title=el('input');title.maxLength=120;title.value=t.prizeTitle || '';field('Nombre del premio',title);
   const description=el('textarea');description.maxLength=1200;description.rows=3;description.value=t.prizeDescription || '';field('Descripción',description);
+  const holder=el('input');holder.maxLength=120;holder.value=t.prizeHolder || '';holder.required=true;field('Quién posee o entregará el premio',holder);
+  const funder=el('input');funder.maxLength=120;funder.value=t.prizeFunder || '';funder.required=true;field('Quién financia el premio',funder);
+  const funding=el('select');for(const [value,text] of [['PENDING','Pendiente · el premio no está disponible'],['CONFIRMED','Confirmado por el responsable']]){const o=el('option',text);o.value=value;funding.append(o);}funding.value=t.prizeFundingStatus || 'PENDING';field('Estado del aporte',funding);
+  form.append(el('p','Al guardar cambian las condiciones: todos los integrantes deberán volver a aceptarlas antes de continuar. Declarar confirmado requiere haber recibido esa confirmación.','field-help'));
   const links=el('textarea');links.rows=3;links.value=parse(t.prizeLinks).join('\n');links.placeholder='https://…';field('Enlaces (hasta 5, uno por línea)',links);
   const retained=attachments.map(item=>({...item}));
   for(const item of retained){const label=el('label','','prize-keep');const check=el('input');check.type='checkbox';check.checked=true;check.addEventListener('change',()=>{item.remove=!check.checked;});label.append(check,document.createTextNode('Conservar '+item.name));form.append(label);}
@@ -62,7 +67,7 @@ function prizeForm(t,attachments,{onSaved,onCancel}){
         keep.push(uploaded.get(file));
       }
       message.textContent='Guardando premio…';
-      const saved=await saveTournamentPrize({tournamentId:t.id,prizeTitle:title.value.trim(),prizeDescription:description.value.trim(),prizeLinks:JSON.stringify(urls),prizeAttachments:JSON.stringify(keep),prizeRevision:t.prizeRevision || 0});
+      const saved=await saveTournamentPrize({tournamentId:t.id,prizeTitle:title.value.trim(),prizeDescription:description.value.trim(),prizeLinks:JSON.stringify(urls),prizeAttachments:JSON.stringify(keep),prizeRevision:t.prizeRevision || 0,prizeHolder:holder.value.trim(),prizeFunder:funder.value.trim(),prizeFundingStatus:funding.value});
       if(!saved?.id)throw new Error('AWS no confirmó el cambio. Actualizá antes de volver a guardar.');
       delete form.parentElement.dataset.prizeEditing;onSaved(saved);
     }catch(error){message.textContent=error.message;save.disabled=false;cancel.disabled=false;}

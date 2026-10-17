@@ -59,7 +59,7 @@
   </header>
   <main class="profile-main">
     <section class="profile-heading"><p class="eyebrow"><span class="live-dot"></span> TU IDENTIDAD EN EL CLUB</p><h1>Tu perfil.</h1><p>Elegí cómo querés aparecer cuando compitas.</p></section>
-<div id="profileBadges" class="club-badges"></div><section class="profile-card judge-reputation"><h2>Reputación como juez</h2><p>Próximamente · todavía no se calculan valoraciones.</p></section>
+<div id="profileBadges" class="club-badges"></div><section id="ownJudgeReputation" class="profile-card"></section>
     <form class="profile-card" id="profileForm">
       <div class="avatar-editor">
         <div class="avatar-preview" id="avatarPreview" aria-label="Vista previa de la foto">?</div>
@@ -68,6 +68,13 @@
       <label class="profile-field">Nick <span>obligatorio</span><input name="nickname" required minlength="3" maxlength="24" autocomplete="nickname" placeholder="Tu nombre en la competencia"><small>Entre 3 y 24 caracteres.</small></label>
       <fieldset class="profile-field phone-field"><legend>Teléfono <span id="phoneRequirement">obligatorio · privado</span></legend><label for="phoneCountry">País</label><select id="phoneCountry" name="phoneCountry"></select><label for="phoneNational">Número local</label><div class="phone-number-row"><span id="phonePrefix">+54 9</span><input id="phoneNational" name="phoneNumber" type="tel" required maxlength="24" autocomplete="tel-national" inputmode="tel" aria-describedby="phoneHelp"></div><small id="phoneHelp"></small><small>Privado y único por cuenta. Por ahora no se verifica por SMS.</small></fieldset>
       <label class="profile-field">Biografía <span>opcional</span><textarea name="bio" maxlength="200" rows="3" placeholder="Una línea sobre vos, tus juegos o tu estilo."></textarea><small><span id="bioCount">0</span>/200</small></label>
+      <label class="profile-field">Privacidad<select name="visibility"><option value="PRIVATE">Privado · sólo amigos aceptados</option><option value="PUBLIC">Público · cuentas del club</option></select><small>El nick y la reputación como juez siguen visibles. Correo y teléfono sólo se muestran en tu configuración personal.</small></label>
+      <label class="profile-field"><span><input type="checkbox" name="judgeEnabled"> Quiero estar disponible como juez</span><small>Cada invitación requiere aceptar el cargo y las condiciones.</small></label>
+      <fieldset class="profile-field"><legend>Redes sociales opcionales</legend>
+      <label>Instagram<input name="instagram" type="url" placeholder="https://www.instagram.com/tuusuario" maxlength="500"></label>
+      <label>Twitch<input name="twitch" type="url" placeholder="https://www.twitch.tv/tuusuario" maxlength="500"></label>
+      <label>Discord<input name="discord" placeholder="Tu usuario o https://discord.gg/…" maxlength="500"></label>
+      <label>Otro enlace<input name="custom" type="url" placeholder="https://…" maxlength="500"></label><small>Estos enlaces respetan la privacidad de tu perfil. No ingreses contraseñas.</small></fieldset>
       <p class="profile-notice" id="profileNotice" role="status" aria-live="polite"></p>
       <button class="primary-button profile-save" type="submit">Guardar perfil <span aria-hidden="true">↗</span></button>
     </form>

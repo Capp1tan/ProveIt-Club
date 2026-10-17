@@ -113,17 +113,12 @@ export async function saveProfile(profileId, values) {
   const dataClient = await profileClient();
   if (!profileId) profileId = (await loadProfile()).profile?.id || null;
   const nickname = values.nickname.trim();
-  const { data: profiles, errors: listErrors } = await dataClient.models.Profile.list({ limit: 1000 });
-  if (listErrors?.length) throw new Error(listErrors[0].message);
-  const key = value => value.normalize('NFKC').toLocaleLowerCase('es');
-  if (profiles.some(profile => profile.id !== profileId && key(profile.nickname) === key(nickname))) {
-    throw new Error('Ese nick ya está en uso. Elegí otro.');
-  }
+  /* La reserva del nick se valida atómicamente en el servidor. */
   const payload = {
     nickname,
     bio: values.bio.trim(),
     avatarPath: values.avatarPath || '',
-    phoneNumber: values.phoneNumber,
+    phoneNumber: values.phoneNumber, visibility:values.visibility, socialLinks:values.socialLinks, judgeEnabled:values.judgeEnabled,
   };
   const result = await dataClient.mutations.saveClubProfile({ profileId, ...payload });
   if (result.errors?.length) throw new Error(result.errors[0].message);
@@ -138,21 +133,17 @@ export async function saveAvatar(file) {
   if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
     throw new Error('Usá una imagen JPG, PNG o WebP.');
   }
-  const session = await fetchAuthSession();
-  const identityId = session.identityId;
-  if (!identityId) throw new Error('No se encontró la identidad de almacenamiento.');
-  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '-');
-  const path = `profile-pictures/${identityId}/${Date.now()}-${safeName}`;
-  const { uploadData } = await import('aws-amplify/storage');
-  await uploadData({ path, data: file, options: { contentType: file.type } }).result;
-  return path;
+  const {communityAction}=await import('./community-api.js');
+  const grant=await communityAction('UPLOAD',{contentType:file.type,size:file.size});
+  const response=await fetch(grant.url,{method:'PUT',headers:{'Content-Type':file.type},body:file,signal:AbortSignal.timeout(60000)});
+  if(!response.ok)throw new Error('No pudimos subir la foto. Reintentá.');return grant.path;
 }
 
 export function avatarUrl(path) {
   if(!path)return Promise.resolve('');
   const cached=avatarRequests.get(path);if(cached && cached.expires>Date.now())return cached.promise;
-  const promise=import('aws-amplify/storage').then(({getUrl})=>getUrl({path,options:{expiresIn:3600}})).then(result=>result.url.toString());
-  avatarRequests.set(path,{promise,expires:Date.now()+50*60000});
+  const promise=import('./community-api.js').then(({communityAction})=>communityAction('AVATAR',{path})).then(result=>result.url);
+  avatarRequests.set(path,{promise,expires:Date.now()+45000});
   promise.catch(()=>{if(avatarRequests.get(path)?.promise===promise)avatarRequests.delete(path);});
   return promise;
 }

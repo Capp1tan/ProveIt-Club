@@ -14,16 +14,17 @@ import { maintenance } from '../functions/maintenance/resource';
 const schema = a.schema({
   // Una única puerta validada: el cliente nunca puede listar mensajes de otras salas.
   clubSocial:a.mutation().arguments({action:a.string().required(),selfProfileId:a.id(),targetProfileId:a.id(),roomType:a.string(),roomId:a.id(),body:a.string(),messageId:a.id(),cursor:a.string(),after:a.string(),seenCount:a.integer()}).returns(a.string()).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(social)),
+  clubCommunity:a.mutation().arguments({action:a.string().required(),targetProfileId:a.id(),cursor:a.string(),path:a.string(),contentType:a.string(),size:a.integer(),tournamentId:a.id(),judgeId:a.id(),positive:a.boolean(),reason:a.string(),status:a.string(),reportId:a.string(),description:a.string(),conflicts:a.string()}).returns(a.string()).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(social)),
   Profile: a
     .model({
       nickname: a.string().required(),
       bio: a.string(),
       avatarPath: a.string(),
       accountComplete: a.boolean(),
+      visibility:a.string(), socialLinks:a.string(), judgeEnabled:a.boolean(),
     })
     .authorization((allow) => [
       allow.owner().to(['read']),
-      allow.authenticated().to(['read']),
     ]),
   // El teléfono nunca se publica en Profile. Sólo su dueño puede leerlo.
   PrivateAccount: a.model({ accountSub: a.string().required(), phoneNumber: a.string().required(), phoneVerified: a.boolean().required(), revision: a.integer().required() })
@@ -31,7 +32,7 @@ const schema = a.schema({
   UniqueClaim: a.model({ accountSub: a.string().required() })
     .authorization(allow => [allow.ownerDefinedIn('accountSub').identityClaim('sub').to(['read'])]),
   ClubBadge: a.model({ accountSub: a.string().required(), accountUsername: a.string(), code: a.string().required() })
-    .authorization(allow => [allow.authenticated().to(['read'])]),
+    .authorization(allow => [allow.ownerDefinedIn('accountSub').identityClaim('sub').to(['read'])]),
   ClubAccess: a.customType({ isCreator: a.boolean().required(),phoneOptional:a.boolean() }),
   deleteClubTournament: a.mutation().arguments({ tournamentId: a.id().required() }).returns(a.boolean()).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(maintenance)),
   deleteMyClubAccount: a.mutation().arguments({ confirmation: a.string().required() }).returns(a.boolean()).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(maintenance)),
@@ -39,7 +40,7 @@ const schema = a.schema({
   setClubPhoneOptional:a.mutation().arguments({profileId:a.id().required(),phoneOptional:a.boolean().required()}).returns(a.ref('ClubAccess')).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(clubAccount)),
   manageClubBadge: a.mutation().arguments({ profileId: a.id().required(), code: a.string().required(), enabled: a.boolean().required() })
     .returns(a.ref('ClubAccess')).authorization(allow => [allow.authenticated()]).handler(a.handler.function(clubAccount)),
-  saveClubProfile: a.mutation().arguments({ profileId: a.id(), nickname: a.string().required(), bio: a.string(), avatarPath: a.string(), phoneNumber: a.string().required() })
+  saveClubProfile: a.mutation().arguments({ profileId: a.id(), nickname: a.string().required(), bio: a.string(), avatarPath: a.string(), phoneNumber: a.string().required(), visibility:a.string(), socialLinks:a.string(), judgeEnabled:a.boolean() })
     .returns(a.ref('Profile')).authorization(allow => [allow.authenticated()]).handler(a.handler.function(clubAccount)),
   // Solicitudes de cobro privadas: sólo el organizador puede consultarlas.
   TournamentPayment: a.model({
@@ -87,6 +88,8 @@ const schema = a.schema({
     rosterStatuses: a.string().required().array(),
     membershipRevision: a.integer(),
     draw: a.string(),
+    termsVersion:a.integer(), conflicts:a.string(), clubRewards:a.boolean(), resultReason:a.string(), resultKind:a.string(),
+    prizeHolder:a.string(), prizeFunder:a.string(), prizeFundingStatus:a.string(),
     // Premio provisional, editable sólo a través de la función que comprueba al juez.
     prizeTitle:a.string(), prizeDescription:a.string(), prizeLinks:a.string(), prizeAttachments:a.string(),
     prizeRevision:a.integer(), prizeUpdatedAt:a.datetime(), prizeUpdatedBySub:a.string(),
@@ -105,12 +108,12 @@ const schema = a.schema({
     consentAcceptedAt: a.datetime(),
     startsAt: a.datetime(),
     timeZone: a.string(),
-    rulesSnapshot: a.string(),
+    rulesSnapshot: a.string(), termsVersion:a.integer(), termsAcceptedAt:a.datetime(), conflictsSnapshot:a.string(),
   }).authorization(allow => [allow.ownerDefinedIn('recipientSub').identityClaim('sub').to(['read'])]),
   PrizeUpload:a.customType({path:a.string().required(),url:a.string().required()}),
   prepareClubPrizeUpload:a.mutation().arguments({tournamentId:a.id().required(),uploadContentType:a.string().required(),uploadSize:a.integer().required()}).returns(a.ref('PrizeUpload')).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(respondInvitation)),
-  saveClubTournamentPrize:a.mutation().arguments({tournamentId:a.id().required(),prizeTitle:a.string().required(),prizeDescription:a.string(),prizeLinks:a.string(),prizeAttachments:a.string(),prizeRevision:a.integer().required()}).returns(a.ref('Tournament')).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(respondInvitation)),
-  recordClubDuelResult: a.mutation().arguments({ tournamentId: a.id().required(), winnerProfileId: a.id().required() })
+  saveClubTournamentPrize:a.mutation().arguments({tournamentId:a.id().required(),prizeTitle:a.string().required(),prizeDescription:a.string(),prizeLinks:a.string(),prizeAttachments:a.string(),prizeRevision:a.integer().required(),prizeHolder:a.string(),prizeFunder:a.string(),prizeFundingStatus:a.string()}).returns(a.ref('Tournament')).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(respondInvitation)),
+  recordClubDuelResult: a.mutation().arguments({ tournamentId: a.id().required(), winnerProfileId: a.id().required(), resultReason:a.string(),resultKind:a.string() })
     .returns(a.ref('Tournament')).authorization(allow => [allow.authenticated()]).handler(a.handler.function(respondInvitation)),
   prepareTournamentDraw: a.mutation().arguments({ tournamentId: a.id().required() })
     .returns(a.ref('Tournament')).authorization(allow => [allow.authenticated()])
@@ -118,7 +121,7 @@ const schema = a.schema({
   respondToTournamentInvitation: a.mutation().arguments({
     invitationId: a.id().required(),
     accept: a.boolean().required(),
-    acceptOrganizerDecision: a.boolean(),
+    acceptOrganizerDecision: a.boolean(), acceptTerms:a.boolean(), termsVersion:a.integer(),
   }).returns(a.ref('TournamentInvitation'))
     .authorization(allow => [allow.authenticated()])
     .handler(a.handler.function(respondInvitation)),
@@ -131,7 +134,7 @@ const schema = a.schema({
     name: a.string().required(),
     activity: a.string().required(),
     format: a.string().required(),
-    description: a.string(),
+    description: a.string(), conflicts:a.string(),
     participantIds: a.string().required().array().required(),
     judgeIds: a.string().required().array().required(),
     treasurerId: a.string(),

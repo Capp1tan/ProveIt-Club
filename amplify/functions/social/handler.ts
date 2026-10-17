@@ -1,3 +1,4 @@
+import {community} from '../community';
 // Amistades y mensajes privados: ninguna tabla tiene acceso directo desde el navegador.
 // Las revisiones y las transacciones protegen el cupo frente a aceptaciones simultáneas.
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
@@ -20,6 +21,7 @@ type Event={arguments:Record<string,any>;identity?:{sub?:string}};
 export const handler=async(event:Event)=>{
  const sub=event.identity?.sub;if(!sub)throw new Error('Iniciá sesión.');
  const a=event.arguments || {},action=a.action;
+ if(String(action).startsWith('COMMUNITY_'))return JSON.stringify(await community(db,sub,a));
  // Lecturas independientes en paralelo; nunca se cachean permisos entre peticiones.
  const ownId=typeof a.selfProfileId==='string' && a.selfProfileId.length<=128?a.selfProfileId:sub;
  const light=['STATE','INBOX'].includes(action);

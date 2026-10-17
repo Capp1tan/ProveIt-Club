@@ -1,3 +1,12 @@
+# Versión 3.0.0
+
+- Perfiles privados por defecto, acceso por amistad recíproca y lecturas filtradas por servidor.
+- Fotos con lectura autorizada y enlaces breves, redes opcionales y perfil visitable.
+- Rol de juez voluntario, aceptación expresa y reaceptación ante cambios de reglas o premio.
+- Reputación de 1 a 5 estrellas basada en votos de participantes, torneos arbitrados y reclamos administrativos por separado.
+- Declaración de conflictos de interés, motivo para sanciones y resultados discutidos.
+- Responsable y financiador del premio, estado pendiente o confirmado sin promesas de custodia.
+
 # 2.13.2 — Chat más ágil y menos consultas
 
 - Mensaje visible de inmediato como pendiente; confirmación con respuesta del servidor y reintento sin duplicados.

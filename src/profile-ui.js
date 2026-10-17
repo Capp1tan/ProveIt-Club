@@ -1,3 +1,8 @@
+import {mountJudgeReportAdmin} from './judge-ui.js';
+import {mountPublicProfile} from './profile-public.js';
+import {viewClubProfile} from './community-api.js';
+import {reputationPanel} from './profile-components.js';
+import '../community.css';
 import { mountPhoneCountry } from './phone-country.js';
 import { mountBillingAdmin } from './billing-admin.js';
 import { mountAccountActions } from './account-actions.js';
@@ -6,6 +11,8 @@ import { loadBadges, badgeElements, decorateAvatar, initializeAccess, mountBadge
 // Amplify los envía a S3 y a la base de datos cuando el backend esté desplegado.
 import { avatarUrl, configureAmplify, loadProfile, saveAvatar, saveProfile, signOut } from './auth-client.js';
 
+const targetId=new URLSearchParams(location.search).get('id');
+if(targetId){await configureAmplify();await mountPublicProfile(targetId);}else{
 const form = document.getElementById('profileForm');
 const notice = document.getElementById('profileNotice');
 const preview = document.getElementById('avatarPreview');
@@ -65,7 +72,8 @@ form.addEventListener('submit', async event => {
       nickname: form.elements.nickname.value,
       bio: bio.value,
       avatarPath: currentAvatarPath,
-      phoneNumber: phoneField.value(),
+      phoneNumber: phoneField.value(),visibility:form.elements.visibility.value,judgeEnabled:form.elements.judgeEnabled.checked,
+      socialLinks:JSON.stringify(Object.fromEntries(['instagram','twitch','discord','custom'].map(k=>[k,form.elements[k].value.trim()]))),
     });
     profileId = saved.id;
     if (currentAvatarPath) setAvatar(await avatarUrl(currentAvatarPath), form.elements.nickname.value.trim().slice(0, 1).toUpperCase());
@@ -94,10 +102,15 @@ if (!ready) {
       await loadBadges();
       decorateAvatar(preview, user.userId);
       document.getElementById('profileBadges').replaceChildren(badgeElements(user.userId));
-      if (access.isCreator) { await mountBadgeAdmin(); await mountBillingAdmin(); }
+      if (access.isCreator) { await mountBadgeAdmin(); await mountBillingAdmin();await mountJudgeReportAdmin(); }
     } catch { showNotice('No pudimos cargar las insignias. Podés editar tu perfil y recargar para reintentar.', true); } })();
     if (profile) {
       profileId = profile.id;
+      form.elements.visibility.value=profile.visibility==='PUBLIC'?'PUBLIC':'PRIVATE';form.elements.judgeEnabled.checked=Boolean(profile.judgeEnabled);
+      let links={};try{links=JSON.parse(profile.socialLinks || '{}');}catch{}
+      for(const k of ['instagram','twitch','discord','custom'])form.elements[k].value=links[k] || '';
+      const ownLink=document.createElement('a');ownLink.href='/perfil.html?id='+encodeURIComponent(profile.id);ownLink.textContent='Tu perfil es '+(profile.visibility==='PUBLIC'?'público':'privado');ownLink.className='field-help';form.prepend(ownLink);
+      void viewClubProfile(profile.id).then(p=>{document.getElementById('ownJudgeReputation').replaceChildren(reputationPanel(p.reputation,p.judgeEnabled));}).catch(()=>{});
       currentAvatarPath = profile.avatarPath || '';
       form.elements.nickname.value = profile.nickname || '';
       bio.value = profile.bio || '';
@@ -112,3 +125,5 @@ if (!ready) {
 
 
 window.proveitLoadingDone?.('page');
+
+}
