@@ -2,10 +2,12 @@ import '../social.css';
 import { socialAction } from './social-api.js';
 import { getCurrentUser } from './auth-client.js';
 import { Hub } from 'aws-amplify/utils';
+import { playMessageSound } from './chat-sound.js';
+let composerNumber=0;
 const el=(tag,text,cls)=>{const e=document.createElement(tag);if(text)e.textContent=text;if(cls)e.className=cls;return e;};
 // Chat de texto, paginado y actualizado sólo con la pestaña visible.
 export function mountChat(root,room) {
- let stopped=false,fetching=false,sending=false,cursor=null,me='',attempt=null,first=true,latestReceived=0,lastMarked=0,marking=false;
+ let stopped=false,fetching=false,sending=false,cursor=null,me='',attempt=null,first=true,latestReceived=0,lastMarked=0,marking=false,historyReady=false;
  const messages=new Map();root.classList.add('club-chat');
  const heading=el('h2',room.title || 'Chat del torneo');
  const help=el('p',room.roomType==='DIRECT'?'Conversación privada entre amigos.':'Sólo el organizador y los integrantes confirmados pueden leer y escribir.','social-help');
@@ -15,7 +17,10 @@ export function mountChat(root,room) {
  const form=el('form','','chat-composer'),label=el('label','Tu mensaje'),input=el('textarea');
  input.maxLength=1000;input.rows=2;input.required=true;input.placeholder='Escribí un mensaje…';input.disabled=true;label.append(input);
  const send=el('button','Enviar','primary-button');send.type='submit';send.disabled=true;
- form.append(label,send);root.replaceChildren(heading,help,older,list,notice,form);
+ const keyboardHelp=el('p','Enter para enviar · Shift + Enter para otra línea','chat-keyboard-help');keyboardHelp.id='chatKeyboardHelp-'+(++composerNumber);input.setAttribute('aria-describedby',keyboardHelp.id);input.enterKeyHint='send';
+ // requestSubmit reutiliza validación, bloqueo e idempotencia del botón Enviar.
+ input.addEventListener('keydown',event=>{if(event.key!=='Enter' || event.shiftKey || event.isComposing)return;event.preventDefault();if(event.repeat || sending || input.disabled || !input.value.trim())return;form.requestSubmit(send);});
+ form.append(label,send);root.replaceChildren(heading,help,older,list,notice,form,keyboardHelp);
  const args={roomType:room.roomType,...(room.roomId?{roomId:room.roomId}:{}),...(room.targetProfileId?{targetProfileId:room.targetProfileId}:{})};
  const active=()=>!stopped && !document.hidden && (!room.isActive || room.isActive());
  async function markRead(){
@@ -39,11 +44,13 @@ export function mountChat(root,room) {
   if(!active() || fetching)return;fetching=true;
   try{
    const page=await socialAction('MESSAGES',{...args,...(previous && cursor?{cursor}:{})});if(stopped)return;
-   for(const m of page.messages)messages.set(m.id,m);
+   // El privado suena desde la bandeja (también minimizada); aquí sólo las salas.
+   if(room.roomType==='TOURNAMENT' && historyReady && !previous && page.messages.some(m=>m.senderSub!==me && !messages.has(m.id)))playMessageSound();
+   for(const m of page.messages)messages.set(m.id,m);historyReady=true;
    if(!previous)latestReceived=page.receivedCount || 0;
    if(previous || first || (!cursor && page.cursor)){cursor=page.cursor;first=false;}
    older.hidden=!cursor;input.disabled=sending;send.disabled=sending;notice.textContent=messages.size?'':'Todavía no hay mensajes. Rompé el hielo.';render();void markRead();
-  }catch(error){if(!stopped){messages.clear();list.replaceChildren();input.disabled=true;send.disabled=true;notice.textContent=error.message;}}
+  }catch(error){if(!stopped){messages.clear();historyReady=false;list.replaceChildren();input.disabled=true;send.disabled=true;notice.textContent=error.message;}}
   finally{fetching=false;}
  }
  older.addEventListener('click',()=>void refresh(true));

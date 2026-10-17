@@ -29,7 +29,7 @@ export const handler=async(event:Event)=>{
   const rows:any[]=[];let key;
   do{const page=await db.send(new QueryCommand({TableName:table(),KeyConditionExpression:'pk=:pk AND begins_with(sk,:prefix)',ExpressionAttributeValues:{':pk':'USER#'+sub,':prefix':'INBOX#'},ConsistentRead:true,ExclusiveStartKey:key}));rows.push(...(page.Items || []));key=page.LastEvaluatedKey;}while(key);
   const ids=new Set(mine.friends.map(p=>p.profileId));
-  return JSON.stringify({conversations:rows.filter(row=>ids.has(row.peerProfileId)).map(row=>({profileId:row.peerProfileId,name:row.peerName || 'Amigo',lastAt:row.lastAt,unread:Math.max(0,(row.receivedCount || 0)-(row.readCount || 0))})).sort((a,b)=>(b.lastAt || '').localeCompare(a.lastAt || ''))});
+  return JSON.stringify({conversations:rows.filter(row=>ids.has(row.peerProfileId)).map(row=>({profileId:row.peerProfileId,name:row.peerName || 'Amigo',lastAt:row.lastAt,receivedCount:row.receivedCount || 0,unread:Math.max(0,(row.receivedCount || 0)-(row.readCount || 0))})).sort((a,b)=>(b.lastAt || '').localeCompare(a.lastAt || ''))});
  }
  // Los perfiles antiguos tienen UUID propio; siempre comprobamos su dueño real.
  const ownId=typeof a.selfProfileId==='string' && a.selfProfileId.length<=128?a.selfProfileId:sub;

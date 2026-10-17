@@ -5,6 +5,7 @@ import { Hub } from 'aws-amplify/utils';
 import { configureAmplify,getCurrentUser } from './auth-client.js';
 import { socialAction } from './social-api.js';
 import { mountChat } from './chat-ui.js';
+import { playMessageSound,chatSoundButton } from './chat-sound.js';
 const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text)n.textContent=text;if(cls)n.className=cls;return n;};
 const root=el('aside','','chat-dock');root.hidden=true;root.setAttribute('aria-label','Bandeja de mensajes');
 const launcher=el('button','','chat-dock-launcher');launcher.type='button';launcher.setAttribute('aria-expanded','false');launcher.setAttribute('aria-controls','chatDockPanel');
@@ -13,11 +14,19 @@ symbol.setAttribute('aria-hidden','true');symbol.innerHTML='<svg viewBox="0 0 24
 totalBadge.hidden=true;totalBadge.setAttribute('aria-live','polite');launcher.append(symbol,launcherText,totalBadge);
 const panel=el('section','','chat-dock-panel');panel.id='chatDockPanel';panel.hidden=true;
 const header=el('div','','chat-dock-header'),back=el('button','←','chat-dock-back'),title=el('strong','Conversaciones'),minimize=el('button','—','chat-dock-minimize');
-back.type=minimize.type='button';back.setAttribute('aria-label','Ver conversaciones');minimize.setAttribute('aria-label','Minimizar chat');back.hidden=true;header.append(back,title,minimize);
+back.type=minimize.type='button';back.setAttribute('aria-label','Ver conversaciones');minimize.setAttribute('aria-label','Minimizar chat');back.hidden=true;header.append(back,title,chatSoundButton(),minimize);
 const list=el('div','','chat-dock-list'),chat=el('div','','chat-dock-body'),status=el('p','','chat-dock-status');status.setAttribute('role','status');chat.hidden=true;
 panel.append(header,list,chat,status);root.append(panel,launcher);document.body.append(root);
 let sub='',epoch=0,loading=false,conversations=[],selected=null,stopChat,key='',queued=null,ready=false;
+let soundSeen=new Map(),soundPrimed=false,soundKey='';
 const drafts=new Map();
+function incomingSound(items){
+ let arrived=false;
+ for(const c of items){const count=c.receivedCount || 0;if(soundPrimed && count>(soundSeen.get(c.profileId) || 0))arrived=true;soundSeen.set(c.profileId,count);}
+ soundPrimed=true;
+ try{sessionStorage.setItem(soundKey,JSON.stringify({ready:true,counts:Object.fromEntries(soundSeen)}));}catch{}
+ if(arrived)playMessageSound();
+}
 function save(){if(!key)return;try{sessionStorage.setItem(key,JSON.stringify({selected:selected?{profileId:selected.profileId,name:selected.name}:null,minimized:panel.hidden}));}catch{}}
 function rememberDraft(){const input=chat.querySelector('textarea');if(selected && input)drafts.set(selected.profileId,input.value);}
 function renderList(){
@@ -43,7 +52,7 @@ function select(person,open=true){
 }
 async function refresh(){
  if(loading || !sub || document.hidden)return;loading=true;const current=epoch;
- try{const result=await socialAction('INBOX');if(current!==epoch)return;conversations=result.conversations;status.textContent='';renderList();
+ try{const result=await socialAction('INBOX');if(current!==epoch)return;incomingSound(result.conversations);conversations=result.conversations;status.textContent='';renderList();
   if(selected && !conversations.some(c=>c.profileId===selected.profileId)){
    // Un chat recién abierto todavía no tiene metadatos; comprobar amistad antes de cerrarlo.
    const state=await socialAction('STATE');if(current!==epoch)return;
@@ -52,9 +61,10 @@ async function refresh(){
   }
  }catch{if(current===epoch)status.textContent='No pudimos actualizar los mensajes. Reintentando…';}finally{loading=false;}
 }
-function reset(){epoch++;ready=false;sub='';key='';rememberDraft();stopChat?.();stopChat=null;selected=null;queued=null;drafts.clear();conversations=[];root.hidden=true;panel.hidden=true;list.hidden=false;chat.hidden=true;chat.replaceChildren();list.replaceChildren();status.textContent='';}
+function reset(){epoch++;ready=false;sub='';key='';soundKey='';soundSeen.clear();soundPrimed=false;rememberDraft();stopChat?.();stopChat=null;selected=null;queued=null;drafts.clear();conversations=[];root.hidden=true;panel.hidden=true;list.hidden=false;chat.hidden=true;chat.replaceChildren();list.replaceChildren();status.textContent='';}
 async function initialize(){const current=++epoch;
- try{if(!await configureAmplify())return;const user=await getCurrentUser();if(current!==epoch)return;sub=user.userId;key='proveit:chat-dock:'+sub;root.hidden=false;
+ try{if(!await configureAmplify())return;const user=await getCurrentUser();if(current!==epoch)return;sub=user.userId;key='proveit:chat-dock:'+sub;soundKey='proveit:chat-sound-seen:'+sub;root.hidden=false;
+  try{const saved=JSON.parse(sessionStorage.getItem(soundKey) || 'null');soundSeen=new Map(Object.entries(saved?.counts || {}).filter(([id,n])=>typeof id==='string' && Number.isSafeInteger(n) && n>=0));soundPrimed=saved?.ready===true;}catch{soundSeen=new Map();soundPrimed=false;}
   let saved;try{saved=JSON.parse(sessionStorage.getItem(key) || 'null');}catch{}
   await refresh();if(current!==epoch)return;ready=true;
   if(queued){const person=queued;queued=null;select(person);}else if(saved?.selected && typeof saved.selected.profileId==='string'){

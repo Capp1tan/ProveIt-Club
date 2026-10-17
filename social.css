@@ -18,3 +18,4 @@
 .social-friends-layout{display:block;max-width:900px}.social-friends-layout .social-sidebar{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}.social-friends-layout .social-sidebar>p{grid-column:1/-1;margin:0}.social-friends-layout .social-section{margin:0;min-width:0}
 @media(max-width:640px){.chat-dock{right:12px;width:330px}.chat-dock-panel{max-height:70dvh}.chat-dock-body .chat-messages{height:190px;max-height:28dvh}.chat-dock-body .chat-composer{flex-wrap:nowrap}.chat-dock-body .chat-composer label{flex-basis:auto}.chat-dock-body .chat-composer textarea{font-size:16px}.social-friends-layout .social-sidebar{grid-template-columns:1fr}}
 .chat-dock-symbol svg{display:block;width:21px;height:21px}
+.chat-keyboard-help{font-size:10px;color:#91a382;margin:6px 0 0;line-height:1.5}.chat-dock-body .chat-keyboard-help{font-size:9px}.chat-sound-toggle svg{display:block;width:18px;height:18px}.chat-dock-header button[data-sound=off]{color:#a6ad9f}

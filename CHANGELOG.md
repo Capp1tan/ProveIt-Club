@@ -1,3 +1,11 @@
+# 2.13.1 — Enter y sonido de mensajes
+
+- Enter envía y Shift + Enter inserta otra línea en chats privados y de torneo.
+- Se conserva el bloqueo de doble envío y la edición mediante composición de teclado.
+- Sonido suave para mensajes nuevos recibidos; no se reproduce al cargar historial ni por mensajes propios.
+- Control de sonido en la bandeja con preferencia persistente.
+- El audio se habilita tras una interacción del usuario, respetando las restricciones del navegador.
+
 # 2.13.0 — Bandeja de mensajes
 
 - Chat privado flotante y minimizable abajo a la derecha en todas las páginas.
