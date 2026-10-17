@@ -9,9 +9,25 @@ import { data } from './data/resource';
 import { storage } from './storage/resource';
 import { respondInvitation } from './functions/respond-invitation/resource';
 import { createTournament } from './functions/create-tournament/resource';
+import { social } from './functions/social/resource';
+import { Table, AttributeType, BillingMode } from 'aws-cdk-lib/aws-dynamodb';
+import { RemovalPolicy } from 'aws-cdk-lib';
 
 /** Recursos AWS que Amplify podrá desplegar cuando habilitemos el backend. */
-const backend = defineBackend({ auth, data, storage, createTournament, respondInvitation, clubAccount, billing, paymentWebhook, maintenance });
+const backend = defineBackend({ auth, data, storage, createTournament, respondInvitation, clubAccount, billing, paymentWebhook, maintenance, social });
+// Tabla privada sin CRUD público. Sólo la función de amigos puede leerla o escribirla.
+const socialTable=new Table(backend.data.resources.graphqlApi.stack,'ClubSocial',{
+  partitionKey:{name:'pk',type:AttributeType.STRING},sortKey:{name:'sk',type:AttributeType.STRING},
+  billingMode:BillingMode.PAY_PER_REQUEST,timeToLiveAttribute:'ttl',removalPolicy:RemovalPolicy.RETAIN,
+});
+socialTable.grantReadWriteData(backend.social.resources.lambda);
+backend.social.addEnvironment('SOCIAL_TABLE_NAME',socialTable.tableName);
+for(const [model,env] of [['Profile','PROFILE_TABLE_NAME'],['Tournament','TOURNAMENT_TABLE_NAME'],['UniqueClaim','CLAIM_TABLE_NAME']] as const){
+  backend.data.resources.tables[model].grantReadData(backend.social.resources.lambda);
+  backend.social.addEnvironment(env,backend.data.resources.tables[model].tableName);
+}
+backend.data.resources.tables['Tournament'].grant(backend.social.resources.lambda,'dynamodb:ConditionCheckItem');
+backend.data.resources.tables['UniqueClaim'].grant(backend.social.resources.lambda,'dynamodb:ConditionCheckItem');
 // Acceso mínimo: leer perfiles registrados y crear torneos validados.
 const profiles = backend.data.resources.tables['Profile'];
 const tournaments = backend.data.resources.tables['Tournament'];

@@ -2,6 +2,7 @@ import { a, defineData, type ClientSchema } from '@aws-amplify/backend';
 import { clubAccount } from '../functions/club-account/resource';
 import { respondInvitation } from '../functions/respond-invitation/resource';
 import { createTournament } from '../functions/create-tournament/resource';
+import { social } from '../functions/social/resource';
 
 /**
  * Perfil público solo para personas con sesión iniciada.
@@ -11,6 +12,8 @@ import { billing } from '../functions/billing/resource';
 import { maintenance } from '../functions/maintenance/resource';
 
 const schema = a.schema({
+  // Una única puerta validada: el cliente nunca puede listar mensajes de otras salas.
+  clubSocial:a.mutation().arguments({action:a.string().required(),selfProfileId:a.id(),targetProfileId:a.id(),roomType:a.string(),roomId:a.id(),body:a.string(),messageId:a.id(),cursor:a.string()}).returns(a.string()).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(social)),
   Profile: a
     .model({
       nickname: a.string().required(),

@@ -58,6 +58,7 @@ export class ProfilePreview {
     this.card.append(close,head,this.badges(profile?.owner?.split('::')[0]),bio);
     const reputation=document.createElement('div');reputation.className='judge-reputation';const repTitle=document.createElement('strong');repTitle.textContent='Reputación como juez';const repText=document.createElement('p');repText.textContent='Próximamente · todavía no se calculan valoraciones.';reputation.append(repTitle,repText);this.card.append(reputation);
     const help=document.createElement('small');help.textContent='Perfil del club';this.card.append(help);
+    if(profile){const friend=document.createElement('a');friend.className='friend-preview-link';friend.href='/amigos.html?persona='+encodeURIComponent(profile.id);friend.textContent='Amistad y mensajes ↗';this.card.append(friend);}
     this.card.hidden=false;this.position();
   }
   position() {

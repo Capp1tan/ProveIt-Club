@@ -1,3 +1,11 @@
+# 2.12.0 — Amigos y chats
+
+- Solicitudes de amistad con aceptación, rechazo, cancelación y eliminación.
+- Máximo 20 amistades por cuenta; el Creador no tiene ese límite. Cupos transaccionales en AWS.
+- Chat de texto entre amigos y chat privado del organizador e integrantes confirmados de cada torneo.
+- Historial paginado, consultas con pestaña visible, control de frecuencia y reintentos sin duplicados.
+- Tabla privada, acceso sólo por función con validación de identidad y estado de cuenta.
+
 # 2.11.2 — Verificado y aros de perfil
 
 - Roseta azul con tilde y nombre accesible en lugar de etiqueta de verificado.

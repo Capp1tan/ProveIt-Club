@@ -1,3 +1,4 @@
+import { mountChat } from './chat-ui.js';
 import { prizePanel } from './tournament-prize.js';
 import { sharePanel } from './tournament-share.js';
 import { myPendingPayments, money } from './billing-api.js';
@@ -16,10 +17,12 @@ const element=(tag,text,className)=>{const node=document.createElement(tag);node
 const stateNames={PENDING:'Esperando confirmación',ACCEPTED:'Confirmado',REJECTED:'Invitación rechazada'};
 let profiles=new Map(),lastVersion='',refreshing=false,currentUser=null,currentTournament=null;
 let drawCleanup;
+let chatCleanup, chatId;
+function closeTournamentChat(){chatCleanup?.();chatCleanup=null;chatId=null;const root=document.getElementById('tournamentChat');if(root){root.replaceChildren();root.hidden=true;}}
 let isClubAdmin=false;
 const photoRequests=new Map();
 const profilePreview=detail ? new ProfilePreview({avatar,badges:badgeElements}) : null;
-Hub.listen('auth',({payload})=>{if(payload.event==='signedOut')profilePreview?.lock();});
+Hub.listen('auth',({payload})=>{if(payload.event==='signedOut'){profilePreview?.lock();closeTournamentChat();}});
 function avatar(id,name) {
   const node=element('span',Array.from(name.trim())[0]?.toUpperCase() || '?','person-avatar');
   node.setAttribute('aria-hidden','true');
@@ -136,6 +139,8 @@ function resultPanel(t) {
 function renderTournament(t) {
   profilePreview?.dismiss();drawCleanup?.();drawCleanup=null;
   currentTournament=t;
+  const chatRoot=document.getElementById('tournamentChat');
+  if(chatRoot && chatId!==t.id){closeTournamentChat();chatRoot.hidden=false;chatId=t.id;chatCleanup=mountChat(chatRoot,{roomType:'TOURNAMENT',roomId:t.id});}
   detail.replaceChildren();
   const status=states(t),format=formats.find(f=>f.id===t.format);
   const label=t.winnerProfileId?'DUELO FINALIZADO':t.draw?'TODOS CONFIRMADOS · SORTEO GUARDADO':status.includes('REJECTED')?'INVITACIÓN RECHAZADA · SORTEO DETENIDO':t.rosterStatuses?'SALA DE ESPERA':'TORNEO ANTERIOR · EN PREPARACIÓN';
@@ -175,7 +180,7 @@ async function refreshTournament(force=false) {
   if(refreshing || document.hidden)return;refreshing=true;
   try {
     const id=new URLSearchParams(location.search).get('id');if(!id)throw new Error('El enlace no incluye un torneo.');
-    let t=await getClubTournament(id);if(!t){profilePreview?.lock();drawCleanup?.();detail.replaceChildren();currentTournament=null;throw new Error('Este torneo fue eliminado o ya no está disponible.');}
+    let t=await getClubTournament(id);if(!t){closeTournamentChat();profilePreview?.lock();drawCleanup?.();detail.replaceChildren();currentTournament=null;throw new Error('Este torneo fue eliminado o ya no está disponible.');}
     if (!t.draw && t.rosterStatuses?.length && t.rosterStatuses.every(state=>state==='ACCEPTED') && (await getCurrentUser()).userId===t.createdBySub) t=await ensureClubTournamentDraw(id) || t;
     const version=t.updatedAt+String(t.draw);
     if((force || version!==lastVersion) && !detail.querySelector('[data-prize-editing="true"]')){renderTournament(t);lastVersion=version;}

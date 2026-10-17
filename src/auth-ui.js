@@ -223,3 +223,5 @@ void import('./notifications.js').catch(() => { console.warn('No se pudo cargar 
 // Al volver a una pestaña, renovamos el estado de acceso y el perfil guardado.
 window.addEventListener('pageshow', () => { void syncAccountControl(); });
 document.addEventListener('visibilitychange', () => { if (!document.hidden) void syncAccountControl(); });
+
+void import('./social-nav.js').catch(() => { /* Amigos no bloquea el acceso al sitio. */ });
