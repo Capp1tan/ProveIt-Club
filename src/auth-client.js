@@ -7,6 +7,8 @@ import {
   confirmResetPassword,
   confirmSignIn,
   confirmSignUp,
+  fetchUserAttributes,
+  resendSignUpCode,
   fetchAuthSession,
   getCurrentUser as amplifyGetCurrentUser,
   resetPassword,
@@ -78,7 +80,7 @@ function requireBackend() {
   if (!configured) throw new Error('El backend de Amplify todavía no está conectado.');
 }
 
-export { confirmResetPassword, confirmSignIn, confirmSignUp, fetchAuthSession, resetPassword, signIn, signInWithRedirect, signOut, signUp };
+export { fetchUserAttributes, resendSignUpCode, confirmResetPassword, confirmSignIn, confirmSignUp, fetchAuthSession, resetPassword, signIn, signInWithRedirect, signOut, signUp };
 
 // El perfil público se comparte entre cabecera, cuenta y chat durante 15 segundos.
 // Sólo se recuerda el ID por cuenta; no se guardan teléfono ni tokens en este caché.

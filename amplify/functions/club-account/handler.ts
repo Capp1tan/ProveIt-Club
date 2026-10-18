@@ -69,6 +69,9 @@ export const handler = async (event: Event) => {
     return { isCreator: true };
   }
   if (operation !== 'saveClubProfile') throw new Error('Operación inválida.');
+  const identity=await cognito.send(new AdminGetUserCommand({UserPoolId:process.env.USER_POOL_ID,Username:event.identity!.username || sub}));
+  const identityAttrs=Object.fromEntries((identity.UserAttributes || []).map(a=>[a.Name,a.Value]));
+  if(identityAttrs.sub!==sub || identityAttrs.email_verified!=='true')throw new Error('Verificá tu correo antes de completar el perfil.');
   const nickname = String(args.nickname || '').trim();
   const bio = String(args.bio || '').trim();
   const avatarPath = String(args.avatarPath || '');

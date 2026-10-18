@@ -1,5 +1,13 @@
 # Versión 3.1.0
 
+## 3.2.0 — Registro inicial y correos únicos
+
+- Alta por correo con nick y teléfono desde el inicio; Google dirige al perfil inicial antes de continuar.
+- Reserva transaccional de nick y teléfono al completar el perfil; correo verificado obligatorio.
+- Protección de alta en Cognito contra correos repetidos entre Google y email, sin distinguir mayúsculas y con reserva atómica de solicitudes simultáneas.
+- Las identidades anteriores no se fusionan automáticamente ni se eliminan datos del club.
+
+
 - Centro de administración exclusivo del Creador, con autorización comprobada por servidor.
 - Cuentas de Cognito con y sin perfil, búsqueda por nick o correo y ficha de identidad, contacto y privacidad.
 - Consulta paginada de perfiles, torneos, pagos, invitaciones, insignias, amistades, jueces, reclamos y tarifas.

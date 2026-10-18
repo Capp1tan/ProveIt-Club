@@ -7,8 +7,9 @@ const countries=[
   {id:'PE',name:'Perú',prefix:'+51',label:'+51',example:'912 345 678',help:'Número móvil de 9 dígitos; para fijos incluí el código de área.'},
   {id:'BR',name:'Brasil',prefix:'+55',label:'+55',example:'11 91234 5678',help:'DDD de 2 dígitos + número, sin el 0 inicial.'},
 ];
-export function mountPhoneCountry(){
-  const select=document.getElementById('phoneCountry'),input=document.getElementById('phoneNational'),prefix=document.getElementById('phonePrefix'),help=document.getElementById('phoneHelp');
+export function mountPhoneCountry(root=document){
+  const byId=id=>root.querySelector('[id="'+id+'"]');
+  const select=byId('phoneCountry'),input=byId('phoneNational'),prefix=byId('phonePrefix'),help=byId('phoneHelp');
   let legacyPrefix='';
   for(const country of countries){const option=document.createElement('option');option.value=country.id;option.textContent=country.name+' ('+country.label+')';select.append(option);}
   const country=()=>countries.find(c=>c.id===select.value) || countries[0];
@@ -29,6 +30,6 @@ export function mountPhoneCountry(){
       let digits=raw.replace(/\D/g,'').replace(/^0+/,'');
       return (legacyPrefix || country().prefix)+digits;
     },
-    optional(value){input.required=!value;document.getElementById('phoneRequirement').textContent=value?'opcional para tu cuenta · privado':'obligatorio · privado';},
+    optional(value){input.required=!value;byId('phoneRequirement').textContent=value?'opcional para tu cuenta · privado':'obligatorio · privado';},
   };
 }

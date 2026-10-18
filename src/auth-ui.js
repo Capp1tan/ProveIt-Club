@@ -1,7 +1,11 @@
+import {mountPhoneCountry} from './phone-country.js';
 // Acceso y estado de cuenta en la navegación.
 import { Hub } from 'aws-amplify/utils';
 import { loadBadges, decorateAvatar } from './badges.js';
 import {
+  fetchUserAttributes,
+  resendSignUpCode,
+  saveProfile,
   avatarUrl,
   configureAmplify,
   getCurrentUser,
@@ -25,6 +29,16 @@ const message = modal?.querySelector('[data-auth-message]');
 const hint = modal?.querySelector('[data-auth-hint]');
 const submit = form?.querySelector('.auth-submit');
 const email = form?.elements.email;
+// Se pide identidad de club al inicio; la unicidad definitiva se reserva en AWS.
+let signupPhone,signupFields;
+if(form){
+ signupFields=document.createElement('fieldset');signupFields.className='signup-details';signupFields.hidden=true;
+ signupFields.innerHTML='<legend>Tu perfil en el club</legend><label>Nick único<input name="signupNickname" minlength="3" maxlength="24" autocomplete="nickname" placeholder="Entre 3 y 24 caracteres"></label><label>País<select id="phoneCountry"></select></label><label>Teléfono privado <span id="phoneRequirement"></span><div class="phone-number-row"><span id="phonePrefix"></span><input id="phoneNational" type="tel" maxlength="24" autocomplete="tel-national"></div></label><small id="phoneHelp"></small><small>El nick y el teléfono deben estar libres al completar el registro. El teléfono no se verifica por SMS todavía.</small>';
+ form.querySelector('[data-password-label]').after(signupFields);signupPhone=mountPhoneCountry(signupFields);
+ const resend=document.createElement('button');resend.type='button';resend.className='auth-text-button';resend.textContent='Reenviar código de verificación';resend.dataset.authResend='';resend.hidden=true;form.append(resend);
+ const back=document.createElement('button');back.type='button';back.className='auth-text-button';back.textContent='Volver a ingresar';back.dataset.authBack='';back.hidden=true;back.addEventListener('click',()=>setMode('signin'));form.append(back);
+ resend.addEventListener('click',async()=>{resend.disabled=true;try{await resendSignUpCode({username:email.value.trim().toLowerCase()});showMessage('Si el registro está pendiente, te llegará un nuevo código por correo.');}catch(e){showMessage(e.message || 'No pudimos reenviar el código.',true);}finally{resend.disabled=false;}});
+}
 let backendReady = false;
 let mode = 'signin';
 let step = 'credentials';
@@ -42,7 +56,7 @@ function displayAccount(user, profile = null) {
   if (!profileLink) return;
   profileLink.dataset.accountSub = user.userId;
   decorateAvatar(profileLink, user.userId);
-  const name = profile?.nickname || user.username || 'Mi perfil';
+  const name = profile?.nickname || 'Completar perfil';
   const fallback = document.createElement('span');
   fallback.className = 'profile-avatar-fallback';
   fallback.setAttribute('aria-hidden', 'true');
@@ -76,20 +90,24 @@ async function syncAccountControl() {
     void loadBadges().then(() => {
       if (profileLink?.dataset.accountSub === user.userId) decorateAvatar(profileLink, user.userId);
     }).catch(() => {});
-    // Google vuelve al inicio: retomamos la creación sin perder el borrador.
-    try {
-      if (location.pathname === '/' || location.pathname === '/index.html') {
-        if (sessionStorage.getItem('proveit:tournament-resume') === '1') {
-          sessionStorage.removeItem('proveit:tournament-resume');
-          location.replace('/crear-torneo.html');
-          return;
-        }
-      }
-    } catch { /* La sesión funciona aunque el navegador no permita guardar el borrador. */ }
-    try {
-      const { profile } = await loadProfile();
-      if (profile) displayAccount(user, profile);
-    } catch { /* El avatar con inicial sigue sirviendo aunque tarde o falle la lectura del perfil. */ }
+    // Ninguna cuenta nueva continúa con un UUID o un perfil genérico.
+    // El borrador de registro proviene de atributos de su propia cuenta Cognito;
+    // no se guardan teléfonos ni contraseñas en localStorage/sessionStorage.
+    let profile;
+    try{({profile}=await loadProfile());}catch{return;}
+    if(!profile){
+      try{const attrs=await fetchUserAttributes();
+       if(attrs.nickname && attrs.phone_number){profile=await saveProfile(null,{nickname:attrs.nickname,phoneNumber:attrs.phone_number,bio:'',avatarPath:'',visibility:'PRIVATE',socialLinks:'{}',judgeEnabled:false});window.dispatchEvent(new Event('proveit:profile-updated'));}
+      }catch{/* Un nick ocupado se resuelve en el formulario inicial, no se inventa otro. */}
+    }
+    if(!profile?.accountComplete){
+      if(location.pathname!=='/perfil.html' || location.search.includes('id='))location.replace('/perfil.html?registro=1');
+      return;
+    }
+    displayAccount(user,profile);
+    try{if((location.pathname==='/' || location.pathname==='/index.html') && sessionStorage.getItem('proveit:tournament-resume')==='1'){sessionStorage.removeItem('proveit:tournament-resume');location.replace('/crear-torneo.html');}}
+    catch{}
+
   } catch {
     if (profileLink) { profileLink.hidden = true; delete profileLink.dataset.accountSub; decorateAvatar(profileLink, null); }
     if (loginControl) loginControl.hidden = false;
@@ -119,6 +137,12 @@ function setStep(nextStep) {
   const code = codeLabel?.querySelector('input');
   const newPassword = field('new-password-label')?.querySelector('input');
   const credentials = nextStep === 'credentials';
+  form.querySelector('[data-auth-back]').hidden=credentials;
+  const registering=credentials && mode==='signup';
+  signupFields.hidden=!registering;signupFields.disabled=!registering;
+  form.elements.signupNickname.required=registering;signupPhone.optional(!registering);
+  const resend=form.querySelector('[data-auth-resend]');if(resend)resend.hidden=nextStep!=='confirm-signup';
+  if(password)password.autocomplete=registering?'new-password':'current-password';
   field('password-label').hidden = !credentials;
   const needsCode = nextStep === 'confirm-signup' || nextStep === 'reset-confirm';
   codeLabel.hidden = !needsCode;
@@ -174,7 +198,7 @@ form?.addEventListener('submit', async event => {
   submit.disabled = true;
   try {
     if (step === 'credentials' && mode === 'signup') {
-      const result = await signUp({ username: emailValue, password: passwordValue, options: { userAttributes: { email: emailValue } } });
+      const result = await signUp({ username: emailValue, password: passwordValue, options: { userAttributes: { email: emailValue, nickname:form.elements.signupNickname.value.trim(),phone_number:signupPhone.value() } } });
       if (result.nextStep.signUpStep === 'CONFIRM_SIGN_UP') {
         setStep('confirm-signup');
         showMessage('Te enviamos un código a tu email. Ingresalo para verificar la cuenta.');
@@ -205,7 +229,8 @@ form?.addEventListener('submit', async event => {
       showMessage('Contraseña actualizada. Ya podés ingresar.');
     }
   } catch (error) {
-    showMessage(error.message || 'No se pudo completar la operación.', true);
+    if(error.name==='UserNotConfirmedException' || (mode==='signup' && error.name==='UsernameExistsException')){setStep('confirm-signup');showMessage('Este correo ya está registrado o pendiente de verificación. Si ya lo verificaste, volvé a Ingresar; si no, podés reenviar el código.',true);}
+    else showMessage(error.message || 'No se pudo completar la operación.', true);
   } finally { submit.disabled = false; }
 });
 
@@ -226,3 +251,5 @@ window.addEventListener('pageshow', () => { void syncAccountControl(); });
 document.addEventListener('visibilitychange', () => { if (!document.hidden) void syncAccountControl(); });
 
 void import('./social-nav.js').catch(() => { /* Amigos no bloquea el acceso al sitio. */ });
+
+Hub.listen('auth',({payload})=>{if(payload.event==='signInWithRedirect_failure'){if(modal)modal.hidden=false;showMessage('No se pudo completar el acceso con Google. Si ya tenés cuenta con ese correo, ingresá con su método original o pedí vincularla a administración.',true);}});

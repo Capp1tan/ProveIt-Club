@@ -1,5 +1,6 @@
+import {preSignUp} from './auth/pre-sign-up/resource';
 import {adminConsole} from './functions/admin-console/resource';
-import {PolicyStatement} from 'aws-cdk-lib/aws-iam';
+import {Policy,PolicyStatement} from 'aws-cdk-lib/aws-iam';
 import { billing } from './functions/billing/resource';
 import { maintenance } from './functions/maintenance/resource';
 import { paymentWebhook } from './functions/payment-webhook/resource';
@@ -16,7 +17,7 @@ import { Table, AttributeType, BillingMode } from 'aws-cdk-lib/aws-dynamodb';
 import { RemovalPolicy } from 'aws-cdk-lib';
 
 /** Recursos AWS que Amplify podrá desplegar cuando habilitemos el backend. */
-const backend = defineBackend({ auth, data, storage, createTournament, respondInvitation, clubAccount, billing, paymentWebhook, maintenance, social, adminConsole });
+const backend = defineBackend({ auth, data, storage, createTournament, respondInvitation, clubAccount, billing, paymentWebhook, maintenance, social, adminConsole, preSignUp });
 // Tabla privada sin CRUD público. Sólo la función de amigos puede leerla o escribirla.
 const socialTable=new Table(backend.data.resources.graphqlApi.stack,'ClubSocial',{
   partitionKey:{name:'pk',type:AttributeType.STRING},sortKey:{name:'sk',type:AttributeType.STRING},
@@ -137,3 +138,9 @@ backend.adminConsole.addEnvironment('USER_POOL_ID',backend.auth.resources.userPo
 backend.storage.resources.bucket.grantRead(backend.adminConsole.resources.lambda,'profile-pictures/*');
 backend.storage.resources.bucket.grantRead(backend.adminConsole.resources.lambda,'profile-private/*');
 backend.adminConsole.addEnvironment('PROFILE_BUCKET_NAME',backend.storage.resources.bucket.bucketName);
+
+// Reserva de correos del alta, privada y en el stack de Auth para evitar dependencias circulares.
+const registrationTable=new Table(backend.auth.resources.userPool.stack,'ClubRegistrationClaims',{partitionKey:{name:'id',type:AttributeType.STRING},billingMode:BillingMode.PAY_PER_REQUEST,timeToLiveAttribute:'expiresAt',removalPolicy:RemovalPolicy.RETAIN});
+registrationTable.grant(backend.preSignUp.resources.lambda,'dynamodb:PutItem');
+backend.preSignUp.addEnvironment('REGISTRATION_TABLE_NAME',registrationTable.tableName);
+backend.preSignUp.resources.lambda.role?.attachInlinePolicy(new Policy(backend.auth.resources.userPool.stack,'RegistrationPoolRead',{statements:[new PolicyStatement({actions:['cognito-idp:ListUsers'],resources:[backend.auth.resources.userPool.userPoolArn]})]}));

@@ -9,7 +9,7 @@ import { mountAccountActions } from './account-actions.js';
 import { loadBadges, badgeElements, decorateAvatar, initializeAccess, mountBadgeAdmin } from './badges.js';
 // Edición del perfil. El archivo no almacena imágenes ni datos en el navegador:
 // Amplify los envía a S3 y a la base de datos cuando el backend esté desplegado.
-import { avatarUrl, configureAmplify, loadProfile, saveAvatar, saveProfile, signOut } from './auth-client.js';
+import { fetchUserAttributes, avatarUrl, configureAmplify, loadProfile, saveAvatar, saveProfile, signOut } from './auth-client.js';
 
 const targetId=new URLSearchParams(location.search).get('id');
 if(targetId){await configureAmplify();await mountPublicProfile(targetId);}else{
@@ -79,6 +79,7 @@ form.addEventListener('submit', async event => {
     if (currentAvatarPath) setAvatar(await avatarUrl(currentAvatarPath), form.elements.nickname.value.trim().slice(0, 1).toUpperCase());
     selectedAvatar = null;
     showNotice('Perfil guardado.');
+    if(new URLSearchParams(location.search).has('registro')){history.replaceState(null,'','/perfil.html');document.querySelector('.profile-heading h1').textContent='Tu perfil.';}
     window.dispatchEvent(new Event('proveit:profile-updated'));
   } catch (error) { showNotice(error.message || 'No se pudo guardar el perfil.', true); }
   finally { button.disabled = false; }
@@ -117,7 +118,13 @@ if (!ready) {
       form.elements.nickname.value = profile.nickname || '';
       bio.value = profile.bio || '';
       if (currentAvatarPath) setAvatar(await avatarUrl(currentAvatarPath), profile.nickname?.slice(0, 1).toUpperCase());
-    } else setAvatar('', user.username?.slice(0, 1).toUpperCase() || '?');
+    } else {
+      setAvatar('','?');
+      try{const attrs=await fetchUserAttributes();form.elements.nickname.value=attrs.nickname || '';if(!account?.phoneNumber)phoneField.load(attrs.phone_number || '');}catch{}
+      document.querySelector('.profile-heading h1').textContent='Completá tu registro.';
+      document.querySelector('.profile-heading>p:last-child').textContent='Elegí un nick único y agregá tu teléfono privado para empezar. La foto y los demás datos son opcionales.';
+      showNotice('Completá y guardá el perfil para continuar. Si el nick o teléfono ya están en uso, te lo indicaremos.');
+    }
     bioCount.textContent = String(bio.value.length);
   } catch (error) {
     showNotice(error.name === 'UserUnAuthenticatedException' ? 'Iniciá sesión para editar tu perfil.' : 'No pudimos cargar tu perfil. Tus datos siguen guardados: recargá para reintentar.', true);

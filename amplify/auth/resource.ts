@@ -1,3 +1,4 @@
+import {preSignUp} from './pre-sign-up/resource';
 import { defineAuth, secret } from '@aws-amplify/backend';
 
 /**
@@ -5,6 +6,7 @@ import { defineAuth, secret } from '@aws-amplify/backend';
  * Las credenciales de Google se cargarán como secretos en Amplify; nunca van aquí.
  */
 export const auth = defineAuth({
+  triggers:{preSignUp},
   loginWith: {
     email: true,
     externalProviders: {
