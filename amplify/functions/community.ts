@@ -4,6 +4,7 @@ import {S3Client,GetObjectCommand,PutObjectCommand} from '@aws-sdk/client-s3';
 import {randomUUID} from 'node:crypto';
 import {getSignedUrl} from '@aws-sdk/s3-request-presigner';
 import {assertActiveAccount,assertActiveTournament} from './lifecycle';
+import {leagueProgress} from './leagues';
 const s3=new S3Client({requestChecksumCalculation:'WHEN_REQUIRED'});
 const env=(k:string)=>process.env[k]!;
 export async function community(db:DynamoDBDocumentClient,sub:string,a:any){
@@ -45,6 +46,13 @@ export async function community(db:DynamoDBDocumentClient,sub:string,a:any){
   return {profiles,cursor:result.LastEvaluatedKey?Buffer.from(JSON.stringify(result.LastEvaluatedKey)).toString('base64url'):null};
  }
  if(a.action==='COMMUNITY_PROFILE')return {profile:await clean(await get('PROFILE_TABLE_NAME',a.targetProfileId))};
+ if(a.action==='COMMUNITY_PROGRESS'){
+  const p=await get('PROFILE_TABLE_NAME',a.targetProfileId);
+  if(!p || await get('CLAIM_TABLE_NAME','deleted-account:'+owner(p)))throw new Error('Perfil no disponible.');
+  // El historial y los logros de perfiles privados nunca salen hacia un no amigo.
+  if(!await visible(p))return {hidden:true};
+  return leagueProgress(db,p.id);
+ }
  if(a.action==='COMMUNITY_UPLOAD'){
   const types:Record<string,string>={'image/jpeg':'jpg','image/png':'png','image/webp':'webp'};
   if(!types[a.contentType] || !Number.isInteger(a.size) || a.size<1 || a.size>2097152)throw new Error('Usá JPG, PNG o WebP hasta 2 MB.');

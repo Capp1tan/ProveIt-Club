@@ -58,8 +58,11 @@
     <nav class="top-actions"><a class="back-link" href="torneos.html">Torneos</a><a class="profile-avatar-link" data-profile-link href="/perfil.html" aria-label="Ir a mi perfil" title="Mi perfil" hidden></a><button class="login-button" id="signOutButton" type="button">Cerrar sesión</button></nav>
   </header>
   <main class="profile-main">
+    <div id="profileDashboard" class="profile-dashboard"></div>
+    <section id="ownJudgeReputation"></section>
+    <details id="profileEditDetails" class="profile-edit-details" open>
+    <summary>Editar perfil</summary>
     <section class="profile-heading"><p class="eyebrow"><span class="live-dot"></span> TU IDENTIDAD EN EL CLUB</p><h1 class="profile-name-line"><span id="ownProfileName">Tu perfil.</span><span id="ownNameBadges"></span></h1></section>
-<section id="ownJudgeReputation" class="profile-card"></section>
     <form class="profile-card" id="profileForm">
       <div class="avatar-editor">
         <div class="avatar-preview" id="avatarPreview" aria-label="Vista previa de la foto">?</div>
@@ -78,6 +81,7 @@
       <p class="profile-notice" id="profileNotice" role="status" aria-live="polite"></p>
       <button class="primary-button profile-save" type="submit">Guardar perfil <span aria-hidden="true">↗</span></button>
     </form>
+    </details>
   </main>
   <footer class="site-footer"><a class="footer-brand" href="index.html">prove.it <span>CLUB</span></a><span>COMPETÍ · DISFRUTÁ · VOLVÉ A INTENTARLO</span><span>© 2026 PROVE.IT CLUB</span></footer>
   <script type="module" src="/src/profile-ui.js"></script>

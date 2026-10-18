@@ -1,4 +1,5 @@
 import {mountPublicProfile} from './profile-public.js';
+import {profileIdentity,profileProgress} from './profile-leagues.js';
 import {viewClubProfile} from './community-api.js';
 import {reputationPanel} from './profile-components.js';
 import '../community.css';
@@ -21,6 +22,19 @@ const phoneField=mountPhoneCountry();
 let profileId = null;
 let currentAvatarPath = '';
 let selectedAvatar = null;
+
+// La ficha pública y el editor son secciones distintas: no se pierde ninguna opción.
+async function refreshDashboard(id){
+ try{
+  const [p]=await Promise.all([viewClubProfile(id),loadBadges()]);
+  if(!p)return;
+  document.getElementById('profileDashboard').replaceChildren(profileIdentity(p),profileProgress(p));
+  document.querySelector('.profile-heading').hidden=true;
+ }catch{
+  const root=document.getElementById('profileDashboard');
+  if(!root.childElementCount){const message=document.createElement('p');message.textContent='No pudimos cargar la ficha del perfil. Podés seguir editándolo y recargar para reintentar.';root.append(message);}
+ }
+}
 
 function showNotice(text, error = false) {
   notice.textContent = text;
@@ -74,6 +88,7 @@ form.addEventListener('submit', async event => {
       socialLinks:JSON.stringify(Object.fromEntries(['instagram','twitch','discord','custom'].map(k=>[k,form.elements[k].value.trim()]))),
     });
     profileId = saved.id;document.getElementById('ownProfileName').textContent=saved.nickname;
+    void refreshDashboard(saved.id);
     if (currentAvatarPath) setAvatar(await avatarUrl(currentAvatarPath), form.elements.nickname.value.trim().slice(0, 1).toUpperCase());
     selectedAvatar = null;
     showNotice('Perfil guardado.');
@@ -105,6 +120,8 @@ if (!ready) {
     } catch { showNotice('No pudimos cargar las insignias. Podés editar tu perfil y recargar para reintentar.', true); } })();
     if (profile) {
       profileId = profile.id;document.getElementById('ownProfileName').textContent=profile.nickname;
+      document.getElementById('profileEditDetails').open=!profile.accountComplete || new URLSearchParams(location.search).has('registro');
+      void refreshDashboard(profile.id);
       form.elements.visibility.value=profile.visibility==='PUBLIC'?'PUBLIC':'PRIVATE';form.elements.judgeEnabled.checked=Boolean(profile.judgeEnabled);
       let links={};try{links=JSON.parse(profile.socialLinks || '{}');}catch{}
       for(const k of ['instagram','twitch','discord','custom'])form.elements[k].value=links[k] || '';

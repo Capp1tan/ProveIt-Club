@@ -1,5 +1,14 @@
 # Versión 3.1.0
 
+## 3.4.0 — Ligas y recorrido del perfil
+
+- Identidad con foto, bio y redes; fondo panorámico compartido y editor desplegable.
+- Todas las cuentas empiezan sin liga. Ocho rangos con símbolos abstractos originales.
+- XP calculada en servidor a partir de torneos confirmados y terminados desde el lanzamiento.
+- Historial de participaciones y logros, sujetos a la privacidad del perfil.
+- Primeros rangos rápidos y umbrales crecientes. Sin premios económicos automáticos.
+- Reglas y límites documentados en LIGAS.md.
+
 ## 3.3.0 — Perfil, búsqueda y administración
 
 - Administración compacta junto al logo. Gestión de emblemas personalizados, tarifas y reclamos dentro del panel.
