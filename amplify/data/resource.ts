@@ -1,3 +1,4 @@
+import {adminConsole} from '../functions/admin-console/resource';
 import { a, defineData, type ClientSchema } from '@aws-amplify/backend';
 import { clubAccount } from '../functions/club-account/resource';
 import { respondInvitation } from '../functions/respond-invitation/resource';
@@ -12,6 +13,8 @@ import { billing } from '../functions/billing/resource';
 import { maintenance } from '../functions/maintenance/resource';
 
 const schema = a.schema({
+  // El resolver vuelve a comprobar el Creador; ninguna consulta administrativa es pública.
+  clubAdmin:a.mutation().arguments({action:a.string().required(),collection:a.string(),targetId:a.string(),cursor:a.string(),search:a.string(),roomKey:a.string(),reason:a.string()}).returns(a.string()).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(adminConsole)),
   // Una única puerta validada: el cliente nunca puede listar mensajes de otras salas.
   clubSocial:a.mutation().arguments({action:a.string().required(),selfProfileId:a.id(),targetProfileId:a.id(),roomType:a.string(),roomId:a.id(),body:a.string(),messageId:a.id(),cursor:a.string(),after:a.string(),seenCount:a.integer()}).returns(a.string()).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(social)),
   clubCommunity:a.mutation().arguments({action:a.string().required(),targetProfileId:a.id(),cursor:a.string(),path:a.string(),contentType:a.string(),size:a.integer(),tournamentId:a.id(),judgeId:a.id(),positive:a.boolean(),reason:a.string(),status:a.string(),reportId:a.string(),description:a.string(),conflicts:a.string()}).returns(a.string()).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(social)),

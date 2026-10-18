@@ -1,3 +1,11 @@
+# Versión 3.1.0
+
+- Centro de administración exclusivo del Creador, con autorización comprobada por servidor.
+- Cuentas de Cognito con y sin perfil, búsqueda por nick o correo y ficha de identidad, contacto y privacidad.
+- Consulta paginada de perfiles, torneos, pagos, invitaciones, insignias, amistades, jueces, reclamos y tarifas.
+- Salas de mensajes con lectura administrativa que exige un motivo, y registro de consultas.
+- No se devuelven contraseñas, tokens ni claves de servicios; el panel no modifica ni elimina registros.
+
 # Versión 3.0.0
 
 - Perfiles privados por defecto, acceso por amistad recíproca y lecturas filtradas por servidor.

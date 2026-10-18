@@ -1,6 +1,8 @@
 import { profileClient } from './auth-client.js';
+import {Hub} from 'aws-amplify/utils';
 let badges = [];
-let accessPromise,badgePromise;
+let accessPromise,badgePromise,badgeEpoch=0;
+Hub.listen('auth',({payload})=>{if(['signedOut','signedIn'].includes(payload.event)){badgeEpoch++;badges=[];accessPromise=undefined;badgePromise=undefined;}});
 function data(result) {
   if (result.errors?.length) throw new Error(result.errors.map(error => error.message).join(' '));
   return result.data;
@@ -13,7 +15,7 @@ export function loadBadges() {
   if(!badgePromise)badgePromise=readBadges().finally(()=>{badgePromise=undefined;});
   return badgePromise;
 }
-async function readBadges(){const {communityAction}=await import('./community-api.js');badges=(await communityAction('BADGES')).badges;}
+async function readBadges(){const current=badgeEpoch;const {communityAction}=await import('./community-api.js');const rows=(await communityAction('BADGES')).badges;if(current===badgeEpoch)badges=rows;}
 export function badgeElements(sub) {
   const wrapper = document.createElement('span'); wrapper.className = 'club-badges';
   if (!sub) return wrapper;

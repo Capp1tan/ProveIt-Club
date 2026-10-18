@@ -102,7 +102,9 @@ if (!ready) {
       await loadBadges();
       decorateAvatar(preview, user.userId);
       document.getElementById('profileBadges').replaceChildren(badgeElements(user.userId));
-      if (access.isCreator) { await mountBadgeAdmin(); await mountBillingAdmin();await mountJudgeReportAdmin(); }
+      if (access.isCreator) {
+       const adminCard=document.createElement('section');adminCard.className='profile-card';const title=document.createElement('h2');title.textContent='Centro de administración';const link=document.createElement('a');link.href='/admin.html';link.className='primary-button';link.textContent='Abrir panel de datos del club ↗';adminCard.append(title,link);document.querySelector('main').prepend(adminCard);
+       await mountBadgeAdmin(); await mountBillingAdmin();await mountJudgeReportAdmin(); }
     } catch { showNotice('No pudimos cargar las insignias. Podés editar tu perfil y recargar para reintentar.', true); } })();
     if (profile) {
       profileId = profile.id;

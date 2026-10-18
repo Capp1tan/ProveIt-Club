@@ -47,7 +47,7 @@ search.addEventListener('input',render);
 try{
  if(!await configureAmplify())throw new Error('No pudimos conectar con el club.');user=await getCurrentUser();
  await Promise.all([registeredProfiles().then(p=>profiles=p),loadBadges().catch(()=>{})]);
- if(closed)throw new Error('Sesión cerrada.');root.append(layout);await refresh();notice.textContent='Las solicitudes requieren aceptación. Los chats se actualizan mientras estás en el sitio.';
+ if(closed)throw new Error('Sesión cerrada.');root.append(layout);await refresh();notice.textContent='Las solicitudes requieren aceptación. Los chats se actualizan mientras estás en el sitio. La administración puede revisarlos por soporte o moderación; la consulta queda registrada.';
  if(target){const friend=state.friends.find(r=>r.profileId===target);if(friend)openChat(friend);}
 }catch(error){notice.textContent=error.message || 'Ingresá para ver tus amigos.';}
 finally{window.proveitLoadingDone?.('page');}
