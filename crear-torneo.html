@@ -5,7 +5,8 @@
   <title>Crear torneo — Prove.it Club</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <!-- Las fuentes no bloquean el primer dibujo; el texto aparece con la fuente de respaldo. -->
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
-  <noscript><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet"></noscript><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="profile.css">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet"></noscript><link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="visual-theme.css"><link rel="stylesheet" href="profile.css">
 <link rel="stylesheet" href="tournament.css">
 
   <!-- Carga inicial: independiente de Amplify; nunca bloquea indefinidamente. -->
@@ -47,8 +48,8 @@
     })();
   </script>
 </head>
-<body class="create-page">
-<header class="topbar"><a class="brand" href="index.html" aria-label="Prove.it Club, inicio"><span class="brand-mark"><i></i><i></i><i></i></span><span>prove<span class="brand-dot">.</span>it<span class="brand-club">CLUB</span></span></a><nav class="top-actions"><a class="back-link" href="index.html">← Volver al inicio</a><a class="profile-avatar-link" data-profile-link href="/perfil.html" aria-label="Ir a mi perfil" title="Mi perfil" hidden></a><button class="login-button" data-login>Ingresar <span>↗</span></button></nav></header>
+<body class="create-page proveit-theme">
+<header class="topbar"><a class="brand" href="index.html" aria-label="Prove.it Club, inicio"><span>prove<span class="brand-dot">.</span>it<span class="brand-club">CLUB</span></span></a><nav class="top-actions"><a class="back-link" href="index.html">← Volver al inicio</a><a class="profile-avatar-link" data-profile-link href="/perfil.html" aria-label="Ir a mi perfil" title="Mi perfil" hidden></a><button class="login-button" data-login>Ingresar <span>↗</span></button></nav></header>
 <main class="tournament-main">
 <div class="tournament-intro"><p class="eyebrow">DEL DESAFÍO A LA COMPETENCIA</p><h1>Tu torneo. Tus reglas.</h1><p>Elegí cómo competir, reuní a tus rivales y asigná quién va a cuidar el juego.</p><a class="back-link" href="torneos.html">Ver torneos del club ↗</a></div>
 <section class="tournament-panel" aria-labelledby="formatHeading"><div class="section-index">01 / FORMATO</div><h2 id="formatHeading">Elegí la competencia</h2><div class="format-options" id="formatOptions" role="group" aria-label="Formatos de torneo"></div><div class="format-preview" id="formatPreview" aria-live="polite"></div></section>

@@ -12,6 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
   <noscript><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet"></noscript>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="visual-theme.css">
   <link rel="stylesheet" href="profile.css">
 
   <!-- Carga inicial: independiente de Amplify; nunca bloquea indefinidamente. -->
@@ -53,14 +54,11 @@
     })();
   </script>
 </head>
-<body>
+<body class="proveit-theme">
   <div id="siteLoader" role="status" aria-live="polite" aria-label="Cargando Prove.it Club"><div class="loader-content"><div class="loader-brand" aria-hidden="true">prove<span>.</span>it<small>CLUB</small></div><div class="loader-track" aria-hidden="true"></div><div class="loader-copy" id="loaderCopy">Preparando el desafío…</div><button class="loader-skip" id="loaderSkip" type="button" hidden>Entrar ahora</button></div></div>
   <!-- Barra superior: logo vuelve al inicio; lupa abre el buscador; el botón muestra el acceso de demostración. -->
   <header class="topbar">
-    <a class="brand" href="index.html" aria-label="Prove.it Club, inicio">
-      <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
-      <span>prove<span class="brand-dot">.</span>it<span class="brand-club">CLUB</span></span>
-    </a>
+    <a class="brand" href="index.html" aria-label="Prove.it Club, inicio"><span>prove<span class="brand-dot">.</span>it<span class="brand-club">CLUB</span></span></a>
     <nav class="top-actions" aria-label="Navegación principal"><a class="back-link" href="torneos.html">Torneos</a>
       <button class="icon-button" id="searchToggle" aria-label="Buscar torneos" title="Buscar torneos">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 5 5"></path></svg>

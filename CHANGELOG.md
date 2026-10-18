@@ -1,5 +1,14 @@
 # Versión 3.1.0
 
+## 3.5.0 — Identidad visual panorámica
+
+- Marca tipográfica prove.it CLUB, sin las barras anteriores, en todas las cabeceras.
+- Fondo panorámico común y tarjetas con transparencia moderada y bordes suaves.
+- Tema compartido en inicio, perfiles, creación y consulta de torneos, pagos, amigos y administración.
+- Formularios, diálogos, búsquedas, notificaciones y chat adaptados al mismo estilo.
+- Más opacidad en tablas y mensajes; menos desenfoque en móviles.
+- Iconos de redes compactos en la identidad del perfil, con nombres accesibles.
+
 ## 3.4.0 — Ligas y recorrido del perfil
 
 - Identidad con foto, bio y redes; fondo panorámico compartido y editor desplegable.
