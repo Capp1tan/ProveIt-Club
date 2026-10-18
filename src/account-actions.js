@@ -4,6 +4,9 @@ import { fetchAuthSession, signOut } from './auth-client.js';
 
 const el=(tag,text)=>{const n=document.createElement(tag);n.textContent=text;return n;};
 export function mountAccountActions(isCreator) {
+  // Las herramientas del Creador están en Administración; el perfil sólo
+  // conserva la baja voluntaria de las cuentas normales.
+  if(isCreator)return;
   const section=el('section','');section.className='profile-card';section.id='accountActions';
   const message=el('p','');message.setAttribute('role','status');
   if(isCreator) {
