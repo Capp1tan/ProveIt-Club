@@ -31,11 +31,11 @@ export async function community(db:DynamoDBDocumentClient,sub:string,a:any){
  const clean=async(p:any,reputation=true)=>{
   if(!p || await get('CLAIM_TABLE_NAME','deleted-account:'+owner(p)))return null;
   const canView=await visible(p);
-  return {id:p.id,nickname:p.nickname,owner:owner(p)+'::'+owner(p),accountComplete:Boolean(p.accountComplete),visibility:p.visibility==='PUBLIC'?'PUBLIC':'PRIVATE',canView,judgeEnabled:Boolean(p.judgeEnabled),...(canView?{bio:p.bio || '',avatarPath:p.avatarPath || '',socialLinks:p.socialLinks || '{}'}:{}),...(reputation?{reputation:await summary(p.id)}:{})};
+  return {id:p.id,nickname:p.nickname,owner:owner(p)+'::'+owner(p),accountComplete:Boolean(p.accountComplete),visibility:p.visibility==='PUBLIC'?'PUBLIC':'PRIVATE',canView,avatarPath:p.avatarPath || '',judgeEnabled:Boolean(p.judgeEnabled),...(canView?{bio:p.bio || '',socialLinks:p.socialLinks || '{}'}:{}),...(reputation?{reputation:await summary(p.id)}:{})};
  };
  if(a.action==='COMMUNITY_BADGES'){
   const badges:any[]=[];let key;
-  do{const r=await db.send(new ScanCommand({TableName:env('BADGE_TABLE_NAME'),ExclusiveStartKey:key,ProjectionExpression:'accountSub,code'}));badges.push(...(r.Items || []));key=r.LastEvaluatedKey;}while(key);return {badges};
+  do{const r=await db.send(new ScanCommand({TableName:env('BADGE_TABLE_NAME'),ExclusiveStartKey:key,ProjectionExpression:'#sub,#code,#label,#color,#effect',ExpressionAttributeNames:{'#sub':'accountSub','#code':'code','#label':'label','#color':'color','#effect':'effect'}}));badges.push(...(r.Items || []));key=r.LastEvaluatedKey;}while(key);return {badges};
  }
  if(a.action==='COMMUNITY_DIRECTORY'){
   let key;try{key=a.cursor?JSON.parse(Buffer.from(a.cursor,'base64url').toString()):undefined;}catch{throw new Error('Página inválida.');}
@@ -55,7 +55,7 @@ export async function community(db:DynamoDBDocumentClient,sub:string,a:any){
   if(typeof a.path!=='string' || !/^(profile-pictures|profile-private)\//.test(a.path) || a.path.length>1024)throw new Error('Foto inválida.');
   let key,found:any;
   do{const page=await db.send(new ScanCommand({TableName:env('PROFILE_TABLE_NAME'),ConsistentRead:true,FilterExpression:'avatarPath=:path',ExpressionAttributeValues:{':path':a.path},ExclusiveStartKey:key}));found=page.Items?.[0];key=page.LastEvaluatedKey;}while(!found && key);
-  if(!found || !await visible(found) || await get('CLAIM_TABLE_NAME','deleted-account:'+owner(found)))throw new Error('Foto privada o no disponible.');
+  if(!found || await get('CLAIM_TABLE_NAME','deleted-account:'+owner(found)))throw new Error('Foto no disponible.');
   return {url:await getSignedUrl(s3,new GetObjectCommand({Bucket:env('PROFILE_BUCKET_NAME'),Key:a.path}),{expiresIn:60})};
  }
  if(a.action==='COMMUNITY_REPORTS'){

@@ -1,3 +1,4 @@
+import {badgeElements,loadBadges} from './badges.js';
 import '../social.css';
 import { socialAction } from './social-api.js';
 import { getCurrentUser } from './auth-client.js';
@@ -29,7 +30,7 @@ export function mountChat(root,room){
    let card=nodes.get(m.id);if(!card){card=el('article','','chat-message');nodes.set(m.id,card);card.dataset.messageId=m.id;}
    card.dataset.mine=String(m.senderSub===me);card.dataset.delivery=m.delivery || 'sent';
    const time=el('time',new Date(m.createdAt).toLocaleString('es',{dateStyle:'short',timeStyle:'short'}));time.dateTime=m.createdAt;
-   card.replaceChildren(el('strong',m.senderName),el('p',m.body),time);
+   const sender=el('strong',m.senderName,'profile-name-line');sender.append(badgeElements(m.senderSub));card.replaceChildren(sender,el('p',m.body),time);
    if(m.delivery==='pending')card.append(el('small','Enviando…','chat-delivery'));
    if(m.delivery==='failed'){const retry=el('button','No enviado · Reintentar','chat-retry');retry.type='button';retry.disabled=sending;retry.addEventListener('click',()=>void deliver(m));card.append(retry);}
    const key=m.createdAt+'#'+m.id;if(card.dataset.sortKey!==key || !card.isConnected){card.dataset.sortKey=key;card.remove();const last=list.lastElementChild;if(!last || last.dataset.sortKey<=key)list.append(card);else{const next=[...list.children].find(n=>n.dataset.sortKey>key);list.insertBefore(card,next || null);}}
@@ -75,6 +76,7 @@ export function mountChat(root,room){
  schedulePoll();
  const inbox=event=>{if(event.detail?.profileId===room.targetProfileId)void refresh();};window.addEventListener('proveit:chat-arrived',inbox);
  const visible=()=>{if(active())void refresh();schedulePoll();};document.addEventListener('visibilitychange',visible);window.addEventListener('focus',visible);
+ void loadBadges().then(()=>{if(stopped)return;for(const id of messages.keys())dirty.add(id);render();}).catch(()=>{});
  const off=Hub.listen('auth',({payload})=>{if(payload.event==='signedOut')stop();});
  function stop(){stopped=true;clearTimeout(timer);window.removeEventListener('proveit:chat-arrived',inbox);document.removeEventListener('visibilitychange',visible);window.removeEventListener('focus',visible);off();messages.clear();nodes.clear();root.replaceChildren();}
  stop.refresh=()=>void refresh();

@@ -20,7 +20,7 @@ export function badgeElements(sub) {
   const wrapper = document.createElement('span'); wrapper.className = 'club-badges';
   if (!sub) return wrapper;
   for (const badge of badges.filter(item => item.accountSub === sub || item.accountUsername === sub)) {
-    const text = { CREATOR: '★ Creador', BETA_TESTER: '✦ Betatester', VERIFIED:'✓ Verificado' }[badge.code];
+    const text = badge.code.startsWith('CUSTOM_') ? badge.label : { CREATOR: '★ Creador', BETA_TESTER: '✦ Betatester', VERIFIED:'✓ Verificado' }[badge.code];
     if (!text) continue;
     const node = document.createElement('span'); node.className = 'club-badge'; node.dataset.code = badge.code;
     if (badge.code === 'VERIFIED') {
@@ -35,7 +35,7 @@ export function badgeElements(sub) {
       const check = document.createElementNS(svg.namespaceURI, 'path');
       check.setAttribute('d', 'm7.3 12 3.1 3.1 6.3-6.3'); check.setAttribute('fill', 'none'); check.setAttribute('stroke', '#fff'); check.setAttribute('stroke-width', '2.2'); check.setAttribute('stroke-linecap', 'round'); check.setAttribute('stroke-linejoin', 'round');
       svg.append(seal, check); node.append(svg);
-    } else node.textContent = text;
+    } else {node.textContent = text;if(badge.code.startsWith('CUSTOM_')){node.classList.add('custom-badge');if(/^#[a-f0-9]{6}$/i.test(badge.color || ''))node.style.setProperty('--badge-color',badge.color);node.dataset.effect=['GLOW','SHIMMER'].includes(badge.effect)?badge.effect:'NONE';node.title=text;}} 
     wrapper.append(node);
   }
   return wrapper;
@@ -48,36 +48,21 @@ export function decorateAvatar(node, sub) {
   if (accent) node.dataset.accountAccent = accent;
   else delete node.dataset.accountAccent;
 }
-export async function mountBadgeAdmin() {
-  const section = document.getElementById('badgeAdmin'), people = document.getElementById('badgePeople'), search = document.getElementById('badgeSearch'), notice = document.getElementById('badgeNotice');
-  const client=await profileClient();const {clubDirectory}=await import('./community-api.js');const profiles=await clubDirectory();
-  function render() {
-    people.replaceChildren();
-    const query = search.value.trim().toLocaleLowerCase('es');
-    const unique = new Map(profiles.filter(p => p.owner && p.nickname).map(p => [p.owner.split('::')[0], p]));
-    for (const [sub, profile] of [...unique].sort((a,b) => a[1].nickname.localeCompare(b[1].nickname, 'es'))) {
-      if (!profile.nickname.toLocaleLowerCase('es').includes(query)) continue;
-      const row = document.createElement('div'); row.className = 'badge-admin-person';
-      const name = document.createElement('strong'); name.textContent = profile.nickname;
-      const enabled = badges.some(item => (item.accountSub === sub || item.accountUsername === sub) && item.code === 'BETA_TESTER');
-      const button = document.createElement('button'); button.type = 'button'; button.textContent = enabled ? 'Quitar Betatester' : 'Dar Betatester'; button.setAttribute('aria-pressed', String(enabled));
-      button.addEventListener('click', async () => {
-        button.disabled = true; notice.textContent = 'Guardando insignia…';
-        try {
-          data(await client.mutations.manageClubBadge({ profileId: profile.id, code: 'BETA_TESTER', enabled: !enabled }));
-          await loadBadges(); render(); notice.textContent = 'Insignias actualizadas.';
-          const { getCurrentUser } = await import('./auth-client.js');
-          document.getElementById('profileBadges').replaceChildren(badgeElements((await getCurrentUser()).userId));
-        } catch (error) { notice.textContent = error.message; button.disabled = false; }
-      });
-      const verified=badges.some(b=>(b.accountSub===sub || b.accountUsername===sub) && b.code==='VERIFIED');
-      const verify=document.createElement('button');verify.type='button';verify.textContent=verified?'Quitar verificado':'Dar verificado';
-      verify.addEventListener('click',async()=>{verify.disabled=true;try{data(await client.mutations.manageClubBadge({profileId:profile.id,code:'VERIFIED',enabled:!verified}));await loadBadges();render();notice.textContent='Verificado actualizado.';}catch(error){notice.textContent=error.message;verify.disabled=false;}});
-      const phone=document.createElement('button');phone.type='button';phone.textContent='Permitir sin teléfono';
-      phone.addEventListener('click',async()=>{phone.disabled=true;try{data(await client.mutations.setClubPhoneOptional({profileId:profile.id,phoneOptional:true}));notice.textContent=profile.nickname+': teléfono opcional habilitado.';phone.textContent='Excepción habilitada';}catch(error){notice.textContent=error.message;phone.disabled=false;}});
-      row.append(name,badgeElements(sub),button,verify,phone);people.append(row);
-    }
-    if (!people.childElementCount) people.textContent = 'No hay perfiles con ese nick.';
-  }
-  search.addEventListener('input', render); section.hidden = false; render();
+// Administración exclusiva: el servidor vuelve a comprobar al Creador en cada cambio.
+export async function mountBadgeAdmin(host){
+ const el=(tag,text)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;return n;};
+ const root=el('section'),title=el('h3','Emblemas del club'),status=el('p'),search=el('input'),list=el('div');root.className='badge-management';search.type='search';search.placeholder='Buscar cuenta por nick';search.setAttribute('aria-label','Buscar cuenta para emblemas');root.append(title,el('p','El verificado usa el mismo tilde en todo el sitio. Los emblemas personalizados aparecen junto al nombre.'),search,list,status);host.append(root);
+ const client=await profileClient(),{clubDirectory}=await import('./community-api.js');const profiles=await clubDirectory();await loadBadges();
+ const form=el('form');form.className='community-form';const target=el('select'),name=el('input'),color=el('input'),effect=el('select'),save=el('button','Otorgar emblema personalizado'),cancel=el('button','Cancelar edición');let editing=null;
+ target.required=true;for(const p of profiles){const o=el('option',p.nickname);o.value=p.id;target.append(o);}name.required=true;name.minLength=2;name.maxLength=24;name.placeholder='Ejemplo: Fundador';color.type='color';color.value='#c1f36b';for(const [v,t] of [['NONE','Sin animación'],['GLOW','Brillo suave'],['SHIMMER','Destello lento']]){const o=el('option',t);o.value=v;effect.append(o);}for(const [text,input] of [['Cuenta',target],['Nombre del emblema',name],['Color',color],['Efecto',effect]]){const l=el('label',text);l.append(input);form.append(l);}save.type='submit';cancel.type='button';cancel.hidden=true;form.append(save,cancel);root.insertBefore(form,search);
+ const reset=()=>{editing=null;save.textContent='Otorgar emblema personalizado';cancel.hidden=true;};cancel.addEventListener('click',reset);target.addEventListener('change',reset);
+ async function change(args){data(await client.mutations.manageClubBadge(args));await loadBadges();render();window.dispatchEvent(new Event('proveit:badges-updated'));status.textContent='Emblemas actualizados.';}
+ form.addEventListener('submit',async e=>{e.preventDefault();save.disabled=true;try{await change({profileId:target.value,code:editing || 'CUSTOM_'+crypto.randomUUID(),enabled:true,label:name.value.trim(),color:color.value,effect:effect.value});reset();name.value='';}catch(e){status.textContent=e.message;}finally{save.disabled=false;}});
+ function action(label,run){const b=el('button',label);b.type='button';b.className='social-button';b.addEventListener('click',async()=>{b.disabled=true;try{await run();}catch(e){status.textContent=e.message;b.disabled=false;}});return b;}
+ function render(){list.replaceChildren();for(const p of profiles.filter(p=>p.nickname.toLocaleLowerCase('es').includes(search.value.trim().toLocaleLowerCase('es')))){
+  const sub=p.owner.split('::')[0],row=el('article');row.className='badge-admin-person';const heading=el('strong',p.nickname);heading.append(badgeElements(sub));row.append(heading);
+  for(const [code,label] of [['VERIFIED','verificado'],['BETA_TESTER','Betatester']]){const enabled=badges.some(b=>b.accountSub===sub && b.code===code);row.append(action((enabled?'Quitar ':'Dar ')+label,()=>change({profileId:p.id,code,enabled:!enabled})));}
+  for(const b of badges.filter(b=>b.accountSub===sub && b.code.startsWith('CUSTOM_'))){row.append(action('Editar '+b.label,async()=>{target.value=p.id;name.value=b.label;color.value=b.color || '#c1f36b';effect.value=b.effect || 'NONE';editing=b.code;save.textContent='Guardar cambios del emblema';cancel.hidden=false;name.focus();}),action('Quitar '+b.label,()=>change({profileId:p.id,code:b.code,enabled:false})));}
+  row.append(action('Permitir sin teléfono',async()=>{data(await client.mutations.setClubPhoneOptional({profileId:p.id,phoneOptional:true}));status.textContent=p.nickname+': excepción de teléfono habilitada.';}));list.append(row);
+ }}search.addEventListener('input',render);render();
 }

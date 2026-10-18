@@ -25,8 +25,8 @@ export function judgePanel(t,{isOrganizer,onChanged}){
   actions.append(report);card.append(actions,el('small','Sólo participantes confirmados pueden valorar o reclamar. Una valoración por juez y evento; no se permiten autoevaluaciones.'),message);root.append(card);
  });return root;
 }
-export async function mountJudgeReportAdmin(){
- const root=el('section','','profile-card');root.append(el('h2','Reclamos de jueces'));document.querySelector('main').append(root);
+export async function mountJudgeReportAdmin(host=document.querySelector('main')){
+ const root=el('section','','profile-card');root.append(el('h2','Reclamos de jueces'));host.append(root);
  const status=el('p','Cargando…','community-notice'),list=el('div');root.append(status,list);
  let cursor=null;const more=el('button','Ver más reclamos','social-button');more.type='button';more.hidden=true;root.append(more);
  async function load(){more.disabled=true;try{const data=await communityAction('REPORTS',{cursor});cursor=data.cursor;for(const report of data.reports){const row=el('article','','community-report'),link=el('a',report.tournamentName);link.href='/torneo.html?id='+encodeURIComponent(report.tournamentId);row.append(el('h3',report.judgeName),link,el('p',report.reason),el('p','Estado: '+report.status));if(report.status==='PENDING'){

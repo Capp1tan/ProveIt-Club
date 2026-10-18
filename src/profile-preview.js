@@ -60,9 +60,9 @@ export class ProfilePreview {
     const close=document.createElement('button');close.type='button';close.className='profile-preview-close';close.textContent='×';close.setAttribute('aria-label','Cerrar vista previa');
     close.addEventListener('click',()=>{this.suppressFocus=button;this.dismiss();button.focus({preventScroll:true});});
     const head=document.createElement('div');head.className='profile-preview-heading';
-    const title=document.createElement('h3');title.textContent=name;head.append(this.avatar(id,name),title);
+    const title=document.createElement('h3');title.textContent=name;title.className='profile-name-line';title.append(this.badges(profile?.owner?.split('::')[0]));head.append(this.avatar(id,name),title);
     const bio=document.createElement('p');bio.className='profile-preview-bio';bio.textContent=profile ? (!profile.canView?'Perfil privado · sólo amigos':profile.bio?.trim() || 'Todavía no agregó una biografía.') : 'Este perfil ya no está disponible. El nombre corresponde al registro del torneo.';
-    this.card.append(close,head,this.badges(profile?.owner?.split('::')[0]),bio);
+    this.card.append(close,head,bio);
     if(profile)this.card.append(reputationPanel(profile.reputation,profile.judgeEnabled),socialLinks(profile));
     const help=document.createElement('small');help.textContent='Perfil del club';this.card.append(help);
     if(profile){const full=document.createElement('a');full.href='/perfil.html?id='+encodeURIComponent(id);full.textContent=profile.canView?'Ver perfil completo ↗':'Ver ficha del perfil ↗';this.card.append(full);const friend=document.createElement('a');friend.className='friend-preview-link';friend.href='/amigos.html?persona='+encodeURIComponent(profile.id);friend.textContent='Amistad y mensajes ↗';this.card.append(friend);}

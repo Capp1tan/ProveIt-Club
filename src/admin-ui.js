@@ -1,3 +1,6 @@
+import {mountBadgeAdmin} from './badges.js';
+import {mountBillingAdmin} from './billing-admin.js';
+import {mountJudgeReportAdmin} from './judge-ui.js';
 import {configureAmplify,profileClient} from './auth-client.js';
 import {socialLinks} from './profile-components.js';
 import {Hub} from 'aws-amplify/utils';
@@ -6,7 +9,7 @@ import '../community.css';
 const root=document.getElementById('adminApp'),notice=document.getElementById('adminNotice');
 const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
 let epoch=0,busy=false,section='USERS',cursor=null,next=null,history=[],query='',api,room=null;
-const sections=[['USERS','Cuentas'],['PROFILES','Perfiles'],['PRIVATE_ACCOUNTS','Teléfonos registrados'],['TOURNAMENTS','Torneos'],['PAYMENTS','Pagos'],['INVITATIONS','Invitaciones'],['BADGES','Insignias'],['FRIENDSHIPS','Amistades'],['JUDGES','Reputación de jueces'],['REPORTS','Reclamos'],['ROOMS','Salas y mensajes'],['SETTINGS','Configuración de tarifas'],['CLAIMS','Reservas y accesos'],['AUDIT','Registro de consultas']];
+const sections=[['USERS','Cuentas'],['PROFILES','Perfiles'],['PRIVATE_ACCOUNTS','Teléfonos registrados'],['TOURNAMENTS','Torneos'],['PAYMENTS','Pagos'],['INVITATIONS','Invitaciones'],['BADGES','Emblemas'],['FRIENDSHIPS','Amistades'],['JUDGES','Reputación de jueces'],['REPORTS','Reclamos'],['ROOMS','Salas y mensajes'],['SETTINGS','Configuración de tarifas'],['CLAIMS','Reservas y accesos'],['AUDIT','Registro de consultas']];
 async function request(action,args={}){const current=epoch;let timeout,r;try{r=await Promise.race([api.mutations.clubAdmin({action,...args}),new Promise((_,reject)=>{timeout=setTimeout(()=>reject(new Error('La consulta tardó demasiado. Podés reintentar; no se modificaron datos.')),35000);})]);}finally{clearTimeout(timeout);}if(current!==epoch)throw new Error('La sesión cambió.');if(r.errors?.length)throw new Error(r.errors.map(e=>e.message).join(' '));if(!r.data)throw new Error('No se recibió una respuesta del servidor.');return JSON.parse(r.data);}
 Hub.listen('auth',({payload})=>{if(['signedOut','signedIn'].includes(payload.event)){epoch++;root.replaceChildren();notice.textContent='La sesión cambió. Recargá para volver a comprobar tu acceso.';}});
 const nav=el('nav','','admin-sections'),panel=el('section','','admin-panel'),heading=el('h2','Cuentas'),list=el('div','','admin-records'),detail=el('section','','admin-detail');
@@ -56,7 +59,7 @@ async function record(row){
  for(const [key,value] of Object.entries(row))if(key in labels && value!==null && typeof value!=='object')addField(fields,labels[key],typeof value==='boolean'?(value?'Sí':'No'):value);
  detail.append(fields,jsonView(row));const tournament=row.tournamentId || (section==='TOURNAMENTS'?row.id:null);if(tournament)detail.prepend(link('Abrir torneo','/torneo.html?id='+encodeURIComponent(tournament)));
  const target=section==='PROFILES'?row.owner?.split('::')[0]:row.accountSub || row.createdBySub;
- if(target){const b=el('button','Consultar ficha de la cuenta','social-button');b.type='button';b.addEventListener('click',()=>void account({id:target}));detail.prepend(b);}if(section==='REPORTS')detail.append(link('Revisar reclamos e insignias','/perfil.html'));
+ if(target){const b=el('button','Consultar ficha de la cuenta','social-button');b.type='button';b.addEventListener('click',()=>void account({id:target}));detail.prepend(b);}
 }
 function renderRows(rows){
  list.replaceChildren();if(!rows.length){list.append(el('p','No hay coincidencias en esta página. Si hay más páginas, podés continuar con «Página siguiente».'));return;}
@@ -69,7 +72,10 @@ function renderRows(rows){
 }
 async function load(){
  if(busy)return;setBusy(true);detail.hidden=true;detail.replaceChildren();const current=epoch;notice.textContent='Consultando datos…';
- try{const r=await request(section==='USERS'?'USERS':'RECORDS',{collection:section,search:query,cursor});if(current!==epoch)return;next=r.cursor;renderRows(r.rows);pageNotice.textContent='Página '+(history.length+1)+' · '+r.rows.length+' registros'+(next?' · hay más':'');notice.textContent='Consulta administrativa registrada. Las acciones de gestión siguen disponibles desde el perfil o torneo correspondiente.';}
+ const management={BADGES:mountBadgeAdmin,SETTINGS:mountBillingAdmin,REPORTS:mountJudgeReportAdmin};
+ searchForm.hidden=Boolean(management[section]);paging.hidden=Boolean(management[section]);
+ if(management[section]){list.replaceChildren();try{await management[section](list);notice.textContent='Herramientas de administración. Cada cambio vuelve a validar tu permiso en el servidor.';}catch(e){notice.textContent=e.message;}finally{setBusy(false);}return;}
+ try{const r=await request(section==='USERS'?'USERS':'RECORDS',{collection:section,search:query,cursor});if(current!==epoch)return;next=r.cursor;renderRows(r.rows);pageNotice.textContent='Página '+(history.length+1)+' · '+r.rows.length+' registros'+(next?' · hay más':'');notice.textContent='Consulta administrativa registrada. Usá Emblemas, Tarifas y Reclamos para administrar el club; cada torneo se gestiona desde su ficha.';}
  catch(e){if(current===epoch){list.replaceChildren();notice.textContent=e.message;next=null;}}finally{if(current===epoch)setBusy(false);}
 }
 for(const [key,name] of sections){const b=el('button',name,'social-button');b.type='button';b.setAttribute('aria-pressed',String(key===section));b.addEventListener('click',()=>{section=key;query='';search.value='';cursor=next=null;history=[];heading.textContent=name;nav.querySelectorAll('button').forEach(n=>n.setAttribute('aria-pressed',String(n===b)));void load();});nav.append(b);}

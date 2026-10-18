@@ -1,5 +1,13 @@
 # Versión 3.1.0
 
+## 3.3.0 — Perfil, búsqueda y administración
+
+- Administración compacta junto al logo. Gestión de emblemas personalizados, tarifas y reclamos dentro del panel.
+- Identidad con emblemas junto al nick en perfiles y previews.
+- Búsqueda unificada de personas y torneos desde la lupa, con acceso a amigos y solicitudes.
+- Las fotos se muestran a todas las cuentas del club, también cuando el resto del perfil es privado.
+
+
 ## 3.2.0 — Registro inicial y correos únicos
 
 - Alta por correo con nick y teléfono desde el inicio; Google dirige al perfil inicial antes de continuar.

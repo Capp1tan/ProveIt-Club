@@ -13,9 +13,9 @@ export async function mountPublicProfile(id){
   if(p.owner?.split('::')[0]===user.userId){location.replace('/perfil.html');return;}
   const card=el('section','','profile-card'),avatar=el('div',p.nickname[0],'avatar-preview');decorateAvatar(avatar,p.owner?.split('::')[0]);
   if(p.avatarPath){const url=await avatarUrl(p.avatarPath);if(url){const image=el('img','');image.src=url;image.alt='Foto de '+p.nickname;avatar.replaceChildren(image);}}
-  card.append(avatar,el('h1',p.nickname),badgeElements(p.owner?.split('::')[0]));
+  const title=el('h1','','profile-name-line');title.append(el('span',p.nickname),badgeElements(p.owner?.split('::')[0]));card.append(avatar,title);
   if(p.canView)card.append(el('p',p.bio || 'Todavía no agregó una biografía.'),socialLinks(p));
-  else card.append(el('p','Perfil privado. La biografía, la foto y las redes sólo están disponibles para sus amigos.'));
+  else card.append(el('p','Perfil privado. La biografía y las redes sólo están disponibles para sus amigos. La foto es pública dentro del club.'));
   const friendship=el('a','Amistad y mensajes ↗','primary-button');friendship.href='/amigos.html?persona='+encodeURIComponent(id);card.append(friendship);
   main.replaceChildren(card,reputationPanel(p.reputation,p.judgeEnabled));document.title=p.nickname+' — ProveIt Club';
  }catch(e){status.textContent=e.message || 'No pudimos cargar el perfil.';}

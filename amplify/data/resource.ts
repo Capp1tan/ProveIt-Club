@@ -34,14 +34,14 @@ const schema = a.schema({
     .authorization(allow => [allow.ownerDefinedIn('accountSub').identityClaim('sub').to(['read'])]),
   UniqueClaim: a.model({ accountSub: a.string().required() })
     .authorization(allow => [allow.ownerDefinedIn('accountSub').identityClaim('sub').to(['read'])]),
-  ClubBadge: a.model({ accountSub: a.string().required(), accountUsername: a.string(), code: a.string().required() })
+  ClubBadge: a.model({ accountSub: a.string().required(), accountUsername: a.string(), code: a.string().required(), label:a.string(), color:a.string(), effect:a.string() })
     .authorization(allow => [allow.ownerDefinedIn('accountSub').identityClaim('sub').to(['read'])]),
   ClubAccess: a.customType({ isCreator: a.boolean().required(),phoneOptional:a.boolean() }),
   deleteClubTournament: a.mutation().arguments({ tournamentId: a.id().required() }).returns(a.boolean()).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(maintenance)),
   deleteMyClubAccount: a.mutation().arguments({ confirmation: a.string().required() }).returns(a.boolean()).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(maintenance)),
   initializeClubAccess: a.mutation().returns(a.ref('ClubAccess')).authorization(allow => [allow.authenticated()]).handler(a.handler.function(clubAccount)),
   setClubPhoneOptional:a.mutation().arguments({profileId:a.id().required(),phoneOptional:a.boolean().required()}).returns(a.ref('ClubAccess')).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(clubAccount)),
-  manageClubBadge: a.mutation().arguments({ profileId: a.id().required(), code: a.string().required(), enabled: a.boolean().required() })
+  manageClubBadge: a.mutation().arguments({ profileId: a.id().required(), code: a.string().required(), enabled: a.boolean().required(), label:a.string(),color:a.string(),effect:a.string() })
     .returns(a.ref('ClubAccess')).authorization(allow => [allow.authenticated()]).handler(a.handler.function(clubAccount)),
   saveClubProfile: a.mutation().arguments({ profileId: a.id(), nickname: a.string().required(), bio: a.string(), avatarPath: a.string(), phoneNumber: a.string().required(), visibility:a.string(), socialLinks:a.string(), judgeEnabled:a.boolean() })
     .returns(a.ref('Profile')).authorization(allow => [allow.authenticated()]).handler(a.handler.function(clubAccount)),

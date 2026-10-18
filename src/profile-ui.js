@@ -1,12 +1,10 @@
-import {mountJudgeReportAdmin} from './judge-ui.js';
 import {mountPublicProfile} from './profile-public.js';
 import {viewClubProfile} from './community-api.js';
 import {reputationPanel} from './profile-components.js';
 import '../community.css';
 import { mountPhoneCountry } from './phone-country.js';
-import { mountBillingAdmin } from './billing-admin.js';
 import { mountAccountActions } from './account-actions.js';
-import { loadBadges, badgeElements, decorateAvatar, initializeAccess, mountBadgeAdmin } from './badges.js';
+import { loadBadges, badgeElements, decorateAvatar, initializeAccess } from './badges.js';
 // Edición del perfil. El archivo no almacena imágenes ni datos en el navegador:
 // Amplify los envía a S3 y a la base de datos cuando el backend esté desplegado.
 import { fetchUserAttributes, avatarUrl, configureAmplify, loadProfile, saveAvatar, saveProfile, signOut } from './auth-client.js';
@@ -75,11 +73,11 @@ form.addEventListener('submit', async event => {
       phoneNumber: phoneField.value(),visibility:form.elements.visibility.value,judgeEnabled:form.elements.judgeEnabled.checked,
       socialLinks:JSON.stringify(Object.fromEntries(['instagram','twitch','discord','custom'].map(k=>[k,form.elements[k].value.trim()]))),
     });
-    profileId = saved.id;
+    profileId = saved.id;document.getElementById('ownProfileName').textContent=saved.nickname;
     if (currentAvatarPath) setAvatar(await avatarUrl(currentAvatarPath), form.elements.nickname.value.trim().slice(0, 1).toUpperCase());
     selectedAvatar = null;
     showNotice('Perfil guardado.');
-    if(new URLSearchParams(location.search).has('registro')){history.replaceState(null,'','/perfil.html');document.querySelector('.profile-heading h1').textContent='Tu perfil.';}
+    if(new URLSearchParams(location.search).has('registro')){history.replaceState(null,'','/perfil.html');document.getElementById('ownProfileName').textContent=saved.nickname;}
     window.dispatchEvent(new Event('proveit:profile-updated'));
   } catch (error) { showNotice(error.message || 'No se pudo guardar el perfil.', true); }
   finally { button.disabled = false; }
@@ -102,13 +100,11 @@ if (!ready) {
       mountAccountActions(access.isCreator);
       await loadBadges();
       decorateAvatar(preview, user.userId);
-      document.getElementById('profileBadges').replaceChildren(badgeElements(user.userId));
-      if (access.isCreator) {
-       const adminCard=document.createElement('section');adminCard.className='profile-card';const title=document.createElement('h2');title.textContent='Centro de administración';const link=document.createElement('a');link.href='/admin.html';link.className='primary-button';link.textContent='Abrir panel de datos del club ↗';adminCard.append(title,link);document.querySelector('main').prepend(adminCard);
-       await mountBadgeAdmin(); await mountBillingAdmin();await mountJudgeReportAdmin(); }
+      document.getElementById('ownNameBadges').replaceChildren(badgeElements(user.userId));
+
     } catch { showNotice('No pudimos cargar las insignias. Podés editar tu perfil y recargar para reintentar.', true); } })();
     if (profile) {
-      profileId = profile.id;
+      profileId = profile.id;document.getElementById('ownProfileName').textContent=profile.nickname;
       form.elements.visibility.value=profile.visibility==='PUBLIC'?'PUBLIC':'PRIVATE';form.elements.judgeEnabled.checked=Boolean(profile.judgeEnabled);
       let links={};try{links=JSON.parse(profile.socialLinks || '{}');}catch{}
       for(const k of ['instagram','twitch','discord','custom'])form.elements[k].value=links[k] || '';
@@ -121,8 +117,8 @@ if (!ready) {
     } else {
       setAvatar('','?');
       try{const attrs=await fetchUserAttributes();form.elements.nickname.value=attrs.nickname || '';if(!account?.phoneNumber)phoneField.load(attrs.phone_number || '');}catch{}
-      document.querySelector('.profile-heading h1').textContent='Completá tu registro.';
-      document.querySelector('.profile-heading>p:last-child').textContent='Elegí un nick único y agregá tu teléfono privado para empezar. La foto y los demás datos son opcionales.';
+      document.getElementById('ownProfileName').textContent='Completá tu registro.';
+      const help=document.createElement('p');help.textContent='Elegí un nick único y agregá tu teléfono privado para empezar. La foto y los demás datos son opcionales.';document.querySelector('.profile-heading').append(help);
       showNotice('Completá y guardá el perfil para continuar. Si el nick o teléfono ya están en uso, te lo indicaremos.');
     }
     bioCount.textContent = String(bio.value.length);
