@@ -148,7 +148,12 @@ backend.preSignUp.resources.lambda.role?.attachInlinePolicy(new Policy(backend.a
 
 // Respaldo continuo de 35 días y bloqueo de borrado accidental. Estos ajustes
 // protegen las tablas existentes; no son un límite de gasto ni un backup S3.
-for(const table of [...Object.values(backend.data.resources.tables),socialTable,registrationTable]){
+for(const table of Object.values(backend.data.resources.cfnResources.amplifyDynamoDbTables)){
+ table.deletionProtectionEnabled=true;
+ table.pointInTimeRecoverySpecification={pointInTimeRecoveryEnabled:true,recoveryPeriodInDays:35};
+ table.applyRemovalPolicy(RemovalPolicy.RETAIN);
+}
+for(const table of [socialTable,registrationTable]){
  const cfn=table.node.defaultChild as CfnTable;
  cfn.deletionProtectionEnabled=true;
  cfn.pointInTimeRecoverySpecification={pointInTimeRecoveryEnabled:true,recoveryPeriodInDays:35};

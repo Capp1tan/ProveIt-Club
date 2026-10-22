@@ -49,7 +49,7 @@ export const handler = async (event: Event) => {
     if(args.phoneOptional) {
       await db.send(new PutCommand({TableName:table('CLAIM_TABLE_NAME'),Item:{...Key,accountSub:target,createdAt:now,updatedAt:now,__typename:'UniqueClaim'}}));
       // El perfil ya existente puede participar aunque no tenga teléfono.
-      if(!profile.accountComplete)await db.send(new PutCommand({TableName:table('PROFILE_TABLE_NAME'),Item:{...profile,accountComplete:true,updatedAt:now},ConditionExpression:'#owner=:owner',ExpressionAttributeNames:{'#owner':'owner'},ExpressionAttributeValues:{':owner':profile.owner}}));
+      if(!profile.accountComplete){const complete={...profile,accountComplete:true,updatedAt:now};if(!complete.avatarPath)delete complete.avatarPath;await db.send(new PutCommand({TableName:table('PROFILE_TABLE_NAME'),Item:complete,ConditionExpression:'#owner=:owner',ExpressionAttributeNames:{'#owner':'owner'},ExpressionAttributeValues:{':owner':profile.owner}}));}
     } else await db.send(new DeleteCommand({TableName:table('CLAIM_TABLE_NAME'),Key}));
     return {isCreator:true,phoneOptional:await phoneOptional(sub)};
   }
@@ -112,6 +112,9 @@ export const handler = async (event: Event) => {
   let scanKey;
   do{const page=await db.send(new ScanCommand({TableName:table('PROFILE_TABLE_NAME'),ProjectionExpression:'id,nickname',ExclusiveStartKey:scanKey}));if(page.Items?.some(p=>p.id!==id && p.nickname?.normalize('NFKC').toLocaleLowerCase('es')===nickname.normalize('NFKC').toLocaleLowerCase('es')))throw new Error('Ese nick ya está en uso.');scanKey=page.LastEvaluatedKey;}while(scanKey);
   const item = { ...existing, id, visibility,socialLinks:JSON.stringify(socialLinks),judgeEnabled,nickname, bio, avatarPath, accountComplete: true, owner: existing?.owner || sub + '::' + event.identity!.username, createdAt: existing?.createdAt || now, updatedAt: now, __typename: 'Profile' };
+  // Un índice disperso debe omitir el atributo cuando no hay foto; DynamoDB
+  // no permite la cadena vacía como clave de un índice secundario.
+  if(!avatarPath)delete item.avatarPath;
   const number=phone?.number || "";
   const newClaim = number ? phoneKey(number) : null;
   const transactions: any[] = [
