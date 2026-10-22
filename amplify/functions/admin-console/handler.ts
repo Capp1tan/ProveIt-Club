@@ -1,7 +1,7 @@
 // Consola de consulta: nunca acepta un rol del navegador ni devuelve claves del entorno.
 import {randomUUID} from 'node:crypto';
 import {DynamoDBClient} from '@aws-sdk/client-dynamodb';
-import {DynamoDBDocumentClient,GetCommand,ScanCommand,QueryCommand,PutCommand} from '@aws-sdk/lib-dynamodb';
+import {DynamoDBDocumentClient,GetCommand,ScanCommand,QueryCommand,PutCommand,TransactWriteCommand} from '@aws-sdk/lib-dynamodb';
 import {CognitoIdentityProviderClient,ListUsersCommand,AdminGetUserCommand} from '@aws-sdk/client-cognito-identity-provider';
 import {S3Client,GetObjectCommand} from '@aws-sdk/client-s3';
 import {getSignedUrl} from '@aws-sdk/s3-request-presigner';
@@ -30,6 +30,26 @@ export const handler=async(event:{arguments?:Record<string,any>;identity?:{sub?:
  if(q.length>100)throw new Error('La búsqueda admite hasta 100 caracteres.');
  const audit=async(target:string,reason='Consulta administrativa')=>db.send(new PutCommand({TableName:env('SOCIAL_TABLE_NAME'),Item:{pk:'ADMIN_AUDIT',sk:new Date().toISOString()+'#'+randomUUID(),actorSub:sub,action,target,reason,requestedAt:new Date().toISOString()}}));
  if(action==='ACCESS')return JSON.stringify({allowed:true});
+ if(action==='SET_CREATION_EXEMPTION'){
+  if(typeof a.targetId!=='string' || !/^[a-f0-9-]{36}$/i.test(a.targetId) || typeof a.enabled!=='boolean')throw new Error('Cuenta o permiso inválidos.');
+  if(a.targetId===sub)throw new Error('El Creador ya tiene creación gratuita permanente.');
+  const reason=String(a.reason || '').trim();
+  if(reason.length<10 || reason.length>500)throw new Error('Registrá un motivo entre 10 y 500 caracteres.');
+  if(a.revision!=null && (typeof a.revision!=='string' || !/^[a-f0-9-]{36}$/i.test(a.revision)))throw new Error('Revisión inválida.');
+  const target=await cognito.send(new ListUsersCommand({UserPoolId:env('USER_POOL_ID'),Filter:'sub = "'+a.targetId+'"',Limit:2}));
+  if(!target.Users?.length)throw new Error('La cuenta ya no existe.');
+  const id='creation-exempt:'+a.targetId,previous=await get('CLAIM_TABLE_NAME',id),now=new Date().toISOString();
+  if((previous?.revision || null)!==(a.revision || null))throw new Error('Otro cambio modificó este permiso. Volvé a abrir la ficha.');
+  const grant={id,accountSub:a.targetId,enabled:a.enabled,revision:randomUUID(),reason,updatedBySub:sub,createdAt:previous?.createdAt || now,updatedAt:now,__typename:'UniqueClaim'};
+  try{await db.send(new TransactWriteCommand({TransactItems:[
+   {ConditionCheck:{TableName:env('CLAIM_TABLE_NAME'),Key:{id:'creator'},ConditionExpression:'accountSub=:sub',ExpressionAttributeValues:{':sub':sub}}},
+   {ConditionCheck:{TableName:env('CLAIM_TABLE_NAME'),Key:{id:'deleted-account:'+sub},ConditionExpression:'attribute_not_exists(id)'}},
+   {ConditionCheck:{TableName:env('CLAIM_TABLE_NAME'),Key:{id:'deleted-account:'+a.targetId},ConditionExpression:'attribute_not_exists(id)'}},
+   {Put:{TableName:env('CLAIM_TABLE_NAME'),Item:grant,...(previous?{ConditionExpression:'revision=:rev',ExpressionAttributeValues:{':rev':a.revision}}:{ConditionExpression:'attribute_not_exists(id)'})}},
+   {Put:{TableName:env('SOCIAL_TABLE_NAME'),Item:{pk:'ADMIN_AUDIT',sk:now+'#'+randomUUID(),actorSub:sub,action,target:a.targetId,reason,enabled:a.enabled,previousEnabled:previous?.enabled===true,requestedAt:now}}},
+  ]}));}catch(error){if((error as Error).name==='TransactionCanceledException')throw new Error('El permiso o la cuenta cambiaron. Volvé a abrir la ficha antes de reintentar.');throw error;}
+  return JSON.stringify({enabled:grant.enabled,source:grant.enabled?'ADMIN':null,revision:grant.revision,reason,updatedAt:now});
+ }
  if(action==='USERS'){
   await audit('users');let token=decode('USERS',a.cursor),rows:any[]=[];
   for(let page=0;page<5;page++){
@@ -48,7 +68,9 @@ export const handler=async(event:{arguments?:Record<string,any>;identity?:{sub?:
   const raw=attributes(u),identity:Record<string,any>={username:u.Username,status:u.UserStatus,enabled:u.Enabled,createdAt:u.UserCreateDate?.toISOString(),updatedAt:u.UserLastModifiedDate?.toISOString(),mfa:u.UserMFASettingList || []};
   for(const k of ['sub','email','email_verified','phone_number','phone_number_verified','name','nickname','preferred_username','picture','locale','zoneinfo'])if(k in raw)identity[k]=raw[k];
   const phoneOptional=Boolean(await get('CLAIM_TABLE_NAME','phone-optional:'+a.targetId)) || creator.accountSub===a.targetId;
-  return JSON.stringify({identity,profile:p,account:account || null,phoneOptional});
+  const grant=await get('CLAIM_TABLE_NAME','creation-exempt:'+a.targetId);
+  const creationExemption=creator.accountSub===a.targetId?{enabled:true,source:'CREATOR',revision:null}:{enabled:grant?.enabled===true,source:grant?.enabled?'ADMIN':null,revision:grant?.revision || null,reason:grant?.reason || '',updatedAt:grant?.updatedAt || null};
+  return JSON.stringify({identity,profile:p,account:account || null,phoneOptional,creationExemption});
  }
  if(action==='AVATAR'){
   if(typeof a.targetId!=='string' || a.targetId.length>128)throw new Error('Perfil inválido.');

@@ -7,3 +7,6 @@
 
 /* Alta inicial: visible sólo al crear cuenta; usa el mismo selector de países del perfil. */
 .signup-details{border:1px solid #394733;border-radius:8px;padding:14px;margin:16px 0;color:#cbd2cb}.signup-details[hidden]{display:none}.signup-details legend{color:#c1f36b;font-size:12px;padding:0 6px}.signup-details label{display:block;font-size:12px;margin:10px 0}.signup-details select{width:100%;background:#101410;color:#edf2e8;border:1px solid #3a433b;border-radius:5px;padding:10px;margin-top:7px}.signup-details small{display:block;font-size:11px;line-height:1.5;color:#aab3a2;margin-top:8px}.signup-details .phone-number-row{display:flex;align-items:center;gap:8px}.signup-details .phone-number-row>span{white-space:nowrap}.signup-details .phone-number-row>input{min-width:0}.login-panel{max-height:90dvh;overflow-y:auto}
+
+/* Ajustes voluntarios discretos; el borrado exige frase y confirmación final. */
+.account-settings{margin:22px 0;color:#a9b4ae;font-size:13px}.account-settings>summary{cursor:pointer;width:fit-content;padding:8px 0}.account-removal{margin:10px 0;padding:12px 16px;border:1px solid #ffffff18;border-radius:12px;max-width:640px}.account-removal>summary{cursor:pointer;font-size:12px}.account-removal p{line-height:1.65}.account-removal .danger-button{font-size:12px;padding:9px 12px}

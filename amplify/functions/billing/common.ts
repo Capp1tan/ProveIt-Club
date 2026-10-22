@@ -17,12 +17,18 @@ export async function mp(path: string, body?: any, method?:string): Promise<any>
   return response.json();
 }
 export async function isCreator(sub: string) {return (await read('CLAIM_TABLE_NAME','creator'))?.accountSub===sub;}
+// Permiso privado asociado al sub estable: nunca se acepta un rol del navegador.
+export async function creationExemption(sub:string) {
+  if(await isCreator(sub))return {enabled:true,source:'CREATOR',revision:null};
+  const grant=await read('CLAIM_TABLE_NAME','creation-exempt:'+sub);
+  return {enabled:grant?.enabled===true,source:grant?.enabled===true?'ADMIN':null,revision:grant?.revision || null};
+}
 export async function fee() {
   const settings=await read('BILLING_SETTINGS_TABLE_NAME','creation');
   return {amountCents:settings?.amountCents ?? 100,currency:'ARS',enabled:settings?.enabled ?? true,mode:mode()};
 }
 export async function assertBillingAccess(sub:string) {
-  if(mode()==='TEST' && !await isCreator(sub))throw new Error('Los pagos están en preparación. Por ahora sólo el Creador puede probar el proceso.');
+  if(mode()==='TEST' && !(await creationExemption(sub)).enabled)throw new Error('Los pagos están en preparación. Por ahora sólo el Creador puede probar el proceso.');
 }
 export function publicCheckout(row:any) {
   // Las mutaciones no necesitan enviar el borrador ni el identificador del pagador.
@@ -31,6 +37,7 @@ export function publicCheckout(row:any) {
 export async function ensureCheckout(row:any,sub:string) {
   if(row.createdBySub!==sub)throw new Error('Esta solicitud no te pertenece.');
   if(row.deletedAt)throw new Error('La solicitud o el torneo fueron eliminados. No vuelvas a pagar este enlace.');
+  if(row.status==='EXEMPT')return publicCheckout(row);
   if(row.paymentMode!==mode())throw new Error('Este enlace pertenece al entorno anterior. Creá un torneo nuevo para obtener un pago real.');
   if(row.status==='APPROVED' || row.checkoutUrl || row.status==='REVERSED')return publicCheckout(row);
   if(Date.parse(row.expiresAt)<=Date.now())throw new Error('La solicitud venció. Creá un nuevo borrador.');

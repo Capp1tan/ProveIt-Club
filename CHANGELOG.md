@@ -1,3 +1,12 @@
+## 3.7.0 — Correcciones, exenciones y administración
+
+- Encabezado de sesión sin falso estado de invitado y panel con recuperación del acceso.
+- Fotos públicas en la selección, lectura consistente y reintento de imágenes.
+- Creación gratuita permanente para el Creador y permiso revocable por cuenta desde Administración.
+- Exenciones con motivo, revisión concurrente y auditoría; publicaciones gratuitas atómicas, sin cobros ni QR.
+- Baja voluntaria compacta en Configuración de cuenta, con confirmación escrita y final.
+- Sin cambios al sistema de puntos, ligas, logros ni formatos de torneo.
+
 ## 3.6.0 — Chat en tiempo real y protección de datos
 
 - Avisos de mensajes filtrados por identidad, con lectura autorizada y respaldo ante cortes.

@@ -7,13 +7,14 @@ export function mountAccountActions(isCreator) {
   // Las herramientas del Creador están en Administración; el perfil sólo
   // conserva la baja voluntaria de las cuentas normales.
   if(isCreator)return;
-  const section=el('section','');section.className='profile-card';section.id='accountActions';
+  const settings=el('details','');settings.className='account-settings';settings.append(el('summary','Configuración de cuenta'));
+  const section=el('details','');section.className='account-removal';section.id='accountActions';section.append(el('summary','Eliminar mi cuenta'));settings.append(section);
   const message=el('p','');message.setAttribute('role','status');
   if(isCreator) {
     section.append(el('h2','Administración de torneos'),el('p','Entrá a Torneos y abrí el que quieras eliminar. Tu cuenta puede acceder a cualquier torneo del club sin invitación y eliminarlo desde su página, con confirmación individual.'));
     const link=el('a','Ver torneos del club ↗');link.href='/torneos.html';link.className='primary-button';section.append(link);
   } else {
-    section.append(el('h2','Eliminar mi cuenta'),el('p','Se eliminarán tu acceso, perfil, fotos, teléfono e insignias. Se cancelarán tus torneos y dejarás de participar en los pendientes de otras personas. Los resultados históricos y recibos de pagos se conservan. No se elimina tu cuenta de Google ni de Mercado Pago.'));
+    section.append(el('p','Se eliminarán tu acceso, perfil, fotos, teléfono e insignias. Se cancelarán tus torneos y dejarás de participar en los pendientes de otras personas. Los resultados históricos y recibos de pagos se conservan. No se elimina tu cuenta de Google ni de Mercado Pago.'));
     const label=el('label','Escribí ELIMINAR MI CUENTA para confirmar');label.className='profile-field';
     const input=el('input','');input.autocomplete='off';input.spellcheck=false;input.setAttribute('aria-label','Confirmación de eliminación');label.append(input);
     const button=el('button','Eliminar mi cuenta definitivamente');button.type='button';button.className='danger-button';button.disabled=true;
@@ -38,5 +39,5 @@ export function mountAccountActions(isCreator) {
       } catch(error){message.textContent='No se completó la baja: '+error.message+' Volvé a pulsar el botón para retomar la limpieza.';button.disabled=false;input.disabled=false;}
     });section.append(label,button);
   }
-  section.append(message);document.querySelector('main').append(section);
+  section.append(message);document.querySelector('main').append(settings);
 }

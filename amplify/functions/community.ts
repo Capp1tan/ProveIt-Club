@@ -62,8 +62,15 @@ export async function community(db:DynamoDBDocumentClient,sub:string,a:any){
  if(a.action==='COMMUNITY_AVATAR'){
   if(typeof a.path!=='string' || !/^(profile-pictures|profile-private)\//.test(a.path) || a.path.length>1024)throw new Error('Foto inválida.');
   let key,found:any;
-  const indexed=await db.send(new QueryCommand({TableName:env('PROFILE_TABLE_NAME'),IndexName:'byAvatarPath',KeyConditionExpression:'avatarPath=:path',ExpressionAttributeValues:{':path':a.path},Limit:1}));
-  found=indexed.Items?.[0];
+  // Si conocemos el perfil, la lectura consistente evita esperar el índice.
+  if(typeof a.targetProfileId==='string'){
+    const direct=await get('PROFILE_TABLE_NAME',a.targetProfileId);
+    if(direct?.avatarPath===a.path)found=direct;
+  }
+  if(!found){
+    const indexed=await db.send(new QueryCommand({TableName:env('PROFILE_TABLE_NAME'),IndexName:'byAvatarPath',KeyConditionExpression:'avatarPath=:path',ExpressionAttributeValues:{':path':a.path},Limit:1}));
+    found=indexed.Items?.[0];
+  }
   // Respaldo sólo durante la propagación del índice después de guardar la foto.
   if(!found)do{const page=await db.send(new ScanCommand({TableName:env('PROFILE_TABLE_NAME'),ConsistentRead:true,FilterExpression:'avatarPath=:path',ExpressionAttributeValues:{':path':a.path},ExclusiveStartKey:key}));found=page.Items?.[0];key=page.LastEvaluatedKey;}while(!found && key);
   if(!found || await get('CLAIM_TABLE_NAME','deleted-account:'+owner(found)))throw new Error('Foto no disponible.');

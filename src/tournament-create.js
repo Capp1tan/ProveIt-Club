@@ -17,7 +17,7 @@ const submit = document.getElementById('createTournament');
 const participants = new Set();
 const judges = new Set();
 let profiles = [];
-let pricingReady=false;
+let pricingReady=false,creationIsFree=false;
 let connectionAttempt = 0;
 let pricingMessage = 'Todavía estamos consultando si podés crear torneos.';
 // Una consulta lenta debe terminar con una explicación y permitir reintentar.
@@ -93,25 +93,21 @@ function usedByOtherRole(profile, role) {
   const otherIds = [...(role !== 'participant' ? participants : []), ...(role !== 'judge' ? judges : []), ...(role !== 'treasurer' && treasurer.value ? [treasurer.value] : [])];
   return profiles.some(other => otherIds.includes(other.id) && owner(other) === owner(profile));
 }
-// Las fotos se cargan una vez por ruta. Sin foto (o si falla) usamos la inicial.
-const avatarRequests = new Map();
+// Caché compartida con vencimiento y reintentos: un error no se recuerda para siempre.
 function personAvatar(profile) {
-  const avatar = document.createElement('span');
-  avatar.className = 'person-avatar'; avatar.setAttribute('aria-hidden', 'true');
-  decorateAvatar(avatar, owner(profile));
-  const initial = Array.from(profile.nickname.trim())[0]?.toLocaleUpperCase('es') || '?';
-  avatar.textContent = initial;
-  if (/^(profile-pictures|profile-private)\//.test(profile.avatarPath || '')) {
-    if (!avatarRequests.has(profile.avatarPath)) {
-      avatarRequests.set(profile.avatarPath, avatarUrl(profile.avatarPath).catch(() => ''));
-    }
-    void avatarRequests.get(profile.avatarPath).then(url => {
-      if (!url) return;
-      const image = document.createElement('img');
-      image.alt = ''; image.loading = 'lazy'; image.decoding = 'async';
-      image.addEventListener('error', () => { avatar.textContent = initial; }, { once: true });
-      image.src = url; avatar.replaceChildren(image);
-    });
+  const avatar=document.createElement('span');avatar.className='person-avatar';avatar.setAttribute('aria-hidden','true');
+  decorateAvatar(avatar,owner(profile));
+  const initial=Array.from(profile.nickname.trim())[0]?.toLocaleUpperCase('es') || '?';avatar.textContent=initial;
+  if(/^(profile-pictures|profile-private)\//.test(profile.avatarPath || '')){
+    const load=async(retry=false)=>{
+      try{
+        const url=await avatarUrl(profile.avatarPath,{profileId:profile.id,refresh:retry});
+        if(!avatar.isConnected)return;
+        const image=document.createElement('img');image.alt='';image.width=36;image.height=36;image.decoding='async';
+        image.addEventListener('error',()=>{avatar.textContent=initial;if(!retry)setTimeout(()=>void load(true),1000);},{once:true});
+        image.src=url;avatar.replaceChildren(image);
+      }catch{if(!retry && avatar.isConnected)setTimeout(()=>void load(true),1000);}
+    };void load();
   }
   return avatar;
 }
@@ -177,8 +173,10 @@ async function connectAccount() {
     try { sessionStorage.removeItem(resumeKey); } catch {}
     const pricing=await withDeadline(tournamentFee(), 'No pudimos consultar la tarifa a tiempo. Reintentá la conexión; no se realizó ningún cobro.');
     if (attempt !== connectionAttempt) return;
+    creationIsFree=pricing.exempt===true;
     pricingReady=pricing.enabled && pricing.canPay;
     document.getElementById('creationFee').textContent=pricing.mode==='TEST' ? 'Modo de prueba: '+money(pricing.amountCents)+' ficticios. Sólo el Creador puede probar el pago.' : 'Tarifa por crear este torneo: '+money(pricing.amountCents)+'. Se paga una sola vez; las invitaciones se envían después de acreditarse.';
+    if(creationIsFree)document.getElementById('creationFee').textContent='Creación gratuita '+(pricing.exemptionSource==='CREATOR'?'permanente para tu cuenta de Creador.':'autorizada por el administrador para tu cuenta.')+' No se solicita un pago; las invitaciones se envían al crear.';
     if(!pricing.enabled)document.getElementById('creationFee').textContent='La creación de torneos está pausada temporalmente.';
     if(pricing.mode==='TEST' && !pricing.canPay)document.getElementById('creationFee').textContent='Los pagos siguen en modo de prueba y sólo están habilitados para la cuenta del Creador. Podés recibir invitaciones, pero todavía no crear un torneo desde esta cuenta. No se realizó ningún cobro.';
     pricingMessage=document.getElementById('creationFee').textContent;
@@ -188,7 +186,7 @@ async function connectAccount() {
       show(pricingMessage); return;
     }
     fields.disabled = false; gate.hidden = true;
-    submit.textContent=pricing.mode==='TEST'?'Preparar pago de prueba ↗':'Pagar y crear torneo ↗';
+    submit.textContent=creationIsFree?'Crear torneo gratis ↗':pricing.mode==='TEST'?'Preparar pago de prueba ↗':'Pagar y crear torneo ↗';
     await refreshPeople();
   } catch (error) {
     if (attempt !== connectionAttempt) return;
@@ -214,12 +212,12 @@ form.addEventListener('submit', async event => {
   let startsAt;
   try { startsAt=localToUtc(startsLocal.value,zone.value); if(Date.parse(startsAt)<=Date.now()) throw new Error('Elegí una fecha y hora futuras.'); }
   catch(error) { return show(error.message,true); }
-  saving = true; submit.disabled = true; show('Preparando el pago del torneo…');
+  saving = true; submit.disabled = true; show(creationIsFree?'Creando el torneo sin cargo…':'Preparando el pago del torneo…');
   try {
     // El mismo identificador permite reintentar si AWS respondió después del límite de espera.
     const result = await withDeadline(createClubTournament({ tournamentId, arbitrationMode: mode.value, startsAt, timeZone: zone.value, acceptOrganizerDecision: noJudge() && consent.checked, name: form.elements.name.value.trim(), activity: form.elements.activity.value.trim(), description: form.elements.description.value.trim(),conflicts:form.elements.conflicts.value.trim(), format: selectedFormat, participantIds: [...participants], judgeIds: [...judges], treasurerId: treasurer.value || null }), 'La preparación del pago tardó demasiado. Podés reintentar desde este formulario; conservamos el identificador para no duplicar la solicitud.', 45000);
     try { sessionStorage.removeItem(draftKey); } catch {}
-    location.href = `/pago.html?id=${encodeURIComponent(result.id)}`;
+    location.href = `${result.status==='EXEMPT'?'/torneo.html':'/pago.html'}?id=${encodeURIComponent(result.id)}`;
   } catch (error) { show(error.message || 'No se pudo guardar. Podés reintentar.', true); }
   finally { saving = false; submit.disabled = !pricingReady; }
 });

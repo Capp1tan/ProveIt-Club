@@ -1,7 +1,7 @@
 import {mountBadgeAdmin} from './badges.js';
 import {mountBillingAdmin} from './billing-admin.js';
 import {mountJudgeReportAdmin} from './judge-ui.js';
-import {configureAmplify,profileClient} from './auth-client.js';
+import {configureAmplify,profileClient,getCurrentUser} from './auth-client.js';
 import {socialLinks} from './profile-components.js';
 import {Hub} from 'aws-amplify/utils';
 import '../admin.css';
@@ -9,9 +9,15 @@ import '../community.css';
 const root=document.getElementById('adminApp'),notice=document.getElementById('adminNotice');
 const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
 let epoch=0,busy=false,section='USERS',cursor=null,next=null,history=[],query='',api,room=null;
-const sections=[['USERS','Cuentas'],['PROFILES','Perfiles'],['PRIVATE_ACCOUNTS','Teléfonos registrados'],['TOURNAMENTS','Torneos'],['PAYMENTS','Pagos'],['INVITATIONS','Invitaciones'],['BADGES','Emblemas'],['FRIENDSHIPS','Amistades'],['JUDGES','Reputación de jueces'],['REPORTS','Reclamos'],['ROOMS','Salas y mensajes'],['SETTINGS','Configuración de tarifas'],['CLAIMS','Reservas y accesos'],['AUDIT','Registro de consultas']];
-async function request(action,args={}){const current=epoch;let timeout,r;try{r=await Promise.race([api.mutations.clubAdmin({action,...args}),new Promise((_,reject)=>{timeout=setTimeout(()=>reject(new Error('La consulta tardó demasiado. Podés reintentar; no se modificaron datos.')),35000);})]);}finally{clearTimeout(timeout);}if(current!==epoch)throw new Error('La sesión cambió.');if(r.errors?.length)throw new Error(r.errors.map(e=>e.message).join(' '));if(!r.data)throw new Error('No se recibió una respuesta del servidor.');return JSON.parse(r.data);}
-Hub.listen('auth',({payload})=>{if(['signedOut','signedIn'].includes(payload.event)){epoch++;root.replaceChildren();notice.textContent='La sesión cambió. Recargá para volver a comprobar tu acceso.';}});
+const sections=[['USERS','Cuentas'],['PROFILES','Perfiles'],['PRIVATE_ACCOUNTS','Teléfonos registrados'],['TOURNAMENTS','Torneos'],['PAYMENTS','Pagos'],['INVITATIONS','Invitaciones'],['BADGES','Emblemas'],['FRIENDSHIPS','Amistades'],['JUDGES','Reputación de jueces'],['REPORTS','Reclamos'],['ROOMS','Salas y mensajes'],['SETTINGS','Configuración de tarifas'],['CLAIMS','Reservas y accesos'],['AUDIT','Registro de actividad']];
+async function request(action,args={}){const current=epoch;let timeout,r;try{r=await Promise.race([api.mutations.clubAdmin({action,...args}),new Promise((_,reject)=>{timeout=setTimeout(()=>reject(new Error('La operación tardó demasiado. Volvé a abrir la ficha para comprobar su estado antes de repetir un cambio.')),35000);})]);}finally{clearTimeout(timeout);}if(current!==epoch)throw new Error('La sesión cambió.');if(r.errors?.length)throw new Error(r.errors.map(e=>e.message).join(' '));if(!r.data)throw new Error('No se recibió una respuesta del servidor.');return JSON.parse(r.data);}
+Hub.listen('auth',({payload})=>{
+ if(['signedOut','signedIn'].includes(payload.event)){
+  epoch++;busy=false;root.replaceChildren();
+  if(payload.event==='signedIn')void initialize();
+  else notice.textContent='Ingresá con la cuenta administradora para abrir este panel.';
+ }
+});
 const nav=el('nav','','admin-sections'),panel=el('section','','admin-panel'),heading=el('h2','Cuentas'),list=el('div','','admin-records'),detail=el('section','','admin-detail');
 detail.hidden=true;detail.setAttribute('aria-live','polite');
 const searchForm=el('form','','admin-search'),search=el('input'),searchButton=el('button','Buscar','social-button'),reload=el('button','Actualizar','social-button');
@@ -36,8 +42,28 @@ async function account(row){
   detail.append(fields);if(p){detail.append(socialLinks({...p,canView:true}),link('Abrir perfil del club','/perfil.html?id='+encodeURIComponent(p.id)));
    if(p.avatarPath){const photo=el('button','Ver foto de la cuenta','social-button');photo.type='button';photo.addEventListener('click',async()=>{photo.disabled=true;try{const r=await request('AVATAR',{targetId:p.id});const img=el('img','','admin-avatar');img.src=r.url;img.alt='Foto de '+p.nickname;photo.replaceWith(img);}catch(e){notice.textContent=e.message;photo.disabled=false;}});detail.append(photo);}
   }
+  mountCreationExemption(detail,data);
   detail.append(jsonView(data));notice.textContent='Ficha administrativa consultada. El acceso quedó registrado.';
  }catch(e){if(current===epoch)detail.replaceChildren(el('p',e.message));}finally{if(current===epoch)setBusy(false);}
+}
+// El permiso se guarda en AWS por cuenta, con motivo y control de cambios simultáneos.
+function mountCreationExemption(host,data){
+ const box=el('section','','admin-exemption');box.append(el('h3','Creación gratuita de torneos'));
+ let grant=data.creationExemption || {enabled:false,revision:null};
+ if(grant.source==='CREATOR'){box.append(el('p','Permiso permanente del Creador. Tu cuenta crea torneos sin pagar y este permiso no se puede quitar desde el panel.'));host.append(box);return;}
+ const form=el('form','','community-form'),label=el('label'),toggle=el('input');toggle.type='checkbox';toggle.checked=grant.enabled;label.append(toggle,document.createTextNode(' Permitir crear torneos gratis, sin límite de usos'));
+ const reasonLabel=el('label','Motivo del cambio'),reason=el('textarea');reason.required=true;reason.minLength=10;reason.maxLength=500;reason.rows=2;reasonLabel.append(reason);
+ const save=el('button','Guardar permiso','social-button');save.type='submit';
+ const status=el('p',grant.enabled?'Exención activa.':'Esta cuenta paga la tarifa general.','social-help');status.setAttribute('role','status');
+ const help=el('p','Podés revocarlo desmarcando la casilla. Afecta nuevas creaciones; no cancela ni modifica pagos pendientes o torneos ya creados.','social-help');
+ form.append(label,reasonLabel,save);box.append(help,status,form);host.append(box);const current=epoch;
+ form.addEventListener('submit',async e=>{
+  e.preventDefault();save.disabled=true;
+  try{grant=await request('SET_CREATION_EXEMPTION',{targetId:data.identity.sub,enabled:toggle.checked,reason:reason.value.trim(),revision:grant.revision});
+   if(current!==epoch)return;toggle.checked=grant.enabled;reason.value='';status.textContent=grant.enabled?'Exención activa. Cambio registrado.':'Exención retirada. Cambio registrado.';
+  }catch(error){if(current===epoch)status.textContent=error.message;}
+  finally{if(current===epoch)save.disabled=false;}
+ });
 }
 function roomView(row){
  detail.hidden=false;detail.replaceChildren(el('h2',row.name || 'Consulta de mensajes'),el('p','Acceso administrativo registrado. Indicá el motivo de soporte, moderación o revisión. No se modifican mensajes.'));
@@ -81,9 +107,18 @@ async function load(){
 for(const [key,name] of sections){const b=el('button',name,'social-button');b.type='button';b.setAttribute('aria-pressed',String(key===section));b.addEventListener('click',()=>{section=key;query='';search.value='';cursor=next=null;history=[];heading.textContent=name;nav.querySelectorAll('button').forEach(n=>n.setAttribute('aria-pressed',String(n===b)));void load();});nav.append(b);}
 searchForm.addEventListener('submit',e=>{e.preventDefault();query=search.value.trim();cursor=next=null;history=[];void load();});reload.addEventListener('click',()=>void load());
 following.addEventListener('click',()=>{if(!next || busy)return;history.push(cursor);cursor=next;void load();});previous.addEventListener('click',()=>{if(!history.length || busy)return;cursor=history.pop();void load();});
-try{
- if(!await configureAmplify())throw new Error('No pudimos conectar con el club.');api=await profileClient();await request('ACCESS');
- root.append(el('p','Acceso exclusivo del administrador general. Correo, teléfono y perfiles privados se consultan aquí; no se vuelven públicos. No se muestran contraseñas, tokens ni claves de pago.','admin-access'),nav,panel);
- await load();
-}catch(e){notice.textContent=e.message || 'Acceso exclusivo del administrador.';root.replaceChildren();}
-finally{window.proveitLoadingDone?.('page');}
+async function initialize(){
+ const current=++epoch;busy=false;root.replaceChildren();notice.textContent='Comprobando sesión y acceso administrativo…';
+ try{
+  if(!await configureAmplify())throw new Error('No pudimos conectar con el club.');
+  // Esperar la renovación de tokens antes de enviar la primera consulta protegida.
+  await getCurrentUser();if(current!==epoch)return;
+  api=await profileClient();await request('ACCESS');if(current!==epoch)return;
+  window.dispatchEvent(new Event('proveit:session-ready'));
+  root.append(el('p','Acceso exclusivo del administrador general. Las exenciones se gestionan en Cuentas → Ver cuenta. Cada cambio guarda motivo y autor. Los datos privados sólo se consultan aquí.','admin-access'),nav,panel);
+  await load();
+ }catch(e){if(current===epoch){notice.textContent=e.name==='UserUnAuthenticatedException'?'Ingresá con la cuenta administradora para abrir este panel.':e.message || 'Acceso exclusivo del administrador.';root.replaceChildren();
+   const retry=el('button','Volver a comprobar acceso','social-button');retry.type='button';retry.addEventListener('click',()=>void initialize());root.append(retry);
+ }}finally{window.proveitLoadingDone?.('page');}
+}
+await initialize();

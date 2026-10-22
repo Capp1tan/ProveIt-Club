@@ -40,6 +40,9 @@ if(form){
  resend.addEventListener('click',async()=>{resend.disabled=true;try{await resendSignUpCode({username:email.value.trim().toLowerCase()});showMessage('Si el registro está pendiente, te llegará un nuevo código por correo.');}catch(e){showMessage(e.message || 'No pudimos reenviar el código.',true);}finally{resend.disabled=false;}});
 }
 let backendReady = false;
+let accountEpoch=0;
+document.documentElement.dataset.accountState='checking';
+if(loginControl)loginControl.hidden=true;
 let mode = 'signin';
 let step = 'credentials';
 
@@ -54,6 +57,7 @@ function clearMessage() {
 }
 function displayAccount(user, profile = null) {
   if (!profileLink) return;
+  document.documentElement.dataset.accountState='signed-in';
   profileLink.dataset.accountSub = user.userId;
   decorateAvatar(profileLink, user.userId);
   const name = profile?.nickname || 'Completar perfil';
@@ -68,7 +72,7 @@ function displayAccount(user, profile = null) {
   if (loginControl) loginControl.hidden = true;
 
   if (profile?.avatarPath) {
-    avatarUrl(profile.avatarPath).then(url => {
+    avatarUrl(profile.avatarPath,{profileId:profile.id}).then(url => {
       if (profileLink.dataset.accountSub !== user.userId) return;
       const image = document.createElement('img');
       // Reserva el tamaño incluso antes de cargar los estilos o la foto.
@@ -83,8 +87,10 @@ function displayAccount(user, profile = null) {
 }
 async function syncAccountControl() {
   if (!backendReady) return;
+  const current=++accountEpoch;
   try {
     const user = await getCurrentUser();
+    if(current!==accountEpoch)return;
     displayAccount(user);
     // El aro llega en paralelo y no retrasa el inicio de sesión ni la foto.
     void loadBadges().then(() => {
@@ -95,11 +101,13 @@ async function syncAccountControl() {
     // no se guardan teléfonos ni contraseñas en localStorage/sessionStorage.
     let profile;
     try{({profile}=await loadProfile());}catch{return;}
+    if(current!==accountEpoch)return;
     if(!profile){
       try{const attrs=await fetchUserAttributes();
        if(attrs.nickname && attrs.phone_number){profile=await saveProfile(null,{nickname:attrs.nickname,phoneNumber:attrs.phone_number,bio:'',avatarPath:'',visibility:'PRIVATE',socialLinks:'{}',judgeEnabled:false});window.dispatchEvent(new Event('proveit:profile-updated'));}
       }catch{/* Un nick ocupado se resuelve en el formulario inicial, no se inventa otro. */}
     }
+    if(current!==accountEpoch)return;
     if(!profile?.accountComplete){
       if(location.pathname!=='/perfil.html' || location.search.includes('id='))location.replace('/perfil.html?registro=1');
       return;
@@ -108,7 +116,17 @@ async function syncAccountControl() {
     try{if((location.pathname==='/' || location.pathname==='/index.html') && sessionStorage.getItem('proveit:tournament-resume')==='1'){sessionStorage.removeItem('proveit:tournament-resume');location.replace('/crear-torneo.html');}}
     catch{}
 
-  } catch {
+  } catch(error) {
+    if(current!==accountEpoch)return;
+    // Un corte de red no significa que la persona cerró sesión.
+    if(error.name!=='UserUnAuthenticatedException'){
+      if(profileLink?.dataset.accountSub)return;
+      document.documentElement.dataset.accountState='unavailable';
+      if(loginControl){loginControl.hidden=false;loginControl.textContent='Revisar acceso';}
+      return;
+    }
+    document.documentElement.dataset.accountState='signed-out';
+    if(loginControl)loginControl.innerHTML='Ingresar <span>↗</span>';
     if (profileLink) { profileLink.hidden = true; delete profileLink.dataset.accountSub; decorateAvatar(profileLink, null); }
     if (loginControl) loginControl.hidden = false;
   }
@@ -117,17 +135,21 @@ async function syncAccountControl() {
 // Google regresa al sitio antes de que finalice el intercambio de la sesión.
 // Hub actualiza el encabezado apenas Amplify termina de iniciar o cerrar sesión.
 Hub.listen('auth', ({ payload }) => {
-  if (payload.event === 'signedIn' || payload.event === 'signedOut') {
-    void syncAccountControl();
-  }
+  if(payload.event==='signedOut'){
+    ++accountEpoch;document.documentElement.dataset.accountState='signed-out';
+    if(profileLink){profileLink.hidden=true;delete profileLink.dataset.accountSub;decorateAvatar(profileLink,null);}
+    if(loginControl){loginControl.hidden=false;loginControl.innerHTML='Ingresar <span>↗</span>';}
+  }else if(payload.event==='signedIn')void syncAccountControl();
 });
 // Inicializamos en paralelo: la lectura remota del perfil no bloquea los botones.
 const backendInitialization = configureAmplify().catch(() => false).then(ready => {
   backendReady = ready;
+  if(!ready){document.documentElement.dataset.accountState='unavailable';if(loginControl){loginControl.hidden=false;loginControl.textContent='Revisar acceso';}}
   if (hint && ready) hint.textContent = 'Tu cuenta se protege con AWS Cognito.';
   return syncAccountControl().finally(() => window.proveitLoadingDone?.('account')).then(() => ready);
 });
 window.addEventListener('proveit:profile-updated', syncAccountControl);
+window.addEventListener('proveit:session-ready', syncAccountControl);
 
 function setStep(nextStep) {
   step = nextStep;
@@ -208,7 +230,7 @@ form?.addEventListener('submit', async event => {
       }
     } else if (step === 'credentials') {
       const result = await signIn({ username: emailValue, password: passwordValue });
-      if (result.isSignedIn) location.href = location.pathname === '/crear-torneo.html' ? '/crear-torneo.html' : '/perfil.html';
+      if (result.isSignedIn){if(location.pathname==='/admin.html'){if(modal)modal.hidden=true;document.body.classList.remove('modal-open');}else location.href = location.pathname === '/crear-torneo.html' ? '/crear-torneo.html' : '/perfil.html';}
       else if (result.nextStep.signInStep === 'CONFIRM_SIGN_UP') {
         setStep('confirm-signup');
         showMessage('Verificá tu email con el código que te enviamos.');

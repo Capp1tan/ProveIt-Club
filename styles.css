@@ -46,3 +46,8 @@
 .badge-management form{padding:16px;border:1px solid #394632;border-radius:10px}.badge-management input,.badge-management select{background:#121711;color:#e8eee0;border:1px solid #48573b;padding:10px;border-radius:5px;max-width:100%}.badge-management input[type=color]{height:42px;width:90px;padding:3px}.badge-admin-person{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:14px 0;border-bottom:1px solid #2b3526}.badge-admin-person>strong{display:inline-flex;gap:6px;align-items:center;flex-wrap:wrap;width:100%}@media(max-width:640px){.admin-shortcut{font-size:9px;padding:5px;margin-left:6px}.topbar{gap:5px}.profile-name-line{font-size:30px}}
 .badge-management form>button{background:#c1f36b;color:#11170d;padding:11px 15px;border:1px solid #c1f36b;border-radius:7px;font:600 12px var(--font);cursor:pointer}.badge-management form>button[type=button]{background:transparent;color:#c1f36b;border-color:#4a5c38}.badge-management form>button:disabled{opacity:.6;cursor:wait}.badge-management form>button[hidden]{display:none}
 #ownJudgeReputation:empty,#ownJudgeReputation:has(>.judge-reputation:empty){display:none}
+
+/* No mostrar un estado de invitado mientras se comprueba la sesión. */
+html:not([data-account-state="signed-out"]):not([data-account-state="unavailable"]) [data-login]{display:none!important}
+[data-login][hidden],[data-profile-link][hidden]{display:none!important}
+.person-avatar{overflow:hidden;flex-shrink:0}.person-avatar img{display:block;width:100%;height:100%;object-fit:cover;border-radius:inherit}

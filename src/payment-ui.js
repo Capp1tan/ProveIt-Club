@@ -9,9 +9,9 @@ function render(row){
   if(!row)throw new Error('No encontramos esta solicitud en tu cuenta. Ingresá con la cuenta que inició el torneo.');
   panel.replaceChildren();panel.append(node('p',row.paymentMode==='TEST'?'MODO DE PRUEBA · SIN COBRO REAL':'CREACIÓN DE TORNEO','eyebrow'),node('h1',row.tournamentName),node('p',money(row.amountCents),'payment-amount'));
   if(row.deletedAt){stopped=true;refresh.hidden=true;panel.append(node('h2','Torneo o solicitud eliminados'),node('p','No vuelvas a pagar este enlace. La eliminación no realiza reembolsos. Si ya pagaste, contactá al administrador.'));return;}
-  if(row.status==='APPROVED'){
+  if(row.status==='APPROVED' || row.status==='EXEMPT'){
     stopped=true;refresh.hidden=true;
-    panel.append(node('h2','Pago confirmado'),node('p','Tu torneo ya está habilitado y las invitaciones fueron enviadas.'));
+    panel.append(node('h2',row.status==='EXEMPT'?'Creación gratuita autorizada':'Pago confirmado'),node('p','Tu torneo ya está habilitado y las invitaciones fueron enviadas.'));
     const link=node('a','Ir al torneo ↗','primary-button');link.href='/torneo.html?id='+encodeURIComponent(id);panel.append(link);return;
   }
   if(row.status==='REVERSED'){stopped=true;panel.append(node('h2','Pago revertido'),node('p','El cobro fue devuelto o recibió un contracargo. Contactá al administrador.'));return;}

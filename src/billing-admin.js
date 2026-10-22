@@ -8,7 +8,7 @@ export async function mountBillingAdmin(host=document.querySelector('main')){
   const toggleLabel=document.createElement('label'),toggle=document.createElement('input');toggle.type='checkbox';toggleLabel.append(toggle,document.createTextNode(' Permitir nuevas solicitudes'));
   const submit=document.createElement('button');submit.type='submit';submit.className='primary-button';submit.textContent='Guardar tarifa';
   const status=document.createElement('p');status.setAttribute('role','status');
-  const current=await tournamentFee();input.value=String(current.amountCents/100);toggle.checked=current.enabled;status.textContent=money(current.amountCents)+' · '+(current.mode==='TEST'?'Modo de prueba':'Cobros reales');
+  const current=await tournamentFee();input.value=String((current.standardAmountCents ?? current.amountCents)/100);toggle.checked=current.enabled;status.textContent=money(current.standardAmountCents ?? current.amountCents)+' · '+(current.mode==='TEST'?'Modo de prueba':'Cobros reales');
   form.append(label,toggleLabel,submit);panel.append(title,help,form,status);host.append(panel);
   form.addEventListener('submit',async event=>{event.preventDefault();submit.disabled=true;try{const cents=Math.round(Number(input.value)*100);const saved=await setTournamentFee(cents,toggle.checked);status.textContent='Tarifa guardada: '+money(saved.amountCents);}catch(error){status.textContent=error.message;}finally{submit.disabled=false;}});
 }

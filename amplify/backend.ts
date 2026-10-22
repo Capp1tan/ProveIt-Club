@@ -126,7 +126,7 @@ invitations.grant(backend.respondInvitation.resources.lambda,'dynamodb:PutItem')
 backend.storage.resources.bucket.grantReadWrite(backend.maintenance.resources.lambda,'profile-private/*');
 backend.maintenance.addEnvironment('PROFILE_BUCKET_NAME',backend.storage.resources.bucket.bucketName);
 
-// Consola de administración de sólo lectura. El registro de consultas usa la tabla privada.
+// Consultas privadas y gestión de exenciones con escritura limitada y auditoría.
 for(const [model,key] of [['Profile','PROFILE_TABLE_NAME'],['PrivateAccount','ACCOUNT_TABLE_NAME'],['UniqueClaim','CLAIM_TABLE_NAME'],['ClubBadge','BADGE_TABLE_NAME'],['Tournament','TOURNAMENT_TABLE_NAME'],['TournamentPayment','PAYMENT_TABLE_NAME'],['TournamentInvitation','INVITATION_TABLE_NAME'],['BillingSettings','BILLING_SETTINGS_TABLE_NAME']] as const){
  backend.data.resources.tables[model].grantReadData(backend.adminConsole.resources.lambda);
  backend.adminConsole.addEnvironment(key,backend.data.resources.tables[model].tableName);
@@ -134,6 +134,11 @@ for(const [model,key] of [['Profile','PROFILE_TABLE_NAME'],['PrivateAccount','AC
 socialTable.grantReadData(backend.adminConsole.resources.lambda);
 backend.adminConsole.resources.lambda.addToRolePolicy(new PolicyStatement({actions:['dynamodb:PutItem'],resources:[socialTable.tableArn],conditions:{'ForAllValues:StringEquals':{'dynamodb:LeadingKeys':['ADMIN_AUDIT']}}}));
 backend.adminConsole.addEnvironment('SOCIAL_TABLE_NAME',socialTable.tableName);
+backend.adminConsole.resources.lambda.addToRolePolicy(new PolicyStatement({actions:['dynamodb:PutItem'],resources:[backend.data.resources.tables['UniqueClaim'].tableArn],conditions:{'ForAllValues:StringLike':{'dynamodb:LeadingKeys':['creation-exempt:*']}}}));
+backend.data.resources.tables['UniqueClaim'].grant(backend.adminConsole.resources.lambda,'dynamodb:ConditionCheckItem');
+backend.data.resources.tables['UniqueClaim'].grant(backend.createTournament.resources.lambda,'dynamodb:ConditionCheckItem');
+// Los permisos sobre la tabla no deben depender de cómo CDK incluya los índices.
+backend.social.resources.lambda.addToRolePolicy(new PolicyStatement({actions:['dynamodb:Query'],resources:[profiles.tableArn+'/index/byAvatarPath']}));
 backend.auth.resources.userPool.grant(backend.adminConsole.resources.lambda,'cognito-idp:ListUsers','cognito-idp:AdminGetUser');
 backend.adminConsole.addEnvironment('USER_POOL_ID',backend.auth.resources.userPool.userPoolId);
 backend.storage.resources.bucket.grantRead(backend.adminConsole.resources.lambda,'profile-pictures/*');

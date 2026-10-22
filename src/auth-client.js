@@ -31,7 +31,7 @@ export async function getCurrentUser() {
   const user = await amplifyGetCurrentUser();
   if (!sessionPromise) {
     sessionPromise = fetchAuthSession().then(session => {
-      if (!session.tokens) throw new Error('Tu sesión venció. Volvé a ingresar.');
+      if (!session.tokens){const error=new Error('Tu sesión venció. Volvé a ingresar.');error.name='UserUnAuthenticatedException';throw error;}
       return session;
     }).finally(() => { sessionPromise = undefined; });
   }
@@ -143,10 +143,10 @@ export async function saveAvatar(file) {
   if(!response.ok)throw new Error('No pudimos subir la foto. Reintentá.');return grant.path;
 }
 
-export function avatarUrl(path) {
+export function avatarUrl(path,{profileId,refresh=false}={}) {
   if(!path)return Promise.resolve('');
-  const cached=avatarRequests.get(path);if(cached && cached.expires>Date.now())return cached.promise;
-  const promise=import('./community-api.js').then(({communityAction})=>communityAction('AVATAR',{path})).then(result=>result.url);
+  const cached=avatarRequests.get(path);if(!refresh && cached && cached.expires>Date.now())return cached.promise;
+  const promise=import('./community-api.js').then(({communityAction})=>communityAction('AVATAR',{path,targetProfileId:profileId})).then(result=>result.url);
   avatarRequests.set(path,{promise,expires:Date.now()+45000});
   promise.catch(()=>{if(avatarRequests.get(path)?.promise===promise)avatarRequests.delete(path);});
   return promise;

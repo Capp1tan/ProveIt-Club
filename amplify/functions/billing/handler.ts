@@ -1,12 +1,15 @@
 import { UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { assertActiveAccount } from '../lifecycle';
-import { db,table,read,fee,mode,isCreator,assertBillingAccess,ensureCheckout,publicCheckout,mp,reconcilePayment } from './common';
+import { db,table,read,fee,mode,isCreator,creationExemption,assertBillingAccess,ensureCheckout,publicCheckout,mp,reconcilePayment } from './common';
 type Event={fieldName?:string;info?:{fieldName:string};identity?:{sub?:string};arguments:Record<string,any>};
 export const handler=async(event:Event)=>{
   const sub=event.identity?.sub;if(!sub)throw new Error('Iniciá sesión.');
   await assertActiveAccount(sub);
   const args=event.arguments || {},operation=event.fieldName || event.info?.fieldName || ('amountCents' in args?'setTournamentFee':args.checkoutId?'checkTournamentPayment':'getTournamentFee');
-  if(operation==='getTournamentFee')return {...await fee(),canPay:await isCreator(sub) || process.env.MERCADOPAGO_MODE==='live'};
+  if(operation==='getTournamentFee'){
+    const [pricing,grant]=await Promise.all([fee(),creationExemption(sub)]);
+    return {...pricing,standardAmountCents:pricing.amountCents,amountCents:grant.enabled?0:pricing.amountCents,exempt:grant.enabled,exemptionSource:grant.source,canPay:grant.enabled || mode()==='LIVE'};
+  }
   if(operation==='setTournamentFee') {
     if(!await isCreator(sub))throw new Error('Sólo el Creador puede cambiar la tarifa.');
     if(!Number.isSafeInteger(args.amountCents) || args.amountCents<1 || args.amountCents>100000000 || typeof args.enabled!=='boolean')throw new Error('Revisá el precio. Debe ser un importe positivo con hasta dos decimales.');
@@ -17,6 +20,7 @@ export const handler=async(event:Event)=>{
   if(!/^[0-9a-f-]{36}$/i.test(args.checkoutId || ''))throw new Error('Solicitud inválida.');
   let row=await read('PAYMENT_TABLE_NAME',args.checkoutId);
   if(!row || row.createdBySub!==sub)throw new Error('Solicitud no encontrada para tu cuenta.');
+  if(row.status==='EXEMPT')return publicCheckout(row);
   if(row.paymentMode!==mode())throw new Error('Esta solicitud pertenece al entorno anterior. Creá un torneo nuevo para obtener un pago real.');
   if(row.deletedAt)return publicCheckout(row);
   // Límite compartido por cuenta/solicitud: el polling no dispara búsquedas sin fin.

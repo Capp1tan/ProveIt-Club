@@ -1,5 +1,14 @@
 # Cobros por creación de torneos
 
+## Exenciones — 3.7.0
+
+El Creador y las cuentas con permiso administrativo activo crean sin pagar.
+AWS guarda un recibo `EXEMPT` de importe cero y publica torneo e invitaciones
+de forma atómica, sin solicitar una preferencia ni un cobro a Mercado Pago.
+La tarifa general, los pagos pendientes y el resto de las validaciones siguen
+vigentes. La pausa general se aplica también a las cuentas exentas.
+La gestión y auditoría se explican en `ADMINISTRACION.md`.
+
 ## Estado de producción — 2.9.0
 
 Checkout Pro mediante Preferences API. Las tres funciones usan

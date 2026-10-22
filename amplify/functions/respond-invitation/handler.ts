@@ -30,9 +30,9 @@ export const handler = async (event: { identity?: { sub?: string }; arguments: {
     try {
       await db.send(new TransactWriteCommand({TransactItems:[{Update:{TableName:table,Key:key,
         UpdateExpression:'SET #draw = :draw, #status = :ready, updatedAt = :now',
-        ConditionExpression:'attribute_exists(id) AND attribute_not_exists(deletedAt) AND attribute_not_exists(#draw) AND (attribute_not_exists(creationPaymentStatus) OR creationPaymentStatus=:paid) AND (attribute_not_exists(membershipRevision) OR membershipRevision=:revision)',
+        ConditionExpression:'attribute_exists(id) AND attribute_not_exists(deletedAt) AND attribute_not_exists(#draw) AND (attribute_not_exists(creationPaymentStatus) OR creationPaymentStatus=:paid OR creationPaymentStatus=:exempt) AND (attribute_not_exists(membershipRevision) OR membershipRevision=:revision)',
         ExpressionAttributeNames:{'#draw':'draw','#status':'status'},
-        ExpressionAttributeValues:{':draw':draw,':ready':'READY',':now':now,':paid':'APPROVED',':revision':t.membershipRevision || 0}}}]}));
+        ExpressionAttributeValues:{':draw':draw,':ready':'READY',':now':now,':paid':'APPROVED',':exempt':'EXEMPT',':revision':t.membershipRevision || 0}}}]}));
       return {...t,draw,status:'READY',updatedAt:now};
     } catch(error) {
       if((error as Error).name!=='TransactionCanceledException') throw error;

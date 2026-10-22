@@ -21,7 +21,7 @@ const schema = a.schema({
   onClubChat:a.subscription().for(a.ref('clubChatSend')).authorization(allow=>[allow.authenticated()])
     .handler(a.handler.custom({entry:'./chat-signal.js'})),
   // El resolver vuelve a comprobar el Creador; ninguna consulta administrativa es pública.
-  clubAdmin:a.mutation().arguments({action:a.string().required(),collection:a.string(),targetId:a.string(),cursor:a.string(),search:a.string(),roomKey:a.string(),reason:a.string()}).returns(a.string()).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(adminConsole)),
+  clubAdmin:a.mutation().arguments({action:a.string().required(),collection:a.string(),targetId:a.string(),cursor:a.string(),search:a.string(),roomKey:a.string(),reason:a.string(),enabled:a.boolean(),revision:a.string()}).returns(a.string()).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(adminConsole)),
   // Una única puerta validada: el cliente nunca puede listar mensajes de otras salas.
   clubSocial:a.mutation().arguments({action:a.string().required(),selfProfileId:a.id(),targetProfileId:a.id(),roomType:a.string(),roomId:a.id(),body:a.string(),messageId:a.id(),cursor:a.string(),after:a.string(),seenCount:a.integer()}).returns(a.string()).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(social)),
   clubCommunity:a.mutation().arguments({action:a.string().required(),targetProfileId:a.id(),cursor:a.string(),path:a.string(),contentType:a.string(),size:a.integer(),tournamentId:a.id(),judgeId:a.id(),positive:a.boolean(),reason:a.string(),status:a.string(),reportId:a.string(),description:a.string(),conflicts:a.string()}).returns(a.string()).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(social)),
@@ -62,7 +62,7 @@ const schema = a.schema({
   }).authorization(allow=>[allow.ownerDefinedIn('createdBySub').identityClaim('sub').to(['read'])]),
   BillingSettings: a.model({amountCents:a.integer().required(),enabled:a.boolean().required()})
     .authorization(allow=>[allow.authenticated().to(['read'])]),
-  TournamentFee: a.customType({amountCents:a.integer().required(),currency:a.string().required(),enabled:a.boolean().required(),mode:a.string().required(),canPay:a.boolean().required()}),
+  TournamentFee: a.customType({amountCents:a.integer().required(),currency:a.string().required(),enabled:a.boolean().required(),mode:a.string().required(),canPay:a.boolean().required(),exempt:a.boolean(),exemptionSource:a.string(),standardAmountCents:a.integer()}),
   getTournamentFee:a.query().returns(a.ref('TournamentFee')).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(billing)),
   setTournamentFee:a.mutation().arguments({amountCents:a.integer().required(),enabled:a.boolean().required()}).returns(a.ref('TournamentFee')).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(billing)),
   checkTournamentPayment:a.mutation().arguments({checkoutId:a.id().required()}).returns(a.ref('TournamentPayment')).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(billing)),
