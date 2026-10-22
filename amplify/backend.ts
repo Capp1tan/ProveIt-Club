@@ -170,4 +170,5 @@ for(const [fn,days] of [[backend.createTournament,30],[backend.respondInvitation
 
 const photoBucket=backend.storage.resources.bucket.node.defaultChild as import('aws-cdk-lib/aws-s3').CfnBucket;
 photoBucket.versioningConfiguration={status:'Enabled'};
-backend.storage.resources.bucket.applyRemovalPolicy(RemovalPolicy.RETAIN);
+// Amplify administra su ciclo de vida y la limpieza del bucket. No cambiamos
+// su RemovalPolicy mientras AutoDeleteObjects esté habilitado por Amplify.

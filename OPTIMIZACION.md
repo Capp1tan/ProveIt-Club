@@ -48,8 +48,11 @@ de AWS abarca toda la cuenta, incluidos otros proyectos.
   PITR comienza al habilitarlo; no crea un historial retroactivo de 35 días.
 - Restaurar PITR crea otra tabla: ante un incidente hay que coordinar restauración
   y reconexión de la aplicación, no basta un botón de deshacer en el sitio.
-- El bucket de fotos activa versionado y RETAIN. No se vuelve público. Las URLs
+- El bucket de fotos activa versionado. No se vuelve público. Las URLs
   siguen firmadas y caducan. No se eliminan versiones automáticamente aquí.
+- El ciclo de vida del bucket continúa administrado por Amplify. El versionado
+  permite recuperar archivos, pero no es una copia independiente que sobreviva
+  a eliminar toda la aplicación y sus recursos de almacenamiento.
 - Retención de logs: 30 días para operaciones comunes; 90 días para cobros,
   webhook, mantenimiento y administración. Estos son registros técnicos;
   no se borran mensajes, pagos ni historiales de torneos con esta configuración.
