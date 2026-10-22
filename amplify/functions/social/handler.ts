@@ -17,10 +17,10 @@ function active(sub:string){return {ConditionCheck:{TableName:process.env.CLAIM_
 const has=(items:Person[],sub:string)=>items.some(p=>p.sub===sub);
 const remove=(items:Person[],sub:string)=>items.filter(p=>p.sub!==sub);
 const uuid=(v:any)=>typeof v==='string' && /^[\da-f-]{36}$/i.test(v);
-type Event={arguments:Record<string,any>;identity?:{sub?:string};info?:{fieldName?:string}};
+type Event={arguments:Record<string,any>;identity?:{sub?:string};fieldName?:string;info?:{fieldName?:string}};
 export const handler=async(event:Event)=>{
  const sub=event.identity?.sub;if(!sub)throw new Error('Iniciá sesión.');
- const a=event.arguments || {},realtime=event.info?.fieldName==='clubChatSend',action=realtime?'SEND':a.action;
+ const a=event.arguments || {},realtime=(event.fieldName || event.info?.fieldName)==='clubChatSend',action=realtime?'SEND':a.action;
  if(String(action).startsWith('COMMUNITY_'))return JSON.stringify(await community(db,sub,a));
  // Lecturas independientes en paralelo; nunca se cachean permisos entre peticiones.
  const ownId=typeof a.selfProfileId==='string' && a.selfProfileId.length<=128?a.selfProfileId:sub;

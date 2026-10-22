@@ -49,7 +49,7 @@ export const handler = async (event: Event) => {
     if(args.phoneOptional) {
       await db.send(new PutCommand({TableName:table('CLAIM_TABLE_NAME'),Item:{...Key,accountSub:target,createdAt:now,updatedAt:now,__typename:'UniqueClaim'}}));
       // El perfil ya existente puede participar aunque no tenga teléfono.
-      if(!profile.accountComplete){const complete={...profile,accountComplete:true,updatedAt:now};if(!complete.avatarPath)delete complete.avatarPath;await db.send(new PutCommand({TableName:table('PROFILE_TABLE_NAME'),Item:complete,ConditionExpression:'#owner=:owner',ExpressionAttributeNames:{'#owner':'owner'},ExpressionAttributeValues:{':owner':profile.owner}}));}
+      if(!profile.accountComplete){const complete:Record<string,any>={...profile,accountComplete:true,updatedAt:now};if(!complete.avatarPath)delete complete.avatarPath;await db.send(new PutCommand({TableName:table('PROFILE_TABLE_NAME'),Item:complete,ConditionExpression:'#owner=:owner',ExpressionAttributeNames:{'#owner':'owner'},ExpressionAttributeValues:{':owner':profile.owner}}));}
     } else await db.send(new DeleteCommand({TableName:table('CLAIM_TABLE_NAME'),Key}));
     return {isCreator:true,phoneOptional:await phoneOptional(sub)};
   }
