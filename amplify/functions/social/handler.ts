@@ -17,10 +17,10 @@ function active(sub:string){return {ConditionCheck:{TableName:process.env.CLAIM_
 const has=(items:Person[],sub:string)=>items.some(p=>p.sub===sub);
 const remove=(items:Person[],sub:string)=>items.filter(p=>p.sub!==sub);
 const uuid=(v:any)=>typeof v==='string' && /^[\da-f-]{36}$/i.test(v);
-type Event={arguments:Record<string,any>;identity?:{sub?:string}};
+type Event={arguments:Record<string,any>;identity?:{sub?:string};info?:{fieldName?:string}};
 export const handler=async(event:Event)=>{
  const sub=event.identity?.sub;if(!sub)throw new Error('Iniciá sesión.');
- const a=event.arguments || {},action=a.action;
+ const a=event.arguments || {},realtime=event.info?.fieldName==='clubChatSend',action=realtime?'SEND':a.action;
  if(String(action).startsWith('COMMUNITY_'))return JSON.stringify(await community(db,sub,a));
  // Lecturas independientes en paralelo; nunca se cachean permisos entre peticiones.
  const ownId=typeof a.selfProfileId==='string' && a.selfProfileId.length<=128?a.selfProfileId:sub;
@@ -80,12 +80,12 @@ export const handler=async(event:Event)=>{
   await transact([put(mine),put(other),...checks]);return JSON.stringify({ok:true});
  }
  if(!['MESSAGES','SEND','READ'].includes(action))throw new Error('Operación inválida.');
- let pk:string,roomCheck:any;
+ let pk:string,roomCheck:any,tournament:any;
  if(a.roomType==='DIRECT' && target && other){
   if(!has(mine.friends,target.sub) || !has(other.friends,sub))throw new Error('Este chat está disponible únicamente entre amigos.');
   pk='DM#'+[sub,target.sub].sort().join('#');roomCheck=check(other);
  }else if(a.roomType==='TOURNAMENT' && uuid(a.roomId)){
-  const t=await read('TOURNAMENT_TABLE_NAME',a.roomId);assertActiveTournament(t);
+  const t=await read('TOURNAMENT_TABLE_NAME',a.roomId);assertActiveTournament(t);tournament=t;
   const ids=[...t!.participantIds,...t!.judgeIds,...(t!.treasurerId?[t!.treasurerId]:[])];
   // Ya comprobamos que este perfil pertenece al sub autenticado: no hace falta
   // leer todos los perfiles de la sala en cada consulta de mensajes.
@@ -111,12 +111,27 @@ export const handler=async(event:Event)=>{
    const rows=after?(page.Items || []):(page.Items || []).reverse(),last=rows.at(-1);
    return JSON.stringify({messages:rows.map(({pk,sk,...message})=>message),receivedCount:inbox?.receivedCount || 0,after:last?Buffer.from(JSON.stringify({pk,sk:last.sk})).toString('base64url'):a.after || null,hasMore:Boolean(after && page.LastEvaluatedKey),cursor:!after && page.LastEvaluatedKey?Buffer.from(JSON.stringify(page.LastEvaluatedKey)).toString('base64url'):null});
  }
+ // Los destinatarios salen de la amistad recíproca o de la nómina aceptada.
+ // Una suscripción vieja jamás recibe contenido: cada lectura revalida permisos.
+ const finishSend=async(result:any)=>{
+  if(!realtime)return JSON.stringify(result);
+  const recipients=new Set<string>([sub]);
+  if(target)recipients.add(target.sub);
+  if(tournament){
+   recipients.add(tournament.createdBySub);
+   const ids=[...tournament.participantIds,...tournament.judgeIds,...(tournament.treasurerId?[tournament.treasurerId]:[])];
+   const accepted=ids.filter((_:string,i:number)=>!tournament.rosterStatuses || tournament.rosterStatuses[i]==='ACCEPTED');
+   const people=await Promise.all([...new Set<string>(accepted)].map(id=>read('PROFILE_TABLE_NAME',id)));
+   for(const p of people){const id=p?.owner?.split('::')[0];if(id)recipients.add(id);}
+  }
+  return {eventId:a.messageId,recipients:[...recipients]};
+ };
  const body=typeof a.body==='string'?a.body.trim():'';
  if(!body || body.length>1000 || /[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(body))throw new Error('Escribí un mensaje de 1 a 1000 caracteres.');
  if(!uuid(a.messageId))throw new Error('Identificador de mensaje inválido.');
  // Clave estable por intento: reintentar una petición sin respuesta no duplica el envío.
  const sent=(await db.send(new GetCommand({TableName:table(),Key:{pk:'SENT#'+sub,sk:a.messageId},ConsistentRead:true}))).Item;
- if(sent){if(sent.room!==pk || sent.body!==body)throw new Error('Identificador ya utilizado.');return JSON.stringify({ok:true,...(sent.message?{message:sent.message}:{})});}
+ if(sent){if(sent.room!==pk || sent.body!==body)throw new Error('Identificador ya utilizado.');return finishSend({ok:true,...(sent.message?{message:sent.message}:{})});}
  const now=new Date().toISOString(),nowMs=Date.now();
  const item={pk,sk:'MSG#'+now+'#'+a.messageId,id:a.messageId,senderSub:sub,senderProfileId:profile.id,senderName:profile.nickname,body,createdAt:now};
  const {pk:messagePk,sk:messageSk,...message}=item;
@@ -129,6 +144,6 @@ export const handler=async(event:Event)=>{
   items.push({Update:{TableName:table(),Key:{pk:'USER#'+target.sub,sk:'INBOX#'+profile.id},UpdateExpression:'SET peerProfileId=:id,peerName=:name,lastAt=:now,receivedCount=if_not_exists(receivedCount,:zero)+:one',ExpressionAttributeValues:{':id':profile.id,':name':profile.nickname,':now':now,':zero':0,':one':1}}});
   items.push({Update:{TableName:table(),Key:inboxKey!,UpdateExpression:'SET peerProfileId=:id,peerName=:name,lastAt=:now',ExpressionAttributeValues:{':id':target.profileId,':name':targetName,':now':now}}});
  }
- await transact(items);return JSON.stringify({ok:true,message});
+ await transact(items);return finishSend({ok:true,message});
 };
 async function transact(items:any[]){for(let attempt=0;attempt<3;attempt++){try{await db.send(new TransactWriteCommand({TransactItems:items}));return;}catch(error){const reasons=(error as any).CancellationReasons || [];if(attempt<2 && ((error as Error).name==='TransactionConflictException' || reasons.some((r:any)=>r.Code==='TransactionConflict'))){await new Promise(resolve=>setTimeout(resolve,50+attempt*80));continue;}if((error as Error).name==='TransactionCanceledException')throw new Error('La conversación cambió o enviaste demasiado rápido. Volvé a intentar.');throw error;}}}

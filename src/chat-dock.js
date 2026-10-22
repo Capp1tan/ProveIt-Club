@@ -4,6 +4,7 @@ import '../social.css';
 import { Hub } from 'aws-amplify/utils';
 import { configureAmplify,getCurrentUser } from './auth-client.js';
 import { socialAction } from './social-api.js';
+import {startChatRealtime,chatRealtimeReady} from './chat-realtime.js';
 import { mountChat } from './chat-ui.js';
 import { playMessageSound,chatSoundButton } from './chat-sound.js';
 const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text)n.textContent=text;if(cls)n.className=cls;return n;};
@@ -20,7 +21,7 @@ panel.append(header,list,chat,status);root.append(panel,launcher);document.body.
 let sub='',epoch=0,loading=false,conversations=[],selected=null,stopChat,key='',queued=null,ready=false;
 let soundSeen=new Map(),soundPrimed=false,soundKey='';
 let inboxTimer,inboxFailures=0,inboxAgain=false,listVersion='';const signalMarks=new Map();
-function scheduleInbox(delay){clearTimeout(inboxTimer);if(!sub || document.hidden)return;const pace=!panel.hidden && selected?1500:!panel.hidden?2500:4000;inboxTimer=setTimeout(()=>void refresh(),delay ?? Math.min(30000,pace*2**inboxFailures));}
+function scheduleInbox(delay){clearTimeout(inboxTimer);if(!sub || document.hidden)return;const pace=chatRealtimeReady()?60000:(!panel.hidden && selected?3000:!panel.hidden?5000:15000);inboxTimer=setTimeout(()=>void refresh(),delay ?? Math.min(120000,pace*2**inboxFailures));}
 const drafts=new Map();
 function incomingSound(items){
  let arrived=false;
@@ -68,7 +69,7 @@ async function refresh(){
 }
 function reset(){epoch++;ready=false;sub='';key='';soundKey='';clearTimeout(inboxTimer);signalMarks.clear();listVersion='';inboxFailures=0;inboxAgain=false;soundSeen.clear();soundPrimed=false;rememberDraft();stopChat?.();stopChat=null;selected=null;queued=null;drafts.clear();conversations=[];root.hidden=true;panel.hidden=true;list.hidden=false;chat.hidden=true;chat.replaceChildren();list.replaceChildren();status.textContent='';}
 async function initialize(){const current=++epoch;
- try{if(!await configureAmplify())return;const user=await getCurrentUser();if(current!==epoch)return;sub=user.userId;key='proveit:chat-dock:'+sub;soundKey='proveit:chat-sound-seen:'+sub;root.hidden=false;
+ try{if(!await configureAmplify())return;const user=await getCurrentUser();if(current!==epoch)return;sub=user.userId;void startChatRealtime();key='proveit:chat-dock:'+sub;soundKey='proveit:chat-sound-seen:'+sub;root.hidden=false;
   try{const saved=JSON.parse(sessionStorage.getItem(soundKey) || 'null');soundSeen=new Map(Object.entries(saved?.counts || {}).filter(([id,n])=>typeof id==='string' && Number.isSafeInteger(n) && n>=0));soundPrimed=saved?.ready===true;}catch{soundSeen=new Map();soundPrimed=false;}
   let saved;try{saved=JSON.parse(sessionStorage.getItem(key) || 'null');}catch{}
   await refresh();if(current!==epoch)return;ready=true;
@@ -82,6 +83,6 @@ export function openDirectChat(person){const ref={profileId:person.profileId,nam
 launcher.addEventListener('click',()=>panel.hidden?expand():collapse());minimize.addEventListener('click',()=>{collapse();launcher.focus();});back.addEventListener('click',showList);
 root.addEventListener('keydown',event=>{if(event.key==='Escape'){collapse();launcher.focus();}});
 const tick=()=>{if(!document.hidden)void refresh();else clearTimeout(inboxTimer);};document.addEventListener('visibilitychange',tick);window.addEventListener('focus',tick);window.addEventListener('online',tick);
-for(const event of ['proveit:chat-read','proveit:chat-sent','proveit:social-updated'])window.addEventListener(event,tick);
+for(const event of ['proveit:chat-read','proveit:chat-sent','proveit:social-updated','proveit:chat-signal','proveit:chat-connection'])window.addEventListener(event,tick);
 Hub.listen('auth',({payload})=>{if(payload.event==='signedOut')reset();if(payload.event==='signedIn')void initialize();});
 void initialize();

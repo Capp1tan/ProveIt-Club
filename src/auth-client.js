@@ -135,6 +135,8 @@ export async function saveAvatar(file) {
   if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
     throw new Error('Usá una imagen JPG, PNG o WebP.');
   }
+  const {optimizeAvatar}=await import('./image-upload.js');
+  file=await optimizeAvatar(file);
   const {communityAction}=await import('./community-api.js');
   const grant=await communityAction('UPLOAD',{contentType:file.type,size:file.size});
   const response=await fetch(grant.url,{method:'PUT',headers:{'Content-Type':file.type},body:file,signal:AbortSignal.timeout(60000)});

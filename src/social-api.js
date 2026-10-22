@@ -11,9 +11,10 @@ export function socialAction(action,args={}){
  const work=(async()=>{const api=await client();let selfProfileId;
   if(!['STATE','INBOX'].includes(action)){if(!profilePromise)profilePromise=loadProfile().then(({profile})=>{if(!profile)throw new Error('Guardá tu perfil antes de usar amigos y chats.');return profile.id;}).catch(e=>{profilePromise=undefined;throw e;});selfProfileId=await profilePromise;}
   if(current!==epoch)throw new Error('Tu sesión cambió.');
-  const result=await api.mutations.clubSocial({action,...args,...(selfProfileId?{selfProfileId}:{})});
+  const values={...args,...(selfProfileId?{selfProfileId}:{})};
+  const result=action==='SEND'?await api.mutations.clubChatSend(values):await api.mutations.clubSocial({action,...values});
   if(current!==epoch)throw new Error('Tu sesión cambió.');
-  if(result.errors?.length)throw new Error(result.errors.map(e=>e.message).join(' '));if(!result.data)throw new Error('AWS no confirmó la respuesta. Volvé a intentar.');return JSON.parse(result.data);
+  if(result.errors?.length)throw new Error(result.errors.map(e=>e.message).join(' '));if(!result.data)throw new Error('AWS no confirmó la respuesta. Volvé a intentar.');return action==='SEND'?{ok:true}:JSON.parse(result.data);
  })();
  if(read){reads.set(key,work);work.then(()=>{if(reads.get(key)===work)reads.delete(key);},()=>{if(reads.get(key)===work)reads.delete(key);});}return work;
 }

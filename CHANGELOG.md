@@ -1,3 +1,9 @@
+## 3.6.0 — Chat en tiempo real y protección de datos
+
+- Avisos de mensajes filtrados por identidad, con lectura autorizada y respaldo ante cortes.
+- Fotos nuevas optimizadas, índices para fotos e invitaciones y buscador con menos redibujados.
+- Recuperación continua de tablas, protección de borrado, versionado S3 y retención de logs.
+- Guía de presupuesto y operación alrededor de USD 20 mensuales.
 # Versión 3.1.0
 
 ## 3.5.0 — Identidad visual panorámica
@@ -313,4 +319,5 @@ Primera versión de ProveIt Club que conecta la web con cuentas y perfiles persi
 - `3.0.0`: otro cambio de etapa importante decidido para el proyecto.
 
 La numeración identifica entregas del proyecto; no es una certificación de que no existan errores.
+
 

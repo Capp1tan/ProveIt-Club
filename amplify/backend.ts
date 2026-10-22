@@ -13,8 +13,9 @@ import { storage } from './storage/resource';
 import { respondInvitation } from './functions/respond-invitation/resource';
 import { createTournament } from './functions/create-tournament/resource';
 import { social } from './functions/social/resource';
-import { Table, AttributeType, BillingMode } from 'aws-cdk-lib/aws-dynamodb';
+import { Table, CfnTable, AttributeType, BillingMode } from 'aws-cdk-lib/aws-dynamodb';
 import { RemovalPolicy } from 'aws-cdk-lib';
+import { LogRetention, RetentionDays } from 'aws-cdk-lib/aws-logs';
 
 /** Recursos AWS que Amplify podrá desplegar cuando habilitemos el backend. */
 const backend = defineBackend({ auth, data, storage, createTournament, respondInvitation, clubAccount, billing, paymentWebhook, maintenance, social, adminConsole, preSignUp });
@@ -144,3 +145,24 @@ const registrationTable=new Table(backend.auth.resources.userPool.stack,'ClubReg
 registrationTable.grant(backend.preSignUp.resources.lambda,'dynamodb:PutItem');
 backend.preSignUp.addEnvironment('REGISTRATION_TABLE_NAME',registrationTable.tableName);
 backend.preSignUp.resources.lambda.role?.attachInlinePolicy(new Policy(backend.auth.resources.userPool.stack,'RegistrationPoolRead',{statements:[new PolicyStatement({actions:['cognito-idp:ListUsers'],resources:[backend.auth.resources.userPool.userPoolArn]})]}));
+
+// Respaldo continuo de 35 días y bloqueo de borrado accidental. Estos ajustes
+// protegen las tablas existentes; no son un límite de gasto ni un backup S3.
+for(const table of [...Object.values(backend.data.resources.tables),socialTable,registrationTable]){
+ const cfn=table.node.defaultChild as CfnTable;
+ cfn.deletionProtectionEnabled=true;
+ cfn.pointInTimeRecoverySpecification={pointInTimeRecoveryEnabled:true,recoveryPeriodInDays:35};
+ table.applyRemovalPolicy(RemovalPolicy.RETAIN);
+}
+
+for(const [fn,days] of [[backend.createTournament,30],[backend.respondInvitation,30],[backend.clubAccount,30],[backend.social,30],[backend.preSignUp,30],[backend.billing,90],[backend.paymentWebhook,90],[backend.maintenance,90],[backend.adminConsole,90]] as const){
+ // Aplica la retención al grupo existente, sin reemplazarlo ni cambiar su nombre.
+ new LogRetention(fn.resources.lambda,'ClubLogRetention',{
+  logGroupName:'/aws/lambda/'+fn.resources.lambda.functionName,
+  retention:days as RetentionDays,
+ });
+}
+
+const photoBucket=backend.storage.resources.bucket.node.defaultChild as import('aws-cdk-lib/aws-s3').CfnBucket;
+photoBucket.versioningConfiguration={status:'Enabled'};
+backend.storage.resources.bucket.applyRemovalPolicy(RemovalPolicy.RETAIN);

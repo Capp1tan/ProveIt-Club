@@ -13,6 +13,13 @@ import { billing } from '../functions/billing/resource';
 import { maintenance } from '../functions/maintenance/resource';
 
 const schema = a.schema({
+  // Avisos mínimos: no transmiten mensajes ni perfiles. El receptor se filtra
+  // por el sub real del token, sin aceptar destinatarios desde el navegador.
+  ChatSignal:a.customType({eventId:a.string().required(),recipients:a.string().required().array().required()}),
+  clubChatSend:a.mutation().arguments({selfProfileId:a.id(),targetProfileId:a.id(),roomType:a.string(),roomId:a.id(),body:a.string(),messageId:a.id()})
+    .returns(a.ref('ChatSignal')).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(social)),
+  onClubChat:a.subscription().for(a.ref('clubChatSend')).authorization(allow=>[allow.authenticated()])
+    .handler(a.handler.custom({entry:'./chat-signal.js'})),
   // El resolver vuelve a comprobar el Creador; ninguna consulta administrativa es pública.
   clubAdmin:a.mutation().arguments({action:a.string().required(),collection:a.string(),targetId:a.string(),cursor:a.string(),search:a.string(),roomKey:a.string(),reason:a.string()}).returns(a.string()).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(adminConsole)),
   // Una única puerta validada: el cliente nunca puede listar mensajes de otras salas.
@@ -26,6 +33,7 @@ const schema = a.schema({
       accountComplete: a.boolean(),
       visibility:a.string(), socialLinks:a.string(), judgeEnabled:a.boolean(),
     })
+    .secondaryIndexes(index=>[index('avatarPath').name('byAvatarPath').queryField('profilesByAvatarPath')])
     .authorization((allow) => [
       allow.owner().to(['read']),
     ]),
@@ -112,7 +120,8 @@ const schema = a.schema({
     startsAt: a.datetime(),
     timeZone: a.string(),
     rulesSnapshot: a.string(), termsVersion:a.integer(), termsAcceptedAt:a.datetime(), conflictsSnapshot:a.string(),
-  }).authorization(allow => [allow.ownerDefinedIn('recipientSub').identityClaim('sub').to(['read'])]),
+  }).secondaryIndexes(index=>[index('recipientSub').sortKeys(['status']).name('byRecipientStatus').queryField('invitationsByRecipient')])
+    .authorization(allow => [allow.ownerDefinedIn('recipientSub').identityClaim('sub').to(['read'])]),
   PrizeUpload:a.customType({path:a.string().required(),url:a.string().required()}),
   prepareClubPrizeUpload:a.mutation().arguments({tournamentId:a.id().required(),uploadContentType:a.string().required(),uploadSize:a.integer().required()}).returns(a.ref('PrizeUpload')).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(respondInvitation)),
   saveClubTournamentPrize:a.mutation().arguments({tournamentId:a.id().required(),prizeTitle:a.string().required(),prizeDescription:a.string(),prizeLinks:a.string(),prizeAttachments:a.string(),prizeRevision:a.integer().required(),prizeHolder:a.string(),prizeFunder:a.string(),prizeFundingStatus:a.string()}).returns(a.ref('Tournament')).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(respondInvitation)),

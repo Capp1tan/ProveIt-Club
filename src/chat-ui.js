@@ -1,6 +1,7 @@
 import {badgeElements,loadBadges} from './badges.js';
 import '../social.css';
 import { socialAction } from './social-api.js';
+import {startChatRealtime,chatRealtimeReady} from './chat-realtime.js';
 import { getCurrentUser } from './auth-client.js';
 import { Hub } from 'aws-amplify/utils';
 import { playMessageSound } from './chat-sound.js';
@@ -45,7 +46,7 @@ export function mountChat(root,room){
  list.addEventListener('scroll',()=>void markRead());
  async function refresh(previous=false){
   if(!active())return;if(fetching){if(!previous)queued=true;return;}fetching=true;
-  const full=!catchingUp && (!after || Date.now()-lastFull>20000);
+  const full=!previous && !catchingUp && (!after || Date.now()-lastFull>60000);
   try{
    const page=await socialAction('MESSAGES',{...args,...(previous && cursor?{cursor}:!full && after?{after}:{})});if(stopped)return;
    const incoming=page.messages.filter(m=>m.senderSub!==me && !messages.has(m.id)).length;
@@ -72,13 +73,14 @@ export function mountChat(root,room){
  // El privado se despierta con el buzón compartido. El intervalo lento es de respaldo.
  // Las salas sin buzón consultan deltas cada 1,5 s, con retroceso ante errores.
  let timer;
- function schedulePoll(){clearTimeout(timer);if(stopped || document.hidden)return;const base=room.roomType==='DIRECT'?15000:1500;timer=setTimeout(async()=>{if(!sending)await refresh();schedulePoll();},Math.min(30000,base*2**Math.min(failures,4)));}
- schedulePoll();
+ function schedulePoll(){clearTimeout(timer);if(stopped || document.hidden)return;const base=chatRealtimeReady()?60000:(room.roomType==='DIRECT'?15000:3000);timer=setTimeout(async()=>{if(!sending)await refresh();schedulePoll();},Math.min(120000,base*2**Math.min(failures,4)));}
+ void startChatRealtime();schedulePoll();
+ const realtime=()=>{if(active())void refresh();schedulePoll();};window.addEventListener('proveit:chat-signal',realtime);window.addEventListener('proveit:chat-connection',realtime);
  const inbox=event=>{if(event.detail?.profileId===room.targetProfileId)void refresh();};window.addEventListener('proveit:chat-arrived',inbox);
  const visible=()=>{if(active())void refresh();schedulePoll();};document.addEventListener('visibilitychange',visible);window.addEventListener('focus',visible);
  void loadBadges().then(()=>{if(stopped)return;for(const id of messages.keys())dirty.add(id);render();}).catch(()=>{});
  const off=Hub.listen('auth',({payload})=>{if(payload.event==='signedOut')stop();});
- function stop(){stopped=true;clearTimeout(timer);window.removeEventListener('proveit:chat-arrived',inbox);document.removeEventListener('visibilitychange',visible);window.removeEventListener('focus',visible);off();messages.clear();nodes.clear();root.replaceChildren();}
+ function stop(){stopped=true;clearTimeout(timer);window.removeEventListener('proveit:chat-signal',realtime);window.removeEventListener('proveit:chat-connection',realtime);window.removeEventListener('proveit:chat-arrived',inbox);document.removeEventListener('visibilitychange',visible);window.removeEventListener('focus',visible);off();messages.clear();nodes.clear();root.replaceChildren();}
  stop.refresh=()=>void refresh();
  void getCurrentUser().then(user=>{if(!stopped){me=user.userId;void refresh();}}).catch(()=>{notice.textContent='Ingresá a tu cuenta para usar el chat.';});
  return stop;

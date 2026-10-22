@@ -26,7 +26,7 @@ export async function community(db:DynamoDBDocumentClient,sub:string,a:any){
   do{const page=await db.send(new QueryCommand({TableName:env('SOCIAL_TABLE_NAME'),KeyConditionExpression:'pk=:p',ExpressionAttributeValues:{':p':'JUDGE#'+id},ExclusiveStartKey:key,ConsistentRead:true}));rows.push(...(page.Items || []));key=page.LastEvaluatedKey;}while(key);
   const votes=rows.filter(r=>r.sk.startsWith('VOTE#')),positive=votes.filter(r=>r.positive).length;
   let scanKey,events=0;
-  do{const page=await db.send(new ScanCommand({TableName:env('TOURNAMENT_TABLE_NAME'),FilterExpression:'#s=:s AND contains(judgeIds,:id) AND attribute_not_exists(deletedAt)',ExpressionAttributeNames:{'#s':'status'},ExpressionAttributeValues:{':s':'COMPLETED',':id':id},ExclusiveStartKey:scanKey}));events+=(page.Items || []).filter(t=>!t.rosterStatuses || t.rosterStatuses[t.participantIds.length+t.judgeIds.indexOf(id)]==='ACCEPTED').length;scanKey=page.LastEvaluatedKey;}while(scanKey);
+  do{const page=await db.send(new ScanCommand({TableName:env('TOURNAMENT_TABLE_NAME'),FilterExpression:'#s=:s AND contains(judgeIds,:id) AND attribute_not_exists(deletedAt)',ExpressionAttributeNames:{'#s':'status'},ExpressionAttributeValues:{':s':'COMPLETED',':id':id},ProjectionExpression:'participantIds,judgeIds,rosterStatuses',ExclusiveStartKey:scanKey}));events+=(page.Items || []).filter(t=>!t.rosterStatuses || t.rosterStatuses[t.participantIds.length+t.judgeIds.indexOf(id)]==='ACCEPTED').length;scanKey=page.LastEvaluatedKey;}while(scanKey);
   return {events,votes:votes.length,positive,negative:votes.length-positive,stars:votes.length?Math.round((1+4*positive/votes.length)*10)/10:null,confirmedReports:rows.filter(r=>r.sk.startsWith('REPORT#') && r.status==='CONFIRMED').length};
  };
  const clean=async(p:any,reputation=true)=>{
@@ -62,7 +62,10 @@ export async function community(db:DynamoDBDocumentClient,sub:string,a:any){
  if(a.action==='COMMUNITY_AVATAR'){
   if(typeof a.path!=='string' || !/^(profile-pictures|profile-private)\//.test(a.path) || a.path.length>1024)throw new Error('Foto inválida.');
   let key,found:any;
-  do{const page=await db.send(new ScanCommand({TableName:env('PROFILE_TABLE_NAME'),ConsistentRead:true,FilterExpression:'avatarPath=:path',ExpressionAttributeValues:{':path':a.path},ExclusiveStartKey:key}));found=page.Items?.[0];key=page.LastEvaluatedKey;}while(!found && key);
+  const indexed=await db.send(new QueryCommand({TableName:env('PROFILE_TABLE_NAME'),IndexName:'byAvatarPath',KeyConditionExpression:'avatarPath=:path',ExpressionAttributeValues:{':path':a.path},Limit:1}));
+  found=indexed.Items?.[0];
+  // Respaldo sólo durante la propagación del índice después de guardar la foto.
+  if(!found)do{const page=await db.send(new ScanCommand({TableName:env('PROFILE_TABLE_NAME'),ConsistentRead:true,FilterExpression:'avatarPath=:path',ExpressionAttributeValues:{':path':a.path},ExclusiveStartKey:key}));found=page.Items?.[0];key=page.LastEvaluatedKey;}while(!found && key);
   if(!found || await get('CLAIM_TABLE_NAME','deleted-account:'+owner(found)))throw new Error('Foto no disponible.');
   return {url:await getSignedUrl(s3,new GetObjectCommand({Bucket:env('PROFILE_BUCKET_NAME'),Key:a.path}),{expiresIn:60})};
  }

@@ -43,9 +43,7 @@ export async function pendingInvitations() {
   const invitations = [];
   let nextToken;
   do {
-    const result = await client.models.TournamentInvitation.list({
-      filter: { recipientSub: { eq: user.userId }, status: { eq: 'PENDING' } }, limit: 100, nextToken,
-    });
+    const result = await client.models.TournamentInvitation.invitationsByRecipient({recipientSub:user.userId,status:{eq:'PENDING'}},{limit:100,nextToken});
     invitations.push(...(resultData(result) || [])); nextToken = result.nextToken;
   } while (nextToken);
   // No mostrar invitaciones de torneos retirados aunque la campana estuviera abierta.
