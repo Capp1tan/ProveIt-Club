@@ -11,3 +11,9 @@
 @media(max-width:740px){.creation-shell{padding:0 12px;margin:20px auto 40px}.creation-surface{padding:23px 19px}.creation-grid,.setup-grid{grid-template-columns:1fr}.creation-steps{gap:14px;row-gap:9px;margin-bottom:23px}.creation-steps li{font-size:10px}.creation-steps li>span{width:21px;height:21px;font-size:9px}.creation-poster{min-height:0;aspect-ratio:5/4}.poster-caption h2{font-size:38px}.poster-empty{inset:12% 22% 30%}.poster-empty>span{font-size:48px}.poster-empty p{font-size:16px}.creation-footer{gap:15px}.editorial-primary{padding:13px 16px;font-size:12px}.draft-state{font-size:9px}.creation-title{gap:10px}.creation-symbol{width:35px;height:35px;font-size:23px}.setup-model{order:2}.creation-steps li:nth-child(2){max-width:130px}.tournament-cover-content{padding:24px}}
 @media(prefers-reduced-motion:reduce){.lobby-progress>span{transition:none}}
 .creation-shell .person-choice:has(input:disabled) .person-selection::after{content:'No disponible'}.lobby-panel>.tournament-panel{border:0;padding:12px 0;margin:12px 0;background:transparent;box-shadow:none}.lobby-panel>.tournament-panel h2{font-size:17px}.tournament-main details>summary{cursor:pointer;font-weight:600;font-size:15px;padding:4px 0}.tournament-main details>h2{margin-top:20px}.lobby-progress{margin-bottom:14px}
+/* El tema global usa selectores con body: estas excepciones mantienen legible la superficie clara. */
+body.create-page .creation-shell .person-choice{background:#f7faf3;border-color:#dce5d4;border-radius:4px;color:#203123}
+body.create-page .creation-shell .person-choice:has(input:checked){background:#edf5df;border-color:#8caf65}
+body.create-page .creation-shell .format-choice{background:#f7f9f4;border-color:#d5dfcc;border-radius:4px;color:#35492b}
+body.create-page .creation-shell .format-choice[aria-pressed=true]{background:#e8f4d7;border-color:#719f45;color:#223b19}
+body.create-page .creation-shell select{color-scheme:light}
