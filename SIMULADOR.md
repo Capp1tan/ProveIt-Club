@@ -1,11 +1,11 @@
-# Simulador local — v3.9.0
+# Simulador local — v3.9.1
 
 Entrada: `simular-torneo.html`. Se puede abrir desde la cabecera de la creación real o desde la segunda etapa.
 
 ## Qué permite
 
 - Llenar automáticamente de 2 a 16 jugadores o equipos ficticios.
-- Ver individuales, 2v2, 3v3 y 5v5. En equipos, cada casillero representa al equipo completo y muestra su alineación.
+- Ver individuales, 2v2, 3v3, 4v4 y 5v5. En equipos, cada casillero representa al equipo completo y muestra su alineación. Para ocho jugadores en un 4v4, elegí dos equipos de cuatro o el ejemplo rápido «Partido 4v4 · 8 jugadores».
 - Cambiar nombres de jugadores y equipos. Los cambios se reflejan sin perder los resultados de esa prueba.
 - Mezclar cruces, simular confirmaciones una por una o todas juntas y adelantar el inicio.
 - Elegir ganadores en cada encuentro, simular un resultado al azar o completar la prueba entera.

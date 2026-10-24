@@ -13,17 +13,17 @@
     <section class="creation-surface" aria-labelledby="demoTitle">
       <header class="creation-heading"><div><p class="editorial-kicker">LABORATORIO DEL CLUB</p><h1 id="demoTitle">Probá tu próximo torneo.</h1></div><span class="demo-badge">SIMULACIÓN LOCAL</span></header>
       <p class="demo-intro">Jugadores ficticios, nombres editables y resultados de prueba. Esta pantalla no crea cuentas ni torneos reales, no envía invitaciones y no cobra dinero.</p>
-      <div class="demo-presets" role="group" aria-label="Ejemplos rápidos"><button type="button" data-preset="duel">Duelo 1v1</button><button type="button" data-preset="five">Partido 5v5</button><button type="button" data-preset="cup">Copa · 4 equipos 5v5</button><button type="button" data-preset="league">Liga · 8 jugadores</button></div>
+      <div class="demo-presets" role="group" aria-label="Ejemplos rápidos"><button type="button" data-preset="duel">Duelo 1v1</button><button type="button" data-preset="four">Partido 4v4 · 8 jugadores</button><button type="button" data-preset="five">Partido 5v5</button><button type="button" data-preset="cup">Copa · 4 equipos 5v5</button><button type="button" data-preset="league">Liga · 8 jugadores</button></div>
       <div class="demo-layout">
         <aside class="demo-setup">
           <h2>Armar la prueba</h2>
           <label for="demoFormat">Formato de competencia</label><select id="demoFormat"></select>
-          <label for="demoTeamSize">Jugadores por equipo</label><select id="demoTeamSize"><option value="1">Individual · 1 jugador</option><option value="2">Equipos de 2 · 2v2</option><option value="3">Equipos de 3 · 3v3</option><option value="5">Equipos de 5 · 5v5</option></select>
+          <label for="demoTeamSize">Jugadores por equipo</label><select id="demoTeamSize"><option value="1">Individual · 1 jugador</option><option value="2">Equipos de 2 · 2v2</option><option value="3">Equipos de 3 · 3v3</option><option value="4">Equipos de 4 · 4v4</option><option value="5">Equipos de 5 · 5v5</option></select>
           <label for="demoCount" id="demoCountLabel">Número de jugadores</label><input id="demoCount" type="number" min="2" max="16" step="1" value="4" inputmode="numeric">
           <p class="editorial-help" id="demoCapacity"></p>
           <p class="demo-scope">Los torneos publicados por ahora son individuales. Acá podés explorar cómo se verían equipos y llaves sin necesitar cuentas reales.</p>
           <div class="demo-setup-actions"><button id="demoShuffle" type="button" class="editorial-secondary">Mezclar cruces ↻</button><button id="demoReset" type="button" class="editorial-link">Reiniciar resultados</button></div>
-          <details class="demo-editors" open><summary>Editar nombres y confirmaciones</summary><p class="editorial-help">Los nombres cambian sólo en esta prueba. Cada equipo ocupa un casillero, aunque tenga cinco jugadores.</p><div id="demoEntrants"></div></details>
+          <details class="demo-editors" open><summary>Editar nombres y confirmaciones</summary><p class="editorial-help">Los nombres cambian sólo en esta prueba. Cada equipo ocupa un casillero con sus integrantes.</p><div id="demoEntrants"></div></details>
         </aside>
         <div class="demo-stage">
           <section class="demo-lobby" aria-labelledby="demoLobbyTitle"><div class="demo-lobby-top"><h2 id="demoLobbyTitle">Sala de espera ficticia</h2><span id="demoPhase" class="demo-phase">Esperando confirmaciones</span></div><p id="demoConfirmations" role="status"></p><div id="demoProgress" class="demo-progress" role="progressbar" aria-label="Confirmación de bots" aria-valuemin="0"><span></span></div><p id="demoClock" class="demo-clock" role="timer" aria-live="off"></p><div class="demo-actions"><button id="demoConfirmNext" type="button" class="editorial-secondary">Confirmar un bot</button><button id="demoConfirmAll" type="button" class="editorial-secondary">Confirmar todos</button><button id="demoStart" type="button" class="editorial-primary">Iniciar ahora ↗</button></div></section>

@@ -241,7 +241,7 @@ $('demoFinish').addEventListener('click', () => {
   announce('Simulación completada. Podés reiniciar los resultados o elegir otra modalidad.'); render();
 });
 for (const button of document.querySelectorAll('[data-preset]')) button.addEventListener('click', () => {
-  const settings = { duel: ['DUEL', 1, 2], five: ['DUEL', 5, 2], cup: ['SINGLE_ELIMINATION', 5, 4], league: ['ROUND_ROBIN', 1, 8] }[button.dataset.preset];
+  const settings = { duel: ['DUEL', 1, 2], four: ['DUEL', 4, 2], five: ['DUEL', 5, 2], cup: ['SINGLE_ELIMINATION', 5, 4], league: ['ROUND_ROBIN', 1, 8] }[button.dataset.preset];
   $('demoFormat').value = settings[0]; $('demoTeamSize').value = String(settings[1]); $('demoCount').value = String(settings[2]); configure();
 });
 $('demoFormat').value = format; $('demoTeamSize').value = String(teamSize); $('demoCount').value = String(count);

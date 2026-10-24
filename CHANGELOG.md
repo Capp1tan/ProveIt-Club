@@ -1,3 +1,9 @@
+## 3.9.1 — 2026-10-23
+
+- Se añade la opción 4v4 que faltaba en el selector del simulador.
+- Ejemplo rápido «Partido 4v4 · 8 jugadores»: dos equipos con cuatro integrantes editables cada uno.
+- Se aclara que cada casillero representa un equipo, independientemente de su tamaño.
+
 ## 3.9.0 — 2026-10-23
 
 - Se elimina la etiqueta visible de borrador, conservando el guardado interno por cuenta.
