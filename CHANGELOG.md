@@ -1,3 +1,10 @@
+## 3.13.1 — 2026-10-24
+
+- Se reemplaza la denominación bots por jugadores de ejemplo en los controles y accesos al simulador.
+- Jugadores con nombres ficticios editables, como Alex, Luna y Nico; equipos con nombres como Norte y Sur.
+- Los nombres predeterminados de integrantes se distribuyen sin repetirse entre los equipos activos, incluso con tamaños personalizados.
+- Sin cambios en cuentas, torneos reales, pagos o infraestructura. La nueva temática visual permanece como propuesta fuera del código.
+
 ## 3.13.0 — 2026-10-24
 
 - El círculo de confirmaciones interpola llenado y vaciado durante 720 ms, conservando el progreso visible si llegan cambios seguidos.

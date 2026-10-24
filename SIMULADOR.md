@@ -1,4 +1,4 @@
-# Simulador local — v3.12.0
+# Simulador local — v3.13.1
 
 Entrada: `simular-torneo.html`. Se puede abrir desde la cabecera de la creación real o desde la segunda etapa.
 
@@ -6,7 +6,7 @@ Ahora abre la sala de espera con el diseño oscuro A. Configurar simulación per
 
 ## Qué permite
 
-- Elegir primero el total de jugadores ficticios, de 2 a 64.
+- Elegir primero el total de jugadores de ejemplo, de 2 a 64.
 - Dividirlos en equipos del mismo tamaño, calculados a partir de los divisores del total y con al menos dos rivales. No se descartan jugadores ni se crean equipos incompletos: si un cambio de total invalida el tamaño previo, se vuelve a individual con un aviso explícito.
 - Con 20 jugadores se ofrecen individual, diez equipos de dos, cinco de cuatro, cuatro de cinco o dos de diez. El ejemplo rápido 10v10 configura dos equipos de diez, con integrantes editables. Cada casillero representa al equipo completo.
 - Mostrar formatos según la cantidad de rivales: enfrentamiento directo sólo para dos; eliminación simple/doble y Round Robin desde dos; suizo y prueba compartida desde tres. Son criterios de esta interfaz de demostración, no restricciones universales de esos formatos.
@@ -31,7 +31,7 @@ Ahora abre la sala de espera con el diseño oscuro A. Configurar simulación per
 
 ## Límites de producción
 
-`src/tournament-demo.js` importa únicamente el catálogo de formatos. No usa clientes de AWS, cuentas, pagos, notificaciones, torneos, mensajes, ligas ni almacenamiento remoto. No añade bots al directorio real ni acepta identificadores ficticios en el backend. Los cambios viven en memoria de esa página y se pierden al recargar.
+`src/tournament-demo.js` importa únicamente el catálogo de formatos. No usa clientes de AWS, cuentas, pagos, notificaciones, torneos, mensajes, ligas ni almacenamiento remoto. No añade jugadores de ejemplo al directorio real ni acepta identificadores ficticios en el backend. Los cambios viven en memoria de esa página y se pierden al recargar.
 
 Los torneos reales todavía son individuales. La simulación por equipos permite revisar su diseño antes de implementar equipos persistentes, sus miembros/capitanes, invitaciones y ganadores por equipo. El simulador no implica que esos elementos ya estén disponibles en producción.
 
@@ -40,3 +40,7 @@ Los torneos reales todavía son individuales. La simulación por equipos permite
 Se retiró el texto visible de borrador, conservando el guardado interno por cuenta. El bloqueo de una publicación preparada ya no desactiva la navegación entre etapas. Los datos de una solicitud preparada siguen inmutables para evitar cobrar/publicar una configuración distinta con el mismo ID. Una acción explícita permite usar los datos como punto de partida de otro torneo con ID nuevo, sin borrar, cancelar ni reembolsar la solicitud anterior.
 
 Archivos: `src/tournament-demo.js` (lógica local), `tournament-demo.css` (estilos), `simular-torneo.html` (controles y panel), `src/tournament-create.js` (corrección del bloqueo y enlaces).
+
+## Nombres de ejemplo
+
+La simulación utiliza 64 nombres ficticios de personas, como Alex, Luna y Nico, y equipos con nombres como Equipo Norte o Equipo Sur. Los valores predeterminados se reparten sin repetir nombres entre los integrantes activos, también en distribuciones personalizadas. Los nombres de jugadores y equipos son editables y los cambios se conservan al navegar entre configuración, sala y llaves durante esa sesión. No representan cuentas reales ni jugadores automáticos.

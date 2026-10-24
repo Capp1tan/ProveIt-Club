@@ -5,9 +5,30 @@ import { createWaitingRoom } from './tournament-waiting-room.js';
 const $ = id => document.getElementById(id);
 const el = (tag, text = '', cls) => { const n = document.createElement(tag); n.textContent = text; if (cls) n.className = cls; return n; };
 const MAX_PLAYERS = 64;
+// Nombres ilustrativos: no son cuentas registradas ni oponentes automáticos.
+const sampleNames = [
+  'Alex', 'Luna', 'Nico', 'Mica', 'Santi', 'Valen', 'Tomi', 'Agus',
+  'Cami', 'Dante', 'Mora', 'Leo', 'Juli', 'Fede', 'Abril', 'Bruno',
+  'Alma', 'Gael', 'Lola', 'Teo', 'Vera', 'Noa', 'Enzo', 'Iris',
+  'Ian', 'Zoe', 'Milo', 'Uma', 'Rocco', 'Sofía', 'Mateo', 'Emma',
+  'Simón', 'Clara', 'Benja', 'Luz', 'Luca', 'Sara', 'Franco', 'Violeta',
+  'Diego', 'Flor', 'Lucas', 'Paz', 'Marcos', 'Malena', 'Andrés', 'Aitana',
+  'Ramiro', 'Elena', 'Manu', 'Olivia', 'Pedro', 'Renata', 'Iván', 'Bianca',
+  'Gonzalo', 'Martina', 'Sebas', 'Celeste', 'Pablo', 'Alicia', 'Ciro', 'Delfina',
+];
+const sampleTeamNames = [
+  'Norte', 'Sur', 'Este', 'Oeste', 'Aurora', 'Horizonte', 'Eclipse', 'Zenith',
+  'Cóndores', 'Lobos', 'Halcones', 'Pumas', 'Linces', 'Toros', 'Águilas', 'Zorros',
+  'Titanes', 'Centellas', 'Cometas', 'Astros', 'Meteoros', 'Rayos', 'Truenos', 'Relámpagos',
+  'Fénix', 'Dragones', 'Quimeras', 'Grifos', 'Guardianes', 'Centinelas', 'Nómadas', 'Pioneros',
+  'Bruma', 'Niebla', 'Viento', 'Marea', 'Río', 'Bosque', 'Sierra', 'Cumbre',
+  'Fuego', 'Hielo', 'Roca', 'Océano', 'Desierto', 'Valle', 'Prado', 'Costa',
+  'Órbita', 'Cosmos', 'Nebulosa', 'Galaxia', 'Estrella', 'Luna', 'Sol', 'Alba',
+  'Impulso', 'Ímpetu', 'Ingenio', 'Talento', 'Unión', 'Fuerza', 'Coraje', 'Visión',
+];
 const bank = Array.from({ length: MAX_PLAYERS }, (_, i) => ({
-  id: 'demo-' + (i + 1), name: 'Equipo ' + (i + 1), solo: 'Bot ' + String(i + 1).padStart(2, '0'),
-  members: Array.from({ length: MAX_PLAYERS }, (_, j) => 'Bot ' + (i + 1) + '.' + (j + 1)), confirmed: false, attendance: [],
+  id: 'demo-' + (i + 1), name: 'Equipo ' + sampleTeamNames[i], solo: sampleNames[i],
+  members: [], defaultMembers: [], memberOverrides: [], confirmed: false, attendance: [],
 }));
 let totalPlayers = 4, count = 4, teamSize = 1, format = 'SINGLE_ELIMINATION', rounds = [], matches = new Map(), order = [];
 let started = false, startsAt = Date.now() + 5 * 60 * 1000, hasReset = false;
@@ -22,6 +43,14 @@ const allConfirmed = () => active().every(p => p.confirmed);
 const isFinished = () => matches.size > 0 && [...matches.values()].every(m => m.done);
 const canPlay = () => !hasPendingConfiguration() && allConfirmed() && started && !isFinished() && !confirmedPodium;
 const announce = text => { $('demoNotice').textContent = text; };
+function assignSampleMembers() {
+  let offset = 0;
+  for (const entry of active()) {
+    entry.defaultMembers = Array.from({ length: entrySize(entry) }, (_, i) => sampleNames[offset + i]);
+    entry.members = entry.defaultMembers.map((fallback, i) => entry.memberOverrides[i] || fallback);
+    offset += entrySize(entry);
+  }
+}
 // La sala cuenta personas. El motor de llaves sigue contando unidades de competencia (equipos o individuos).
 const memberStatus = (entry, index) => entry.attendance[index] || (entry.confirmed ? 'confirmed' : 'pending');
 function confirmEntry(entry, value) {
@@ -54,7 +83,7 @@ function confirmNextPerson() {
 }
 function confirmEveryone() {
   if (hasPendingConfiguration() || started) return;
-  active().forEach(entry => confirmEntry(entry, true)); renderEditors(); announce('Todos los jugadores ficticios confirmaron. Podés iniciar la simulación.'); render();
+  active().forEach(entry => confirmEntry(entry, true)); renderEditors(); announce('Todos los jugadores de ejemplo confirmaron. Podés iniciar la simulación.'); render();
 }
 function startSimulation() {
   if (hasPendingConfiguration() || !allConfirmed() || started) return;
@@ -236,19 +265,19 @@ function renderEditors() {
   for (const [i, entry] of active().entries()) {
     const row = el('section', '', 'demo-entrant'); row.dataset.confirmed = String(entry.confirmed);
     const heading = el('div', '', 'demo-entry-heading'), check = el('input'); check.type = 'checkbox'; check.checked = entry.confirmed;
-    check.id = 'demo-confirm-' + i; const label = el('label', (grouped() ? 'Equipo ' : 'Jugador ') + (i + 1)); label.htmlFor = check.id;
+    check.id = 'demo-confirm-' + i; const label = el('label', name(entry)); label.htmlFor = check.id;
     const status = el('span', entry.confirmed ? 'Confirmado' : 'Pendiente', 'demo-status');
     check.disabled = started;
     check.addEventListener('change', () => { if (hasPendingConfiguration() || started) return; confirmEntry(entry, check.checked); row.dataset.confirmed = String(entry.confirmed); status.textContent = entry.confirmed ? 'Confirmado' : 'Pendiente'; render(); });
     heading.append(check, label, status); row.append(heading);
     const input = el('input'); input.maxLength = 40; input.value = name(entry); input.setAttribute('aria-label', (grouped() ? 'Nombre del equipo ' : 'Nombre del jugador ') + (i + 1));
-    input.addEventListener('input', () => { const value = input.value.trim().slice(0, 40); if (!grouped()) entry.solo = value || 'Bot ' + (i + 1); else entry.name = value || 'Equipo ' + (i + 1); render(); }); row.append(input);
+    input.addEventListener('input', () => { const value = input.value.trim().slice(0, 40); if (!grouped()) entry.solo = value || sampleNames[i]; else entry.name = value || 'Equipo ' + sampleTeamNames[i]; label.textContent = name(entry); render(); }); row.append(input);
     if (grouped()) {
       const members = el('details', '', 'demo-member-editor'); members.append(el('summary', entrySize(entry) === 1 ? 'Editar 1 integrante' : 'Editar los ' + entrySize(entry) + ' integrantes'));
       for (let j = 0; j < entrySize(entry); j++) {
         const member = el('input'); member.maxLength = 40; member.value = entry.members[j]; member.id = 'demo-member-' + i + '-' + j;
         const memberLabel = el('label', 'Jugador ' + (j + 1)); memberLabel.htmlFor = member.id;
-        member.addEventListener('input', () => { entry.members[j] = member.value.trim().slice(0, 40) || 'Bot ' + (i + 1) + '.' + (j + 1); render(); });
+        member.addEventListener('input', () => { entry.memberOverrides[j] = member.value.trim().slice(0, 40); entry.members[j] = entry.memberOverrides[j] || entry.defaultMembers[j]; render(); });
         members.append(memberLabel, member);
       } row.append(members);
     }
@@ -439,7 +468,7 @@ function render() {
   $('demoConfirmNext').disabled = allConfirmed(); $('demoConfirmAll').disabled = allConfirmed(); $('demoStart').disabled = !allConfirmed() || started;
   $('demoNextResult').disabled = !canPlay() || format === 'FREE_FOR_ALL'; $('demoFinish').disabled = !canPlay() || format === 'FREE_FOR_ALL';
   $('demoBoardTitle').textContent = (custom ? count === 2 ? `Desafío personalizado · ${duelLabel()}` : 'Llaves con equipos personalizados' : teamSize === 1 ? 'Llaves individuales' : `Llaves por equipos · ${teamSize}v${teamSize}`) + ' · demostración';
-  $('demoFormatHelp').textContent = format === 'SWISS' ? 'Se simula sólo la primera ronda del suizo. La publicación actual todavía no automatiza las rondas siguientes por puntaje.' : format === 'FREE_FOR_ALL' ? 'Confirmá a todos e iniciá la prueba; después elegí los puestos en Clasificación final. No se puede repetir un rival.' : format === 'DOUBLE_ELIMINATION' ? 'Primera derrota: llave inferior. Segunda derrota: eliminación. Si gana el finalista de la llave inferior, aparece una final de desempate. El tercero, si se muestra, es quien pierde la final de la llave inferior.' : 'Confirmá a los bots e iniciá la prueba. Tocá un nombre para revisar y confirmar su victoria. En un encuentro terminado, elegí al otro rival para corregirlo.';
+  $('demoFormatHelp').textContent = format === 'SWISS' ? 'Se simula sólo la primera ronda del suizo. La publicación actual todavía no automatiza las rondas siguientes por puntaje.' : format === 'FREE_FOR_ALL' ? 'Confirmá a todos e iniciá la prueba; después elegí los puestos en Clasificación final. No se puede repetir un rival.' : format === 'DOUBLE_ELIMINATION' ? 'Primera derrota: llave inferior. Segunda derrota: eliminación. Si gana el finalista de la llave inferior, aparece una final de desempate. El tercero, si se muestra, es quien pierde la final de la llave inferior.' : 'Confirmá la asistencia de los jugadores de ejemplo e iniciá la prueba. Tocá un nombre para revisar y confirmar su victoria. En un encuentro terminado, elegí al otro rival para corregirlo.';
   $('demoEntrants').hidden = pending; $('demoBoard').hidden = pending; $('demoStandings').hidden = pending;
   $('demoRoundPicker').hidden = pending || format !== 'ROUND_ROBIN';
   if (pending) {
@@ -481,6 +510,7 @@ async function configure(shuffle = false) {
   let adjusted = false;
   if (custom) { customSizes = sizes; count = sizes.length; $('demoCustomSizes').value = sizes.join(', '); }
   else adjusted = syncTeamSizes(requestedTeamSize);
+  assignSampleMembers();
   syncFormats(requestedFormat);
   places = Math.min(Number($('demoPlaces').value) || 2, count, 3);
   if (format === 'SWISS') places = 1;

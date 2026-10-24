@@ -123,7 +123,7 @@ export function createWaitingRoom(root, actions) {
     const cta = button(self.status === 'confirmed' ? 'Asistencia confirmada' : state.started ? 'Encuentro iniciado' : 'Confirmar mi asistencia', 'wr-primary wr-attend', () => actions.onStatus(viewer, 'confirmed'), 'confirm-self');
     cta.disabled = locked || self.status === 'confirmed'; cta.prepend(icon('check')); toolbar.append(cta); root.append(toolbar);
 
-    const identity = node('div', '', 'wr-identity'); identity.append(avatar(self.name, self.index), node('span', 'Vista de jugador simulado:'), node('strong', self.name));
+    const identity = node('div', '', 'wr-identity'); identity.append(avatar(self.name, self.index), node('span', 'Estás simulando a:'), node('strong', self.name));
     if (!locked && self.status !== 'declined') identity.append(button('No podré asistir', 'wr-text-button', () => actions.onDecline(viewer), 'decline-self'));
     root.append(identity);
     if (state.pending) { const notice = node('p', 'Hay cambios pendientes. Volvé a la configuración para aplicarlos; la asistencia está bloqueada.', 'wr-warning'); notice.setAttribute('role', 'status'); notice.append(button('Revisar configuración', 'wr-text-button', actions.onConfigure)); root.append(notice); }
@@ -145,7 +145,7 @@ export function createWaitingRoom(root, actions) {
         row.append(avatar(player.name, player.index, player.key === viewer ? 'wr-avatar-self' : ''));
         const info = node('div', '', 'wr-player-info'), nameLine = node('div', '', 'wr-player-name'); nameLine.append(node('strong', player.name));
         if (player.key === viewer) nameLine.append(node('span', 'Vos', 'wr-you'));
-        info.append(nameLine, node('small', 'Jugador ficticio · Sin liga')); row.append(info);
+        info.append(nameLine, node('small', 'Jugador de ejemplo · Sin liga')); row.append(info);
         if (stateControls) {
           const select = node('select', '', 'wr-status-select'); select.dataset.focus = 'status-' + player.key; select.setAttribute('aria-label', 'Estado simulado de ' + player.name); select.dataset.status = player.status;
           for (const [value, label] of Object.entries(statusLabels)) { const option = node('option', label); option.value = value; select.append(option); } select.value = player.status; select.disabled = locked;
@@ -163,7 +163,7 @@ export function createWaitingRoom(root, actions) {
     const nextText = node('div'); nextText.append(node('strong', state.started ? 'El desafío ya está en marcha' : counts.confirmed === counts.all ? 'Todos listos para el próximo desafío' : 'Las confirmaciones preparan el encuentro'), node('p', state.started ? 'Continuá con las llaves para registrar y confirmar los resultados ficticios.' : 'Los nombres de los equipos también aparecen en las llaves. Iniciar requiere que todos confirmen.')); next.append(nextText);
     const bracket = button(state.started ? 'Ver llaves y resultados ↗' : 'Ver modelo de llaves ↗', 'wr-secondary', actions.onResults, 'results'); bracket.disabled = state.pending; next.append(bracket); root.append(next);
 
-    const tools = node('details', '', 'wr-glass wr-tools'); tools.open = toolsOpen; tools.append(node('summary', 'Opciones de la sala y controles de simulación'));
+    const tools = node('details', '', 'wr-glass wr-tools'); tools.open = toolsOpen; tools.append(node('summary', 'Opciones de la sala · Simular jugadores'));
     const controls = node('div', '', 'wr-tools-content'); controls.append(node('p', 'Estos controles sólo cambian esta prueba local. No envían invitaciones, no crean cuentas y no hay premios reales.', 'wr-tools-copy'));
     const fields = node('div', '', 'wr-meta-fields');
     for (const [key, label, placeholder] of [['title', 'Nombre del torneo de ejemplo', 'Copa ProveIt'], ['reward', 'Premio de ejemplo (opcional)', '$50.000 ARS'], ['provider', 'Quién lo aportaría (opcional)', 'Nombre del patrocinador'], ['judge', 'Nombre de juez ficticio (opcional)', 'Sin juez asignado']]) {

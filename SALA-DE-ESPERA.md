@@ -1,4 +1,4 @@
-# Sala de espera — v3.13.0
+# Sala de espera — v3.13.1
 
 ## Entrada y navegación
 
@@ -10,13 +10,13 @@ Para ver equipos 5v5, abrir Configurar simulación, elegir Partido 5v5, editar n
 
 Cada integrante tiene estado pendiente, confirmado o no asiste. Los contadores de sala cuentan personas, mientras las llaves siguen contando equipos o individuos. Un equipo sólo queda confirmado cuando todos sus integrantes están confirmados.
 
-La sala se mira desde un jugador ficticio, señalado con Vos; Confirmar mi asistencia cambia sólo a ese jugador. Una vez confirmado, el botón muestra Asistencia confirmada. No podré asistir permite volver al estado no asiste, con confirmación; puede revertirse confirmando antes del inicio.
+La sala se mira desde un jugador de ejemplo, señalado con Vos; Confirmar mi asistencia cambia sólo a ese jugador. Una vez confirmado, el botón muestra Asistencia confirmada. No podré asistir permite volver al estado no asiste, con confirmación; puede revertirse confirmando antes del inicio.
 
-Opciones de la sala y controles de simulación permite cambiar el jugador desde el que se mira, mostrar selectores de estado en las tarjetas, confirmar al siguiente o a todos e iniciar. La asistencia queda bloqueada al iniciar. Si la configuración tiene cambios pendientes o inválidos, también queda bloqueada, como en el formulario.
+Opciones de la sala · Simular jugadores permite cambiar el jugador desde el que se mira, mostrar selectores de estado en las tarjetas, confirmar al siguiente o a todos e iniciar. La asistencia queda bloqueada al iniciar. Si la configuración tiene cambios pendientes o inválidos, también queda bloqueada, como en el formulario.
 
 ## Datos ilustrativos
 
-El nombre, premio, aportante y juez se editan en las opciones de esta sala local. El premio comienza sin definir; si se escribe uno, se identifica como Premio de ejemplo. Un nombre de juez se etiqueta como ficticio, no como una aceptación real de cargo. No se asignan verificaciones, ligas ni fotos reales a los bots.
+El nombre, premio, aportante y juez se editan en las opciones de esta sala local. El premio comienza sin definir; si se escribe uno, se identifica como Premio de ejemplo. Un nombre de juez se etiqueta como ficticio, no como una aceptación real de cargo. No se asignan verificaciones, ligas ni fotos reales a los jugadores de ejemplo.
 
 El tipo de premio se elige explícitamente: sin premio, dinero, regalo sorpresa, comida/bebida, tecnología/informática, ropa/accesorios, experiencia o actividad y otro premio. Cada categoría usa un SVG local (billete, caja de regalo, cubiertos, monitor, camiseta o entrada). No se infiere la categoría de palabras o símbolos del texto. Cada categoría conserva un detalle independiente mientras la página permanece abierta; volver a dinero recupera su importe de ejemplo, pero cambiar a comida no muestra ese importe. Sin premio desactiva el detalle. Si hay categoría sin detalle, el texto indica que está por definir.
 
@@ -36,3 +36,7 @@ El contador usa el horario de ejemplo ya existente, cinco minutos desde la confi
 - `simular-torneo.html`: alterna sala, configuración y resultados sin navegación ni recarga.
 
 Usa el fondo WebP ya existente del sitio y avatares locales con iniciales. Los datos viven en memoria y se pierden al recargar. Esta versión no modifica torneos reales, perfiles, permisos, cobros o infraestructura. La publicación real por equipos y la sala conectada a confirmaciones de cuentas reales siguen pendientes.
+
+## Nombres de ejemplo
+
+La simulación utiliza 64 nombres ficticios de personas, como Alex, Luna y Nico, y equipos con nombres como Equipo Norte o Equipo Sur. Los valores predeterminados se reparten sin repetir nombres entre los integrantes activos, también en distribuciones personalizadas. Los nombres de jugadores y equipos son editables y los cambios se conservan al navegar entre configuración, sala y llaves durante esa sesión. No representan cuentas reales ni jugadores automáticos.
