@@ -1,15 +1,17 @@
-# Simulador local — v3.9.1
+# Simulador local — v3.10.0
 
 Entrada: `simular-torneo.html`. Se puede abrir desde la cabecera de la creación real o desde la segunda etapa.
 
 ## Qué permite
 
-- Llenar automáticamente de 2 a 16 jugadores o equipos ficticios.
-- Ver individuales, 2v2, 3v3, 4v4 y 5v5. En equipos, cada casillero representa al equipo completo y muestra su alineación. Para ocho jugadores en un 4v4, elegí dos equipos de cuatro o el ejemplo rápido «Partido 4v4 · 8 jugadores».
+- Elegir primero el total de jugadores ficticios, de 2 a 64.
+- Dividirlos en equipos del mismo tamaño, calculados a partir de los divisores del total y con al menos dos rivales. No se descartan jugadores ni se crean equipos incompletos: si un cambio de total invalida el tamaño previo, se vuelve a individual con un aviso explícito.
+- Con 20 jugadores se ofrecen individual, diez equipos de dos, cinco de cuatro, cuatro de cinco o dos de diez. El ejemplo rápido 10v10 configura dos equipos de diez, con integrantes editables. Cada casillero representa al equipo completo.
+- Mostrar formatos según la cantidad de rivales: enfrentamiento directo sólo para dos; eliminación simple/doble y Round Robin desde dos; suizo y prueba compartida desde tres. Son criterios de esta interfaz de demostración, no restricciones universales de esos formatos.
 - Cambiar nombres de jugadores y equipos. Los cambios se reflejan sin perder los resultados de esa prueba.
 - Mezclar cruces, simular confirmaciones una por una o todas juntas y adelantar el inicio.
 - Elegir ganadores en cada encuentro, simular un resultado al azar o completar la prueba entera.
-- Explorar eliminación directa, doble eliminación con llave inferior/reinicio de final, Round Robin, duelo y prueba compartida. Suizo conserva sólo la primera ronda, explícitamente indicada.
+- Explorar eliminación directa, doble eliminación con llave inferior/reinicio de final, Round Robin, duelo y prueba compartida. Round Robin conserva todas las rondas y permite elegir cuál dibujar para evitar miles de elementos simultáneos. Suizo conserva sólo la primera ronda, explícitamente indicada.
 - Consultar una tabla de resultados ficticios.
 
 ## Separación de la producción

@@ -95,7 +95,7 @@ function updateSummary() {
   submit.textContent = pendingRequest ? 'Retomar publicación ↗' : creationIsFree ? 'Crear y enviar invitaciones ↗' : 'Continuar al pago ↗';
   $('preparedRequestActions').hidden = !pendingRequest;
   $('originalRequestLink').href = '/pago.html?id=' + encodeURIComponent(tournamentId);
-  for (const link of document.querySelectorAll('[data-demo-link]')) link.href = `/simular-torneo.html?format=${encodeURIComponent(selectedFormat)}&count=${Math.max(2, Math.min(16, capacity() || 2))}`;
+  for (const link of document.querySelectorAll('[data-demo-link]')) link.href = `/simular-torneo.html?format=${encodeURIComponent(selectedFormat)}&total=${Math.max(2, Math.min(64, capacity() || 2))}`;
 }
 function lockPreparedRequest() {
   // Una solicitud de pago preparada es inmutable: el reintento no puede cobrar otra configuración.

@@ -13,14 +13,16 @@
     <section class="creation-surface" aria-labelledby="demoTitle">
       <header class="creation-heading"><div><p class="editorial-kicker">LABORATORIO DEL CLUB</p><h1 id="demoTitle">Probá tu próximo torneo.</h1></div><span class="demo-badge">SIMULACIÓN LOCAL</span></header>
       <p class="demo-intro">Jugadores ficticios, nombres editables y resultados de prueba. Esta pantalla no crea cuentas ni torneos reales, no envía invitaciones y no cobra dinero.</p>
-      <div class="demo-presets" role="group" aria-label="Ejemplos rápidos"><button type="button" data-preset="duel">Duelo 1v1</button><button type="button" data-preset="four">Partido 4v4 · 8 jugadores</button><button type="button" data-preset="five">Partido 5v5</button><button type="button" data-preset="cup">Copa · 4 equipos 5v5</button><button type="button" data-preset="league">Liga · 8 jugadores</button></div>
+      <div class="demo-presets" role="group" aria-label="Ejemplos rápidos"><button type="button" data-preset="duel">Duelo 1v1</button><button type="button" data-preset="four">Partido 4v4 · 8 jugadores</button><button type="button" data-preset="ten">Partido 10v10 · 20 jugadores</button><button type="button" data-preset="five">Partido 5v5</button><button type="button" data-preset="cup">Copa · 4 equipos 5v5</button><button type="button" data-preset="league">Liga · 8 jugadores</button></div>
       <div class="demo-layout">
         <aside class="demo-setup">
           <h2>Armar la prueba</h2>
-          <label for="demoFormat">Formato de competencia</label><select id="demoFormat"></select>
-          <label for="demoTeamSize">Jugadores por equipo</label><select id="demoTeamSize"><option value="1">Individual · 1 jugador</option><option value="2">Equipos de 2 · 2v2</option><option value="3">Equipos de 3 · 3v3</option><option value="4">Equipos de 4 · 4v4</option><option value="5">Equipos de 5 · 5v5</option></select>
-          <label for="demoCount" id="demoCountLabel">Número de jugadores</label><input id="demoCount" type="number" min="2" max="16" step="1" value="4" inputmode="numeric">
+          <label for="demoCount">1. Total de jugadores</label><input id="demoCount" type="number" min="2" max="64" step="1" value="4" inputmode="numeric" aria-describedby="demoDivisionHelp">
+          <label for="demoTeamSize">2. Jugadores por equipo</label><select id="demoTeamSize" aria-describedby="demoDivisionHelp"></select>
+          <p class="editorial-help" id="demoDivisionHelp">Elegí de 2 a 64 jugadores. Se ofrecen divisiones exactas en al menos dos equipos, sin dejar jugadores afuera.</p>
           <p class="editorial-help" id="demoCapacity"></p>
+          <label for="demoFormat">3. Formatos disponibles</label><select id="demoFormat" aria-describedby="demoAvailableHelp"></select>
+          <p class="editorial-help" id="demoAvailableHelp"></p>
           <p class="demo-scope">Los torneos publicados por ahora son individuales. Acá podés explorar cómo se verían equipos y llaves sin necesitar cuentas reales.</p>
           <div class="demo-setup-actions"><button id="demoShuffle" type="button" class="editorial-secondary">Mezclar cruces ↻</button><button id="demoReset" type="button" class="editorial-link">Reiniciar resultados</button></div>
           <details class="demo-editors" open><summary>Editar nombres y confirmaciones</summary><p class="editorial-help">Los nombres cambian sólo en esta prueba. Cada equipo ocupa un casillero con sus integrantes.</p><div id="demoEntrants"></div></details>
@@ -30,6 +32,7 @@
           <div class="demo-results-actions"><button id="demoNextResult" type="button" class="editorial-secondary">Simular siguiente resultado</button><button id="demoFinish" type="button" class="editorial-secondary">Completar simulación</button></div>
           <p id="demoNotice" class="editorial-message" role="status" aria-live="polite"></p>
           <h2 id="demoBoardTitle">Llaves de demostración</h2><p class="editorial-help" id="demoFormatHelp"></p>
+          <div id="demoRoundPicker" hidden><label for="demoRound">Ronda de Round Robin</label><select id="demoRound"></select></div>
           <div id="demoBoard" class="demo-board" role="region" aria-label="Llaves interactivas ficticias" tabindex="0"></div>
           <div id="demoStandings" class="demo-standings"></div>
         </div>

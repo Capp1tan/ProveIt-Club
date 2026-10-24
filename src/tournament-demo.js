@@ -3,11 +3,12 @@ import { formats } from './tournament-formats.js';
 
 const $ = id => document.getElementById(id);
 const el = (tag, text = '', cls) => { const n = document.createElement(tag); n.textContent = text; if (cls) n.className = cls; return n; };
-const bank = Array.from({ length: 16 }, (_, i) => ({
+const MAX_PLAYERS = 64;
+const bank = Array.from({ length: MAX_PLAYERS }, (_, i) => ({
   id: 'demo-' + (i + 1), name: 'Equipo ' + (i + 1), solo: 'Bot ' + String(i + 1).padStart(2, '0'),
-  members: Array.from({ length: 5 }, (_, j) => 'Bot ' + (i + 1) + '.' + (j + 1)), confirmed: false,
+  members: Array.from({ length: MAX_PLAYERS / 2 }, (_, j) => 'Bot ' + (i + 1) + '.' + (j + 1)), confirmed: false,
 }));
-let count = 4, teamSize = 1, format = 'SINGLE_ELIMINATION', rounds = [], matches = new Map(), order = [];
+let totalPlayers = 4, count = 4, teamSize = 1, format = 'SINGLE_ELIMINATION', rounds = [], matches = new Map(), order = [];
 let started = false, startsAt = Date.now() + 5 * 60 * 1000, hasReset = false;
 const active = () => bank.slice(0, count);
 const name = p => p ? teamSize === 1 ? p.solo : p.name : 'Pase libre';
@@ -16,14 +17,38 @@ const isFinished = () => matches.size > 0 && [...matches.values()].every(m => m.
 const canPlay = () => allConfirmed() && started && !isFinished();
 const announce = text => { $('demoNotice').textContent = text; };
 
-for (const f of formats) {
-  const option = el('option', f.id === 'DUEL' ? 'Enfrentamiento directo' : f.name); option.value = f.id; $('demoFormat').append(option);
-}
 const params = new URLSearchParams(location.search);
 if (formats.some(f => f.id === params.get('format'))) format = params.get('format');
-const fromCount = Number(params.get('count'));
-if (Number.isInteger(fromCount) && fromCount >= 2 && fromCount <= 16) count = fromCount;
-if (format === 'DUEL' && count !== 2) format = 'SINGLE_ELIMINATION';
+// «count» mantiene compatibles los enlaces anteriores (individuales).
+const fromCount = Number(params.get('total') ?? params.get('count'));
+if (Number.isInteger(fromCount) && fromCount >= 2 && fromCount <= MAX_PLAYERS) totalPlayers = fromCount;
+const fromTeam = Number(params.get('teamSize'));
+if (Number.isInteger(fromTeam) && fromTeam >= 1 && totalPlayers % fromTeam === 0 && totalPlayers / fromTeam >= 2) teamSize = fromTeam;
+
+function syncTeamSizes(requested) {
+  const sizes = Array.from({ length: Math.floor(totalPlayers / 2) }, (_, i) => i + 1).filter(size => totalPlayers % size === 0);
+  teamSize = sizes.includes(requested) ? requested : 1;
+  $('demoTeamSize').replaceChildren();
+  for (const size of sizes) {
+    const option = el('option', size === 1 ? 'Individual · 1 jugador' : `${size} por equipo · ${totalPlayers / size} equipos · ${size}v${size}`);
+    option.value = String(size); $('demoTeamSize').append(option);
+  }
+  $('demoTeamSize').value = String(teamSize); count = totalPlayers / teamSize;
+  return teamSize !== requested;
+}
+function syncFormats(requested) {
+  // El tamaño de la llave depende de equipos (o individuos), nunca del total de integrantes.
+  const available = formats.filter(f => f.id === 'DUEL' ? count === 2 : f.id === 'SWISS' || f.id === 'FREE_FOR_ALL' ? count >= 3 : true);
+  format = available.some(f => f.id === requested) ? requested : count === 2 ? 'DUEL' : 'SINGLE_ELIMINATION';
+  $('demoFormat').replaceChildren();
+  for (const f of available) {
+    const option = el('option', f.id === 'DUEL' ? `Enfrentamiento directo · ${teamSize}v${teamSize}` : f.name);
+    option.value = f.id; $('demoFormat').append(option);
+  }
+  $('demoFormat').value = format;
+  const units = teamSize === 1 ? 'jugadores individuales' : 'equipos';
+  $('demoAvailableHelp').textContent = `Formatos para ${count} ${units}. ` + (count === 2 ? 'Un enfrentamiento directo o una final; doble eliminación permite revancha.' : 'Con un número impar, algunas rondas pueden incluir descansos o pases libres.') + ' Suizo y prueba compartida se muestran desde tres rivales.';
+}
 
 function ref(id) { return { entryId: id }; }
 function source(id, outcome = 'winner') { return { source: id, outcome }; }
@@ -150,7 +175,9 @@ function slotLabel(slot) {
 }
 function renderBoard() {
   $('demoBoard').replaceChildren();
-  for (const round of rounds) {
+  // Round Robin completo puede tener 2.016 encuentros: dibujar una ronda evita saturar la página.
+  const visibleRounds = format === 'ROUND_ROBIN' ? [rounds[Number($('demoRound').value) || 0]] : rounds;
+  for (const round of visibleRounds) {
     const column = el('section', '', 'demo-round'); column.append(el('h3', round.group + ' · ' + round.title));
     const stack = el('div', '', 'demo-matches'); column.append(stack);
     for (const m of round.items) {
@@ -201,7 +228,6 @@ function updateClock() {
 }
 function render() {
   const confirmed = active().filter(p => p.confirmed).length;
-  $('demoCountLabel').textContent = teamSize === 1 ? 'Número de jugadores' : 'Número de equipos';
   $('demoCapacity').textContent = teamSize === 1 ? `${count} jugadores ficticios.` : `${count} equipos de ${teamSize} · ${count * teamSize} jugadores ficticios. Cada cruce es ${teamSize}v${teamSize}.`;
   $('demoConfirmations').textContent = `${confirmed} de ${count} ${teamSize === 1 ? 'jugadores' : 'equipos'} confirmados en esta simulación.`;
   $('demoProgress').setAttribute('aria-valuenow', String(confirmed)); $('demoProgress').setAttribute('aria-valuemax', String(count)); $('demoProgress').firstElementChild.style.width = (confirmed / count * 100) + '%';
@@ -213,16 +239,23 @@ function render() {
   renderBoard(); renderStandings(); updateClock();
 }
 function configure(shuffle = false) {
-  format = $('demoFormat').value;
-  teamSize = Number($('demoTeamSize').value);
+  const requestedFormat = $('demoFormat').value || format;
+  const requestedTeamSize = Number($('demoTeamSize').value) || teamSize;
   const value = Number($('demoCount').value);
-  if (!Number.isInteger(value) || value < 2 || value > 16) { announce('Elegí entre 2 y 16 jugadores o equipos.'); return; }
-  count = value;
-  if (format === 'DUEL' && count !== 2) { format = 'SINGLE_ELIMINATION'; $('demoFormat').value = format; }
+  if (!Number.isInteger(value) || value < 2 || value > MAX_PLAYERS) {
+    $('demoCount').value = String(totalPlayers); announce('Elegí un total entre 2 y 64 jugadores. Se conservó la configuración anterior.'); return;
+  }
+  totalPlayers = value;
+  const adjusted = syncTeamSizes(requestedTeamSize); syncFormats(requestedFormat);
   started = false; startsAt = Date.now() + 5 * 60 * 1000; bank.forEach(p => { p.confirmed = false; });
-  buildDraw(shuffle); renderEditors(); render(); announce('Prueba preparada. Podés cambiar todos los nombres sin invitar a nadie.');
+  buildDraw(shuffle);
+  $('demoRoundPicker').hidden = format !== 'ROUND_ROBIN'; $('demoRound').replaceChildren();
+  if (format === 'ROUND_ROBIN') rounds.forEach((round, i) => { const option = el('option', round.title); option.value = String(i); $('demoRound').append(option); });
+  renderEditors(); render();
+  announce((adjusted ? 'El total no se divide en equipos del tamaño anterior: se pasó a individual. Elegí otra división disponible. ' : '') + 'Prueba preparada. Podés cambiar todos los nombres sin invitar a nadie.');
 }
-$('demoFormat').addEventListener('change', () => { if ($('demoFormat').value === 'DUEL') $('demoCount').value = '2'; configure(); });
+$('demoFormat').addEventListener('change', () => configure());
+$('demoRound').addEventListener('change', renderBoard);
 $('demoTeamSize').addEventListener('change', () => configure()); $('demoCount').addEventListener('change', () => configure());
 $('demoShuffle').addEventListener('click', () => configure(true));
 $('demoReset').addEventListener('click', () => configure());
@@ -237,12 +270,14 @@ function nextResult() {
 }
 $('demoNextResult').addEventListener('click', () => { if (nextResult()) announce('Se simuló un resultado al azar. No se modifican puntos, ligas ni torneos reales.'); render(); });
 $('demoFinish').addEventListener('click', () => {
-  let guard = 0; while (guard++ < 300 && nextResult()) { /* Número máximo acotado, sin llamadas remotas. */ }
+  let guard = 0; while (guard++ < MAX_PLAYERS * (MAX_PLAYERS - 1) / 2 + MAX_PLAYERS && nextResult()) { /* Número máximo acotado, sin llamadas remotas. */ }
   announce('Simulación completada. Podés reiniciar los resultados o elegir otra modalidad.'); render();
 });
 for (const button of document.querySelectorAll('[data-preset]')) button.addEventListener('click', () => {
-  const settings = { duel: ['DUEL', 1, 2], four: ['DUEL', 4, 2], five: ['DUEL', 5, 2], cup: ['SINGLE_ELIMINATION', 5, 4], league: ['ROUND_ROBIN', 1, 8] }[button.dataset.preset];
-  $('demoFormat').value = settings[0]; $('demoTeamSize').value = String(settings[1]); $('demoCount').value = String(settings[2]); configure();
+  // Cada ejemplo declara formato, integrantes por equipo y TOTAL de jugadores.
+  const settings = { duel: ['DUEL', 1, 2], four: ['DUEL', 4, 8], ten: ['DUEL', 10, 20], five: ['DUEL', 5, 10], cup: ['SINGLE_ELIMINATION', 5, 20], league: ['ROUND_ROBIN', 1, 8] }[button.dataset.preset];
+  totalPlayers = settings[2]; $('demoCount').value = String(totalPlayers);
+  syncTeamSizes(settings[1]); syncFormats(settings[0]); configure();
 });
-$('demoFormat').value = format; $('demoTeamSize').value = String(teamSize); $('demoCount').value = String(count);
+$('demoCount').value = String(totalPlayers); syncTeamSizes(teamSize); syncFormats(format);
 configure(); setInterval(updateClock, 1000);

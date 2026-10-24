@@ -1,3 +1,12 @@
+## 3.10.0 — 2026-10-23
+
+- El simulador parte del total de jugadores (2–64), calcula divisiones exactas y deriva el número de equipos.
+- Tamaños de equipo dinámicos: incluye 10v10 y cualquier división exacta con al menos dos rivales, sin jugadores omitidos.
+- Formatos filtrados según la cantidad de rivales: enfrentamiento directo para dos, suizo y prueba compartida desde tres.
+- Ejemplo rápido de 20 jugadores en dos equipos de diez; integrantes y equipos editables.
+- Round Robin conserva todo el calendario y muestra una ronda por vez para no saturar la interfaz.
+- Los enlaces desde la creación real conservan hasta 64 jugadores. Publicar equipos reales sigue pendiente.
+
 ## 3.9.1 — 2026-10-23
 
 - Se añade la opción 4v4 que faltaba en el selector del simulador.
