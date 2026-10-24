@@ -1,3 +1,14 @@
+## 3.11.0 — 2026-10-24
+
+- Confirmación explícita antes de guardar la victoria de un encuentro; cancelar y Escape no alteran resultados.
+- Podio configurable de uno, dos o tres puestos, confirmación final y validación de rivales distintos.
+- Tercer puesto en eliminación directa mediante un encuentro entre perdedores de semifinales; podio derivado en doble eliminación.
+- Round Robin exige resolver empates explícitamente con un criterio escrito; prueba compartida permite asignar puestos manuales.
+- Correcciones con advertencia de los encuentros dependientes que se anularían, reapertura de podio e historial local.
+- Distribuciones personalizadas de equipos de tamaños diferentes, por ejemplo 4 contra 1 o 3/2/1, sin excluir jugadores del total.
+- Reglas descriptivas opcionales y confirmación antes de reiniciar una prueba con resultados.
+- Cambios limitados al simulador local; publicación real por equipos y permisos reales de jueces siguen pendientes.
+
 ## 3.10.0 — 2026-10-23
 
 - El simulador parte del total de jugadores (2–64), calcula divisiones exactas y deriva el número de equipos.

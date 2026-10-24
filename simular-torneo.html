@@ -13,16 +13,19 @@
     <section class="creation-surface" aria-labelledby="demoTitle">
       <header class="creation-heading"><div><p class="editorial-kicker">LABORATORIO DEL CLUB</p><h1 id="demoTitle">Probá tu próximo torneo.</h1></div><span class="demo-badge">SIMULACIÓN LOCAL</span></header>
       <p class="demo-intro">Jugadores ficticios, nombres editables y resultados de prueba. Esta pantalla no crea cuentas ni torneos reales, no envía invitaciones y no cobra dinero.</p>
-      <div class="demo-presets" role="group" aria-label="Ejemplos rápidos"><button type="button" data-preset="duel">Duelo 1v1</button><button type="button" data-preset="four">Partido 4v4 · 8 jugadores</button><button type="button" data-preset="ten">Partido 10v10 · 20 jugadores</button><button type="button" data-preset="five">Partido 5v5</button><button type="button" data-preset="cup">Copa · 4 equipos 5v5</button><button type="button" data-preset="league">Liga · 8 jugadores</button></div>
+      <div class="demo-presets" role="group" aria-label="Ejemplos rápidos"><button type="button" data-preset="duel">Duelo 1v1</button><button type="button" data-preset="uneven">Desafío personalizado · 4 contra 1</button><button type="button" data-preset="four">Partido 4v4 · 8 jugadores</button><button type="button" data-preset="ten">Partido 10v10 · 20 jugadores</button><button type="button" data-preset="five">Partido 5v5</button><button type="button" data-preset="cup">Copa · 4 equipos 5v5</button><button type="button" data-preset="league">Liga · 8 jugadores</button></div>
       <div class="demo-layout">
         <aside class="demo-setup">
           <h2>Armar la prueba</h2>
           <label for="demoCount">1. Total de jugadores</label><input id="demoCount" type="number" min="2" max="64" step="1" value="4" inputmode="numeric" aria-describedby="demoDivisionHelp">
+          <label for="demoTeamMode">Distribución de jugadores</label><select id="demoTeamMode"><option value="equal">Equipos iguales / individual</option><option value="custom">Equipos personalizados · tamaños distintos</option></select>
+          <div id="demoCustomSetup" class="demo-custom-setup" hidden><label for="demoCustomSizes">Integrantes de cada equipo, separados por comas</label><input id="demoCustomSizes" value="4, 1" maxlength="190" placeholder="Ejemplo: 4, 1 o 3, 2, 1" aria-describedby="demoCustomHelp"><p id="demoCustomHelp" class="editorial-help">La suma debe coincidir con el total. Mínimo dos equipos; una persona también puede ocupar un equipo. Esto define los grupos, no un orden de encuentros.</p><label for="demoCustomRules">Reglas del desafío (opcional)</label><textarea id="demoCustomRules" maxlength="800" rows="3" placeholder="Por ejemplo: el jugador solo tiene dos vidas."></textarea><button id="demoApplyCustom" class="editorial-secondary" type="button">Aplicar distribución</button></div>
           <label for="demoTeamSize">2. Jugadores por equipo</label><select id="demoTeamSize" aria-describedby="demoDivisionHelp"></select>
           <p class="editorial-help" id="demoDivisionHelp">Elegí de 2 a 64 jugadores. Se ofrecen divisiones exactas en al menos dos equipos, sin dejar jugadores afuera.</p>
           <p class="editorial-help" id="demoCapacity"></p>
           <label for="demoFormat">3. Formatos disponibles</label><select id="demoFormat" aria-describedby="demoAvailableHelp"></select>
           <p class="editorial-help" id="demoAvailableHelp"></p>
+          <label for="demoPlaces">Puestos del podio</label><select id="demoPlaces"><option value="1">Solo campeón</option><option value="2" selected>Primer y segundo puesto</option><option value="3">Primer, segundo y tercer puesto</option></select><p class="editorial-help" id="demoPodiumHelp"></p>
           <p class="demo-scope">Los torneos publicados por ahora son individuales. Acá podés explorar cómo se verían equipos y llaves sin necesitar cuentas reales.</p>
           <div class="demo-setup-actions"><button id="demoShuffle" type="button" class="editorial-secondary">Mezclar cruces ↻</button><button id="demoReset" type="button" class="editorial-link">Reiniciar resultados</button></div>
           <details class="demo-editors" open><summary>Editar nombres y confirmaciones</summary><p class="editorial-help">Los nombres cambian sólo en esta prueba. Cada equipo ocupa un casillero con sus integrantes.</p><div id="demoEntrants"></div></details>
@@ -35,11 +38,14 @@
           <div id="demoRoundPicker" hidden><label for="demoRound">Ronda de Round Robin</label><select id="demoRound"></select></div>
           <div id="demoBoard" class="demo-board" role="region" aria-label="Llaves interactivas ficticias" tabindex="0"></div>
           <div id="demoStandings" class="demo-standings"></div>
+          <section id="demoPodium" class="demo-podium" aria-labelledby="demoPodiumTitle"><h2 id="demoPodiumTitle">Clasificación final</h2><div id="demoPodiumContent"></div></section>
+          <details class="demo-audit"><summary>Historial local de resultados y correcciones</summary><ol id="demoAudit"></ol></details>
         </div>
       </div>
       <footer class="creation-footer"><a href="crear-torneo.html" class="editorial-link">← Volver a mi creación</a><span class="editorial-help">Los datos de esta prueba se pierden al cerrar o recargar.</span></footer>
     </section>
   </main>
+  <dialog id="demoConfirmDialog" aria-labelledby="demoConfirmTitle" aria-describedby="demoConfirmBody"><h2 id="demoConfirmTitle"></h2><p id="demoConfirmBody"></p><div class="demo-actions"><button id="demoCancelAction" type="button" class="editorial-secondary" autofocus>Cancelar</button><button id="demoAcceptAction" type="button" class="editorial-primary">Confirmar</button></div></dialog>
   <script type="module" src="/src/tournament-demo.js"></script>
 </body>
 </html>

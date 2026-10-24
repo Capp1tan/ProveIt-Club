@@ -1,4 +1,4 @@
-# Simulador local — v3.10.0
+# Simulador local — v3.11.0
 
 Entrada: `simular-torneo.html`. Se puede abrir desde la cabecera de la creación real o desde la segunda etapa.
 
@@ -14,7 +14,19 @@ Entrada: `simular-torneo.html`. Se puede abrir desde la cabecera de la creación
 - Explorar eliminación directa, doble eliminación con llave inferior/reinicio de final, Round Robin, duelo y prueba compartida. Round Robin conserva todas las rondas y permite elegir cuál dibujar para evitar miles de elementos simultáneos. Suizo conserva sólo la primera ronda, explícitamente indicada.
 - Consultar una tabla de resultados ficticios.
 
-## Separación de la producción
+## Resultados, podio y personalización
+
+- Al tocar un rival se abre una confirmación con su nombre, el oponente y el encuentro. No se guarda una victoria por el mero clic; cancelar o Escape conserva todo.
+- El podio admite uno, dos o tres puestos, limitado por el número de rivales. En eliminación directa con tres puestos se añade el partido por el tercero (un pase libre puede resolverlo automáticamente con tres rivales). En doble eliminación, el tercero es quien pierde la última ronda inferior.
+- Round Robin deriva puestos de victorias. Si hay empate en un puesto mostrado, permite ordenar sólo entre quienes empataron, exige rivales distintos y un criterio escrito. No se usa el nombre como criterio deportivo de desempate.
+- En prueba compartida se seleccionan las posiciones manualmente. En suizo no se permite declarar podio de torneo con sólo la primera ronda.
+- El podio requiere una confirmación separada y no promete premios. Puede reabrirse; corregir resultados también lo reabre.
+- En un encuentro ya terminado, tocar al otro rival ofrece una corrección. Se enumeran los resultados posteriores dependientes que se anularían; los encuentros independientes se conservan. Los pases libres y el eventual reinicio de gran final se recalculan.
+- La distribución personalizada acepta tamaños separados por comas que sumen exactamente el total: con cinco jugadores, `4, 1`; con seis, `3, 2, 1`. Cada grupo es una unidad de competencia; nombres e integrantes ficticios son editables. No permite cero integrantes, omisiones ni más de 64 personas.
+- Las reglas son texto descriptivo: no hay un motor que ejecute condiciones, vidas, handicaps o puntuaciones arbitrarias. Las llaves usan los formatos disponibles, incluso si los tamaños son diferentes. Crear grafos de encuentros completamente libres sigue fuera de alcance.
+- Cambiar configuración con resultados exige confirmar el reinicio. El historial es local y temporal, y se muestran sus últimos cien eventos. Una simulación masiva registra una acción de lote, no un evento individual por cada resultado aleatorio.
+
+## Límites de producción
 
 `src/tournament-demo.js` importa únicamente el catálogo de formatos. No usa clientes de AWS, cuentas, pagos, notificaciones, torneos, mensajes, ligas ni almacenamiento remoto. No añade bots al directorio real ni acepta identificadores ficticios en el backend. Los cambios viven en memoria de esa página y se pierden al recargar.
 
