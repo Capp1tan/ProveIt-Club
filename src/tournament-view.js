@@ -28,7 +28,7 @@ async function connectLobby(){
   lobbySubscription?.unsubscribe();lobbySubscription=null;lobbyConnected=false;updateLobbyConnection();clearTimeout(lobbyRetry);lobbyRetry=setTimeout(()=>void connectLobby(),15000);
  });}catch{clearTimeout(lobbyRetry);lobbyRetry=setTimeout(()=>void connectLobby(),15000);}
 }
-Hub.listen('api',({payload})=>{if(payload.event==='ConnectionStateChange'){lobbyConnected=payload.data?.connectionState==='Connected';updateLobbyConnection();if(lobbyConnected)void refreshTournament();}});
+Hub.listen('api',({payload})=>{if(payload.event==='ConnectionStateChange'){lobbyConnected=payload.data?.connectionState==='Connected';updateLobbyConnection();if(lobbyConnected && detail)void refreshTournament();}});
 let chatCleanup, chatId;
 function closeTournamentChat(){chatCleanup?.();chatCleanup=null;chatId=null;const root=document.getElementById('tournamentChat');if(root){root.replaceChildren();root.hidden=true;}}
 let isClubAdmin=false;
@@ -104,7 +104,7 @@ function drawBoard(t) {
 // Sólo pinta el reloj. La autorización y la hora para decidir se comprueban en AWS.
 function updateClock() {
   const timer=document.getElementById('tournamentCountdown');
-  if(timer && currentTournament?.startsAt) timer.textContent=currentTournament.winnerProfileId ? 'Duelo finalizado' : countdownLabel(currentTournament.startsAt);
+  if(timer && currentTournament?.startsAt) timer.textContent=currentTournament.winnerProfileId ? 'Torneo finalizado' : countdownLabel(currentTournament.startsAt);
   const button=document.getElementById('recordDuelWinner');
   if(button && !button.dataset.saving) button.disabled=Date.now()<Date.parse(currentTournament.startsAt);
 }
@@ -206,7 +206,7 @@ function renderTournament(t) {
   updateClock();
 }
 async function refreshTournament(force=false) {
-  if(document.hidden || lobbyStopped)return;if(refreshing){refreshQueued=true;return;}refreshing=true;
+  if(!detail || document.hidden || lobbyStopped)return;if(refreshing){refreshQueued=true;return;}refreshing=true;
   try {
     const id=new URLSearchParams(location.search).get('id');if(!id)throw new Error('El enlace no incluye un torneo.');
     let t=await getClubTournament(id);if(!t){closeTournamentChat();profilePreview?.lock();drawCleanup?.();detail.replaceChildren();currentTournament=null;throw new Error('Este torneo fue eliminado o ya no está disponible.');}
