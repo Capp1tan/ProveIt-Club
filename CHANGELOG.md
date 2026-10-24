@@ -1,3 +1,11 @@
+## 3.11.1 — 2026-10-24
+
+- Distribuciones personalizadas aceptan comas, guiones cortos/largos y separadores habituales; 5-2 se interpreta como equipos de cinco y dos.
+- Se elimina el reparto predeterminado N−1 / 1 al seleccionar modo personalizado.
+- Una distribución válida se aplica automáticamente antes de jugar; con resultados exige confirmación de reinicio.
+- Validación al lado del campo y bloqueo de confirmaciones, inicio, resultados y podio mientras hay cambios pendientes o inválidos.
+- Se oculta la llave anterior para evitar que contradiga el reparto aún no aplicado.
+
 ## 3.11.0 — 2026-10-24
 
 - Confirmación explícita antes de guardar la victoria de un encuentro; cancelar y Escape no alteran resultados.

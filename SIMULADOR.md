@@ -1,4 +1,4 @@
-# Simulador local — v3.11.0
+# Simulador local — v3.11.1
 
 Entrada: `simular-torneo.html`. Se puede abrir desde la cabecera de la creación real o desde la segunda etapa.
 
@@ -22,7 +22,8 @@ Entrada: `simular-torneo.html`. Se puede abrir desde la cabecera de la creación
 - En prueba compartida se seleccionan las posiciones manualmente. En suizo no se permite declarar podio de torneo con sólo la primera ronda.
 - El podio requiere una confirmación separada y no promete premios. Puede reabrirse; corregir resultados también lo reabre.
 - En un encuentro ya terminado, tocar al otro rival ofrece una corrección. Se enumeran los resultados posteriores dependientes que se anularían; los encuentros independientes se conservan. Los pases libres y el eventual reinicio de gran final se recalculan.
-- La distribución personalizada acepta tamaños separados por comas que sumen exactamente el total: con cinco jugadores, `4, 1`; con seis, `3, 2, 1`. Cada grupo es una unidad de competencia; nombres e integrantes ficticios son editables. No permite cero integrantes, omisiones ni más de 64 personas.
+- La distribución personalizada acepta comas y guiones (incluidos guiones largos), además de `x`, `v`, `×`, `+` y punto y coma. Con siete jugadores, `5-2`, `5–2` y `5, 2` significan cinco contra dos. Exige al menos dos tamaños enteros positivos que sumen exactamente el total. No se interpreta el guion como resta ni se inventa un reparto N−1 / 1.
+- Antes de jugar, una entrada válida se aplica después de una breve pausa al escribir. Si hay resultados, permanece pendiente hasta pulsar Aplicar distribución y confirmar el reinicio. La validación aparece junto al campo. Las confirmaciones, el inicio, los resultados y el podio quedan bloqueados mientras haya cambios pendientes; la llave previa se oculta. Cada grupo es una unidad de competencia con nombres e integrantes ficticios editables.
 - Las reglas son texto descriptivo: no hay un motor que ejecute condiciones, vidas, handicaps o puntuaciones arbitrarias. Las llaves usan los formatos disponibles, incluso si los tamaños son diferentes. Crear grafos de encuentros completamente libres sigue fuera de alcance.
 - Cambiar configuración con resultados exige confirmar el reinicio. El historial es local y temporal, y se muestran sus últimos cien eventos. Una simulación masiva registra una acción de lote, no un evento individual por cada resultado aleatorio.
 

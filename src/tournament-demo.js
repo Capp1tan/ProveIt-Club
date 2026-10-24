@@ -11,7 +11,7 @@ const bank = Array.from({ length: MAX_PLAYERS }, (_, i) => ({
 let totalPlayers = 4, count = 4, teamSize = 1, format = 'SINGLE_ELIMINATION', rounds = [], matches = new Map(), order = [];
 let started = false, startsAt = Date.now() + 5 * 60 * 1000, hasReset = false;
 let custom = false, customSizes = [4, 1], places = 2, confirmedPodium = null, rules = '', lastConfig = null;
-let dialogPending = false, audit = [], podiumDraft = [], podiumReason = '';
+let dialogPending = false, audit = [], podiumDraft = [], podiumReason = '', draftTimer;
 const active = () => bank.slice(0, count);
 const grouped = () => custom || teamSize > 1;
 const entrySize = p => custom ? customSizes[bank.indexOf(p)] : teamSize;
@@ -19,8 +19,45 @@ const duelLabel = () => custom ? customSizes.join('v') : `${teamSize}v${teamSize
 const name = p => p ? grouped() ? p.name : p.solo : 'Pase libre';
 const allConfirmed = () => active().every(p => p.confirmed);
 const isFinished = () => matches.size > 0 && [...matches.values()].every(m => m.done);
-const canPlay = () => allConfirmed() && started && !isFinished() && !confirmedPodium;
+const canPlay = () => !hasPendingConfiguration() && allConfirmed() && started && !isFinished() && !confirmedPodium;
 const announce = text => { $('demoNotice').textContent = text; };
+
+// Acepta separadores habituales sin interpretar «5-2» como una resta ni cambiar los tamaños elegidos.
+function parseDistribution(text, total) {
+  const value = text.trim();
+  if (!/^[1-9]\d*(?:\s*[,;xv×+\-\u2010-\u2015\u2212]\s*[1-9]\d*)+$/i.test(value)) return { error: 'Indicá al menos dos equipos con tamaños positivos, por ejemplo 5, 2 o 5-2.' };
+  const sizes = value.split(/\s*[,;xv×+\-\u2010-\u2015\u2212]\s*/i).map(Number);
+  if (sizes.length > MAX_PLAYERS || sizes.some(size => !Number.isInteger(size) || size < 1 || size > MAX_PLAYERS)) return { error: 'Cada equipo debe tener entre 1 y 64 integrantes; el total máximo es 64.' };
+  const sum = sizes.reduce((result, size) => result + size, 0);
+  if (!Number.isInteger(total) || total < 2 || total > MAX_PLAYERS) return { error: 'El total debe ser un número entero entre 2 y 64.' };
+  if (sum !== total) return { error: `La distribución suma ${sum} jugadores, pero el total es ${total}. Ajustá los tamaños o el total.`, sizes };
+  return { sizes };
+}
+function hasPendingConfiguration() {
+  if (!lastConfig) return false;
+  const mode = $('demoTeamMode').value === 'custom';
+  if (mode !== custom || Number($('demoCount').value) !== totalPlayers || $('demoFormat').value !== format || Number($('demoPlaces').value) !== places) return true;
+  if (!mode) return Number($('demoTeamSize').value) !== teamSize;
+  const draft = parseDistribution($('demoCustomSizes').value, Number($('demoCount').value));
+  return Boolean(draft.error) || draft.sizes.join(',') !== customSizes.join(',') || $('demoCustomRules').value.trim().slice(0, 800) !== rules;
+}
+function renderDraftFeedback() {
+  const pending = hasPendingConfiguration(), mode = $('demoTeamMode').value === 'custom';
+  const draft = mode ? parseDistribution($('demoCustomSizes').value, Number($('demoCount').value)) : {};
+  $('demoDistributionStatus').textContent = draft.error || (pending ? 'Cambios pendientes: aplicá la distribución antes de confirmar o iniciar.' : custom ? `Aplicada: ${customSizes.join(' + ')} = ${totalPlayers} jugadores.` : '');
+  $('demoDistributionStatus').dataset.error = String(Boolean(draft.error));
+  $('demoCustomSizes').setAttribute('aria-invalid', String(Boolean(draft.error)));
+  $('demoPendingChanges').hidden = !pending;
+  $('demoPendingChanges').textContent = draft.error || 'Hay cambios pendientes. La llave anterior está oculta hasta aplicar la nueva configuración.';
+  return pending;
+}
+function queueCustomDraft() {
+  clearTimeout(draftTimer); render();
+  if ($('demoTeamMode').value !== 'custom' || !hasPendingConfiguration()) return;
+  const draft = parseDistribution($('demoCustomSizes').value, Number($('demoCount').value));
+  // Antes de jugar, una distribución completa se aplica sola. Con resultados se exige la acción explícita.
+  if (!draft.error && !dialogPending && !confirmedPodium && ![...matches.values()].some(m => m.done && !m.auto)) draftTimer = setTimeout(() => void configure(), 400);
+}
 
 // Diálogo modal: cancelar es la opción inicial; Escape también cancela. Nunca guarda al seleccionar un nombre.
 function confirmAction(title, body, label = 'Confirmar resultado') {
@@ -162,12 +199,12 @@ function renderEditors() {
     const heading = el('div', '', 'demo-entry-heading'), check = el('input'); check.type = 'checkbox'; check.checked = entry.confirmed;
     check.id = 'demo-confirm-' + i; const label = el('label', (grouped() ? 'Equipo ' : 'Jugador ') + (i + 1)); label.htmlFor = check.id;
     const status = el('span', entry.confirmed ? 'Confirmado' : 'Pendiente', 'demo-status');
-    check.addEventListener('change', () => { entry.confirmed = check.checked; row.dataset.confirmed = String(entry.confirmed); status.textContent = entry.confirmed ? 'Confirmado' : 'Pendiente'; render(); });
+    check.addEventListener('change', () => { if (hasPendingConfiguration()) return; entry.confirmed = check.checked; row.dataset.confirmed = String(entry.confirmed); status.textContent = entry.confirmed ? 'Confirmado' : 'Pendiente'; render(); });
     heading.append(check, label, status); row.append(heading);
     const input = el('input'); input.maxLength = 40; input.value = name(entry); input.setAttribute('aria-label', (grouped() ? 'Nombre del equipo ' : 'Nombre del jugador ') + (i + 1));
     input.addEventListener('input', () => { const value = input.value.trim().slice(0, 40); if (!grouped()) entry.solo = value || 'Bot ' + (i + 1); else entry.name = value || 'Equipo ' + (i + 1); render(); }); row.append(input);
     if (grouped()) {
-      const members = el('details', '', 'demo-member-editor'); members.append(el('summary', 'Editar los ' + entrySize(entry) + ' integrantes'));
+      const members = el('details', '', 'demo-member-editor'); members.append(el('summary', entrySize(entry) === 1 ? 'Editar 1 integrante' : 'Editar los ' + entrySize(entry) + ' integrantes'));
       for (let j = 0; j < entrySize(entry); j++) {
         const member = el('input'); member.maxLength = 40; member.value = entry.members[j]; member.id = 'demo-member-' + i + '-' + j;
         const memberLabel = el('label', 'Jugador ' + (j + 1)); memberLabel.htmlFor = member.id;
@@ -200,7 +237,7 @@ function impactedBy(id) {
   return affected;
 }
 async function chooseWinner(m, entry) {
-  if (!allConfirmed() || !started || m.auto || format === 'FREE_FOR_ALL') return;
+  if (hasPendingConfiguration() || !allConfirmed() || !started || m.auto || format === 'FREE_FOR_ALL') return;
   const players = matchPlayers(m);
   if (players.some(p => p === undefined) || !players.some(p => p?.id === entry.id)) return;
   if (m.done && m.winnerId === entry.id) { announce('Ese resultado ya está registrado. Elegí al otro rival para corregirlo.'); return; }
@@ -232,6 +269,7 @@ function slotLabel(slot) {
 }
 function renderBoard() {
   $('demoBoard').replaceChildren();
+  if (hasPendingConfiguration()) return;
   // Round Robin completo puede tener 2.016 encuentros: dibujar una ronda evita saturar la página.
   const visibleRounds = format === 'ROUND_ROBIN' ? [rounds[Number($('demoRound').value) || 0]] : rounds;
   for (const round of visibleRounds) {
@@ -298,6 +336,7 @@ function podiumOptions() {
 }
 function renderPodium() {
   const root = $('demoPodiumContent'); root.replaceChildren();
+  if (hasPendingConfiguration()) { root.append(el('p', 'Aplicá los cambios de configuración antes de revisar la clasificación.', 'editorial-help')); return; }
   if (confirmedPodium) {
     const list = el('ol', '', 'demo-podium-list');
     confirmedPodium.forEach((id, i) => list.append(el('li', `${['🥇', '🥈', '🥉'][i]} ${i + 1}. ${name(bank.find(p => p.id === id))}`)));
@@ -340,7 +379,8 @@ function renderPodium() {
   }); root.append(confirm);
 }
 function updateClock() {
-  if (confirmedPodium) $('demoClock').textContent = 'Podio confirmado';
+  if (hasPendingConfiguration()) $('demoClock').textContent = 'Configuración pendiente';
+  else if (confirmedPodium) $('demoClock').textContent = 'Podio confirmado';
   else if (isFinished()) $('demoClock').textContent = format === 'SWISS' ? 'Primera ronda terminada' : 'Encuentros terminados · falta confirmar podio';
   else if (started) $('demoClock').textContent = 'Simulación en curso';
   else {
@@ -349,6 +389,7 @@ function updateClock() {
   }
 }
 function render() {
+  const pending = renderDraftFeedback();
   const confirmed = active().filter(p => p.confirmed).length;
   $('demoCapacity').textContent = custom ? `${totalPlayers} jugadores en ${count} equipos personalizados (${customSizes.join(' + ')}).${count === 2 ? ' Cruce ' + duelLabel() + '.' : ''} No se compensan automáticamente las diferencias de tamaño.` + (rules ? ' Reglas: ' + rules : '') : teamSize === 1 ? `${count} jugadores ficticios.` : `${count} equipos de ${teamSize} · ${count * teamSize} jugadores ficticios. Cada cruce es ${teamSize}v${teamSize}.`;
   $('demoConfirmations').textContent = `${confirmed} de ${count} ${grouped() ? 'equipos' : 'jugadores'} confirmados en esta simulación.`;
@@ -358,6 +399,15 @@ function render() {
   $('demoNextResult').disabled = !canPlay() || format === 'FREE_FOR_ALL'; $('demoFinish').disabled = !canPlay() || format === 'FREE_FOR_ALL';
   $('demoBoardTitle').textContent = (custom ? count === 2 ? `Desafío personalizado · ${duelLabel()}` : 'Llaves con equipos personalizados' : teamSize === 1 ? 'Llaves individuales' : `Llaves por equipos · ${teamSize}v${teamSize}`) + ' · demostración';
   $('demoFormatHelp').textContent = format === 'SWISS' ? 'Se simula sólo la primera ronda del suizo. La publicación actual todavía no automatiza las rondas siguientes por puntaje.' : format === 'FREE_FOR_ALL' ? 'Confirmá a todos e iniciá la prueba; después elegí los puestos en Clasificación final. No se puede repetir un rival.' : format === 'DOUBLE_ELIMINATION' ? 'Primera derrota: llave inferior. Segunda derrota: eliminación. Si gana el finalista de la llave inferior, aparece una final de desempate. El tercero, si se muestra, es quien pierde la final de la llave inferior.' : 'Confirmá a los bots e iniciá la prueba. Tocá un nombre para revisar y confirmar su victoria. En un encuentro terminado, elegí al otro rival para corregirlo.';
+  $('demoEntrants').hidden = pending; $('demoBoard').hidden = pending; $('demoStandings').hidden = pending;
+  $('demoRoundPicker').hidden = pending || format !== 'ROUND_ROBIN';
+  if (pending) {
+    $('demoCapacity').textContent = 'Cambios pendientes: todavía no hay una llave para los datos ingresados.';
+    $('demoPhase').textContent = 'Configuración pendiente'; $('demoConfirmations').textContent = 'Aplicá una distribución válida antes de confirmar participantes.';
+    $('demoConfirmNext').disabled = true; $('demoConfirmAll').disabled = true; $('demoStart').disabled = true;
+    $('demoProgress').setAttribute('aria-valuenow', '0'); $('demoProgress').firstElementChild.style.width = '0%';
+    $('demoBoardTitle').textContent = 'Llave pendiente de actualizar'; $('demoFormatHelp').textContent = 'La configuración anterior no se usará mientras haya cambios sin aplicar.';
+  }
   renderBoard(); renderStandings(); renderPodium(); updateClock();
   $('demoAudit').replaceChildren();
   for (const event of audit.slice(-100).reverse()) $('demoAudit').append(el('li', event.at + ' · ' + event.text));
@@ -368,9 +418,10 @@ function restoreControls() {
   $('demoCount').value = String(totalPlayers); $('demoTeamMode').value = custom ? 'custom' : 'equal';
   $('demoCustomSetup').hidden = !custom; $('demoCustomSizes').value = customSizes.join(', '); $('demoCustomRules').value = rules;
   $('demoTeamSize').hidden = custom; $('demoTeamSize').previousElementSibling.hidden = custom;
-  if (!custom) syncTeamSizes(teamSize); syncFormats(format); $('demoPlaces').value = String(places);
+  if (!custom) syncTeamSizes(teamSize); syncFormats(format); $('demoPlaces').value = String(places); render();
 }
 async function configure(shuffle = false) {
+  clearTimeout(draftTimer);
   const requestedFormat = $('demoFormat').value || format;
   const requestedTeamSize = Number($('demoTeamSize').value) || teamSize;
   const value = Number($('demoCount').value);
@@ -378,18 +429,15 @@ async function configure(shuffle = false) {
     restoreControls(); announce('Elegí un total entre 2 y 64 jugadores. Se conservó la configuración anterior.'); return;
   }
   const requestedCustom = $('demoTeamMode').value === 'custom';
-  const sizesText = $('demoCustomSizes').value.trim();
-  const sizes = sizesText.split(',').map(s => Number(s.trim()));
-  if (requestedCustom && (!/^\d+(\s*,\s*\d+)+$/.test(sizesText) || sizes.length > MAX_PLAYERS || sizes.some(size => !Number.isInteger(size) || size < 1) || sizes.reduce((sum, size) => sum + size, 0) !== value)) {
-    announce('Distribución inválida: escribí al menos dos tamaños enteros positivos separados por comas, cuya suma sea ' + value + '. La prueba actual no cambió.'); return;
-  }
+  const distribution = parseDistribution($('demoCustomSizes').value, value), sizes = distribution.sizes;
+  if (requestedCustom && distribution.error) { render(); announce(distribution.error); return; }
   const recorded = [...matches.values()].filter(m => m.done && !m.auto);
   if (recorded.length || confirmedPodium) {
     if (!await confirmAction('Reiniciar esta prueba', `Cambiar la configuración o reiniciar borrará ${recorded.length} resultados ficticios y el podio de esta prueba. Los nombres se conservan. No se modifica ningún torneo real.`, 'Reiniciar prueba')) { restoreControls(); return; }
   }
   totalPlayers = value; custom = requestedCustom;
   let adjusted = false;
-  if (custom) { customSizes = sizes; count = sizes.length; }
+  if (custom) { customSizes = sizes; count = sizes.length; $('demoCustomSizes').value = sizes.join(', '); }
   else adjusted = syncTeamSizes(requestedTeamSize);
   syncFormats(requestedFormat);
   places = Math.min(Number($('demoPlaces').value) || 2, count, 3);
@@ -412,17 +460,24 @@ $('demoFormat').addEventListener('change', () => configure());
 $('demoRound').addEventListener('change', renderBoard);
 $('demoPlaces').addEventListener('change', () => configure());
 $('demoTeamSize').addEventListener('change', () => configure());
-$('demoCount').addEventListener('change', () => { if ($('demoTeamMode').value === 'custom') announce('Ajustá la distribución para que sume el nuevo total y presioná Aplicar distribución. La prueba actual sigue intacta.'); else void configure(); });
+$('demoCount').addEventListener('input', () => { if ($('demoTeamMode').value === 'custom') queueCustomDraft(); else render(); });
+$('demoCount').addEventListener('change', () => { if ($('demoTeamMode').value === 'custom') queueCustomDraft(); else void configure(); });
+$('demoCustomSizes').addEventListener('input', queueCustomDraft);
+$('demoCustomRules').addEventListener('input', queueCustomDraft);
 $('demoTeamMode').addEventListener('change', () => {
-  if ($('demoTeamMode').value === 'custom' && !custom) $('demoCustomSizes').value = `${Math.max(1, Number($('demoCount').value) - 1)}, 1`;
+  if ($('demoTeamMode').value === 'custom' && !custom) {
+    // No inventar un reparto N−1 / 1: el creador elige los tamaños.
+    clearTimeout(draftTimer); $('demoCustomSizes').value = ''; $('demoCustomSetup').hidden = false;
+    render(); $('demoCustomSizes').focus(); announce('Indicá el tamaño de cada equipo. Por ejemplo, para siete jugadores: 5-2.'); return;
+  }
   $('demoCustomSetup').hidden = $('demoTeamMode').value !== 'custom'; void configure();
 });
 $('demoApplyCustom').addEventListener('click', () => void configure());
 $('demoShuffle').addEventListener('click', () => configure(true));
 $('demoReset').addEventListener('click', () => configure());
-$('demoConfirmNext').addEventListener('click', () => { const entry = active().find(p => !p.confirmed); if (entry) entry.confirmed = true; renderEditors(); render(); });
-$('demoConfirmAll').addEventListener('click', () => { active().forEach(p => { p.confirmed = true; }); renderEditors(); render(); announce('Todos los bots confirmaron. Podés iniciar ahora sin esperar al reloj.'); });
-$('demoStart').addEventListener('click', () => { if (!allConfirmed()) return; started = true; render(); announce('Prueba iniciada. Elegí ganadores tocando los nombres o simulá resultados.'); });
+$('demoConfirmNext').addEventListener('click', () => { if (hasPendingConfiguration()) return; const entry = active().find(p => !p.confirmed); if (entry) entry.confirmed = true; renderEditors(); render(); });
+$('demoConfirmAll').addEventListener('click', () => { if (hasPendingConfiguration()) return; active().forEach(p => { p.confirmed = true; }); renderEditors(); render(); announce('Todos los bots confirmaron. Podés iniciar ahora sin esperar al reloj.'); });
+$('demoStart').addEventListener('click', () => { if (hasPendingConfiguration() || !allConfirmed()) return; started = true; render(); announce('Prueba iniciada. Elegí ganadores tocando los nombres o simulá resultados.'); });
 function nextResult() {
   if (!canPlay()) return false;
   const m = [...matches.values()].find(m => !m.done && matchPlayers(m).every(p => p !== undefined) && matchPlayers(m).filter(Boolean).length > 1);
