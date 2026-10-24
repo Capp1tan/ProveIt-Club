@@ -1,4 +1,4 @@
-# Sala de espera — v3.12.0
+# Sala de espera — v3.13.0
 
 ## Entrada y navegación
 
@@ -17,6 +17,14 @@ Opciones de la sala y controles de simulación permite cambiar el jugador desde 
 ## Datos ilustrativos
 
 El nombre, premio, aportante y juez se editan en las opciones de esta sala local. El premio comienza sin definir; si se escribe uno, se identifica como Premio de ejemplo. Un nombre de juez se etiqueta como ficticio, no como una aceptación real de cargo. No se asignan verificaciones, ligas ni fotos reales a los bots.
+
+El tipo de premio se elige explícitamente: sin premio, dinero, regalo sorpresa, comida/bebida, tecnología/informática, ropa/accesorios, experiencia o actividad y otro premio. Cada categoría usa un SVG local (billete, caja de regalo, cubiertos, monitor, camiseta o entrada). No se infiere la categoría de palabras o símbolos del texto. Cada categoría conserva un detalle independiente mientras la página permanece abierta; volver a dinero recupera su importe de ejemplo, pero cambiar a comida no muestra ese importe. Sin premio desactiva el detalle. Si hay categoría sin detalle, el texto indica que está por definir.
+
+## Movimiento
+
+El círculo conserva su nodo y su valor visual, y cambia hacia el nuevo porcentaje en 720 ms con aceleración y frenado suaves. Un cambio durante la animación parte de la posición visible actual, también al disminuir confirmaciones. El número y la etiqueta accesible muestran el dato real inmediatamente; sólo se anima el arco. El reloj no reconstruye la sala y el movimiento sólo usa requestAnimationFrame mientras cambia el progreso. Al cambiar de prueba/configuración se usa el porcentaje nuevo sin simular una variación de asistencia de la prueba anterior.
+
+Los botones, los indicadores de estado modificados y el ícono al cambiar de categoría tienen movimiento discreto. Con prefers-reduced-motion se actualiza todo inmediatamente, sin esas animaciones. Los íconos no requieren descargas ni bibliotecas adicionales.
 
 El contador usa el horario de ejemplo ya existente, cinco minutos desde la configuración. Es orientativo: no expulsa jugadores, no crea reservas y no inicia automáticamente. Al llegar a cero explica que se espera a las confirmaciones. Un sistema real de cierre, reemplazos y sanciones requiere reglas y backend adicionales.
 

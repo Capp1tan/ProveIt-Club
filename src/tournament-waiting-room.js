@@ -1,11 +1,29 @@
 // Vista de sala independiente del motor: recibe datos y callbacks, sin AWS ni cuentas reales.
 const node = (tag, text = '', cls = '') => { const n = document.createElement(tag); n.textContent = text; if (cls) n.className = cls; return n; };
 const statusLabels = { confirmed: 'Confirmado', pending: 'Pendiente', declined: 'No asiste' };
+const rewardTypes = {
+  none: { label: 'Sin premio', icon: 'trophy', fallback: 'Sin premio definido', placeholder: 'Primero elegí un tipo de premio' },
+  money: { label: 'Dinero', icon: 'money', fallback: 'Premio en dinero', placeholder: '$50.000 ARS' },
+  surprise: { label: 'Regalo sorpresa', icon: 'gift', fallback: 'Regalo sorpresa', placeholder: 'Un regalo sorpresa' },
+  food: { label: 'Comida / bebida', icon: 'food', fallback: 'Premio gastronómico', placeholder: 'Cena para dos o una milanesa' },
+  tech: { label: 'Tecnología / informática', icon: 'monitor', fallback: 'Premio de tecnología', placeholder: 'Teclado mecánico, auriculares…' },
+  clothing: { label: 'Ropa / accesorios', icon: 'shirt', fallback: 'Premio de indumentaria', placeholder: 'Camiseta, gorra, buzo…' },
+  experience: { label: 'Experiencia / actividad', icon: 'ticket', fallback: 'Una experiencia', placeholder: 'Entradas a un evento…' },
+  other: { label: 'Otro premio', icon: 'gift', fallback: 'Otro premio', placeholder: 'Describí el premio' },
+};
 function icon(kind) {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('fill', 'none'); svg.setAttribute('stroke', 'currentColor'); svg.setAttribute('stroke-width', '1.7'); svg.setAttribute('stroke-linecap', 'round'); svg.setAttribute('stroke-linejoin', 'round'); svg.setAttribute('aria-hidden', 'true');
   const paths = { trophy: ['M8 3h8v6a4 4 0 0 1-8 0V3Z', 'M8 5H4v2a4 4 0 0 0 4 4m8-6h4v2a4 4 0 0 1-4 4', 'M12 13v6m-4 2h8'], clock: ['M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z', 'M12 7v5l3 2'], shield: ['m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6l8-3Z', 'm8 12 3 3 5-6'], check: ['m5 12 4 4L19 6'], cross: ['m6 6 12 12M18 6 6 18'], users: ['M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z', 'M2 21v-3a7 7 0 0 1 14 0v3m0-17a4 4 0 0 1 0 8m3 9v-3a7 7 0 0 0-2-5'], edit: ['m16 3 5 5-12 12-6 1 1-6L16 3Z', 'm14 5 5 5'], bracket: ['M3 4h5v5h8m-13 11h5v-5h8M16 6v12m0-6h5'] };
-  for (const d of paths[kind] || paths.users) { const path = document.createElementNS(svg.namespaceURI, 'path'); path.setAttribute('d', d); svg.append(path); }
+  const prizes = {
+    money: ['M2 5h20v14H2V5Z', 'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z', 'M5 8v1m14 6v1'],
+    gift: ['M3 8h18v4H3V8Zm2 4v9h14v-9M12 8v13', 'M12 8H8a3 3 0 1 1 3-3l1 3Zm0 0h4a3 3 0 1 0-3-3l-1 3Z'],
+    food: ['M4 3v6a3 3 0 0 0 6 0V3M7 3v18', 'M18 3c-3 2-4 5-4 9h4m0-9v18'],
+    monitor: ['M3 3h18v13H3V3Zm9 13v5m-4 0h8', 'M7 7h5'],
+    shirt: ['m8 3-6 4 3 5 3-2v11h8V10l3 2 3-5-6-4', 'M8 3a4 4 0 0 0 8 0'],
+    ticket: ['M3 6h18v4a2 2 0 0 0 0 4v4H3v-4a2 2 0 0 0 0-4V6Z', 'M15 6v2m0 3v2m0 3v2'],
+  };
+  for (const d of paths[kind] || prizes[kind] || paths.users) { const path = document.createElementNS(svg.namespaceURI, 'path'); path.setAttribute('d', d); svg.append(path); }
   return svg;
 }
 function button(text, cls, handler, key) {
@@ -16,11 +34,46 @@ function avatar(label, seed, cls = '') {
 }
 export function createWaitingRoom(root, actions) {
   let state, filter = 'all', viewer = '', toolsOpen = false, stateControls = false;
-  const meta = { title: 'Copa ProveIt', reward: '', provider: '', judge: '' };
+  const meta = { title: 'Copa ProveIt', reward: '', rewardType: 'none', provider: '', judge: '' }, rewardDrafts = Object.create(null);
+  const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
+  let displayedProgress = null, targetProgress = 0, progressFrame = 0, progressContext = '', lastRewardType = null, previousStatuses = new Map();
+  // Se reutiliza el mismo círculo: reconstruirlo en cada render cortaba las transiciones.
+  const attendanceRing = node('div', '', 'wr-ring'), ringInner = node('div'), ringNumber = node('strong');
+  attendanceRing.setAttribute('role', 'img'); ringInner.append(ringNumber, node('span', 'confirmados')); attendanceRing.append(ringInner);
+  function paintProgress(value) { displayedProgress = value; attendanceRing.style.setProperty('--ready', `${value * 100}%`); }
+  function animateProgress(target, reset = false) {
+    if (reset || displayedProgress === null || motionPreference.matches) {
+      cancelAnimationFrame(progressFrame); progressFrame = 0; targetProgress = target; paintProgress(target); return;
+    }
+    if (target === targetProgress && (progressFrame || Math.abs(displayedProgress - target) < 0.00001)) return;
+    cancelAnimationFrame(progressFrame); targetProgress = target;
+    const from = displayedProgress, began = performance.now(), duration = 720;
+    function frame(now) {
+      const elapsed = Math.min(1, Math.max(0, (now - began) / duration));
+      const eased = elapsed < 0.5 ? 4 * elapsed ** 3 : 1 - (-2 * elapsed + 2) ** 3 / 2;
+      paintProgress(from + (target - from) * eased);
+      if (elapsed < 1) progressFrame = requestAnimationFrame(frame);
+      else { progressFrame = 0; paintProgress(target); }
+    }
+    progressFrame = requestAnimationFrame(frame);
+  }
+  function onMotionPreferenceChange() { if (motionPreference.matches) animateProgress(targetProgress, true); }
+  motionPreference.addEventListener('change', onMotionPreferenceChange);
   function updateMeta() {
     // Actualizar sólo texto evita perder foco o clics al editar las opciones de la sala.
-    const values = { title: meta.title || 'Copa ProveIt', reward: meta.reward || 'Sin premio definido', rewardCaption: meta.reward ? 'Premio de ejemplo' + (meta.provider ? ' · ' + meta.provider : '') : 'Podés agregar uno en las opciones de la sala', judge: meta.judge || 'Sin juez asignado', judgeCaption: meta.judge ? 'Nombre ficticio · simulación' : 'Organización de ejemplo' };
+    const type = rewardTypes[meta.rewardType] || rewardTypes.none;
+    const values = { title: meta.title || 'Copa ProveIt', reward: meta.reward || type.fallback, rewardCaption: meta.rewardType === 'none' ? 'Sin premio asignado en esta simulación' : `${meta.reward ? '' : 'Por definir · '}Premio de ejemplo · ${type.label}` + (meta.provider ? ' · ' + meta.provider : ''), judge: meta.judge || 'Sin juez asignado', judgeCaption: meta.judge ? 'Nombre ficticio · simulación' : 'Organización de ejemplo' };
     for (const [key, value] of Object.entries(values)) { const target = root.querySelector(`[data-room-meta="${key}"]`); if (target) target.textContent = value; }
+    const host = root.querySelector('[data-reward-icon]'), card = root.querySelector('.wr-reward');
+    if (card) card.dataset.rewardType = meta.rewardType;
+    if (host && host.dataset.kind !== meta.rewardType) {
+      const glyph = icon(type.icon);
+      if (lastRewardType !== null && lastRewardType !== meta.rewardType && !motionPreference.matches) glyph.classList.add('wr-prize-icon-enter');
+      host.replaceChildren(glyph); host.dataset.kind = meta.rewardType;
+    }
+    lastRewardType = meta.rewardType;
+    const detail = root.querySelector('[data-focus="meta-reward"]');
+    if (detail) { detail.disabled = meta.rewardType === 'none'; detail.placeholder = type.placeholder; }
   }
   const players = () => state.groups.flatMap(group => group.players);
   const me = () => players().find(p => p.key === viewer) || players()[0];
@@ -47,7 +100,7 @@ export function createWaitingRoom(root, actions) {
     tournament.append(eventIcon, eventText); top.append(tournament);
     const clock = node('section', '', 'wr-glass wr-clock'); clock.append(icon('clock'));
     const clockText = node('div'), digits = node('strong'); digits.dataset.roomClock = ''; digits.setAttribute('role', 'timer'); digits.setAttribute('aria-live', 'off'); const caption = node('span'); caption.dataset.clockCaption = ''; clockText.append(digits, caption); clock.append(clockText); top.append(clock);
-    const prize = node('section', '', 'wr-glass wr-reward'); prize.append(icon('trophy'));
+    const prize = node('section', '', 'wr-glass wr-reward'), rewardIcon = node('span', '', 'wr-reward-icon'); rewardIcon.dataset.rewardIcon = ''; prize.append(rewardIcon);
     const prizeText = node('div'), rewardValue = node('strong'), rewardCaption = node('span'); rewardValue.dataset.roomMeta = 'reward'; rewardCaption.dataset.roomMeta = 'rewardCaption'; prizeText.append(rewardValue, rewardCaption);
     prize.append(prizeText); top.append(prize); root.append(top);
 
@@ -56,8 +109,10 @@ export function createWaitingRoom(root, actions) {
     const title = node('h1', 'Sala de espera'); title.id = 'waitingRoomTitle'; heroCopy.append(title, node('p', state.pending ? 'Aplicá una configuración válida para ver los equipos y confirmar la asistencia.' : state.finished ? 'Los encuentros terminaron. Revisá los resultados y la clasificación final.' : state.started ? 'El encuentro de ejemplo ya comenzó. Podés continuar con las llaves y los resultados.' : 'Confirmá tu asistencia para preparar el próximo desafío.'));
     if (!state.started && !state.pending) heroCopy.append(node('small', 'El reloj es orientativo en esta demo; no expulsa jugadores ni inicia automáticamente.'));
     hero.append(heroCopy);
-    const ring = node('div', '', 'wr-ring'); ring.style.setProperty('--ready', `${state.pending ? 0 : counts.confirmed / Math.max(1, counts.all) * 100}%`); ring.setAttribute('role', 'img'); ring.setAttribute('aria-label', `${counts.confirmed} de ${counts.all} jugadores confirmados`);
-    const ringInner = node('div'); ringInner.append(node('strong', `${state.pending ? '—' : counts.confirmed} de ${counts.all}`), node('span', 'confirmados')); ring.append(ringInner); hero.append(ring);
+    attendanceRing.setAttribute('aria-label', state.pending ? 'Confirmaciones pendientes de configuración' : `${counts.confirmed} de ${counts.all} jugadores confirmados`);
+    ringNumber.textContent = `${state.pending ? '—' : counts.confirmed} de ${counts.all}`; hero.append(attendanceRing);
+    const context = String(state.startsAt) + '|' + roster.map(p => p.key).join(',');
+    animateProgress(state.pending ? 0 : counts.confirmed / Math.max(1, counts.all), state.pending || context !== progressContext); progressContext = context;
     const judge = node('div', '', 'wr-judge'), judgeName = node('strong'), judgeCaption = node('small'); judgeName.dataset.roomMeta = 'judge'; judgeCaption.dataset.roomMeta = 'judgeCaption'; judge.append(icon('shield'), node('span', 'Juez del torneo'), judgeName, judgeCaption); hero.append(judge); root.append(hero);
 
     const toolbar = node('section', '', 'wr-glass wr-toolbar'), filters = node('div', '', 'wr-filters'); filters.setAttribute('role', 'group'); filters.setAttribute('aria-label', 'Filtrar asistencia');
@@ -86,6 +141,7 @@ export function createWaitingRoom(root, actions) {
       const list = node('ul', '', state.grouped ? 'wr-roster' : 'wr-roster wr-individual-roster');
       for (const player of entries) {
         const row = node('li', '', 'wr-player'); row.dataset.status = player.status;
+        if (previousStatuses.has(player.key) && previousStatuses.get(player.key) !== player.status) row.classList.add('wr-player-status-change');
         row.append(avatar(player.name, player.index, player.key === viewer ? 'wr-avatar-self' : ''));
         const info = node('div', '', 'wr-player-info'), nameLine = node('div', '', 'wr-player-name'); nameLine.append(node('strong', player.name));
         if (player.key === viewer) nameLine.append(node('span', 'Vos', 'wr-you'));
@@ -111,8 +167,18 @@ export function createWaitingRoom(root, actions) {
     const controls = node('div', '', 'wr-tools-content'); controls.append(node('p', 'Estos controles sólo cambian esta prueba local. No envían invitaciones, no crean cuentas y no hay premios reales.', 'wr-tools-copy'));
     const fields = node('div', '', 'wr-meta-fields');
     for (const [key, label, placeholder] of [['title', 'Nombre del torneo de ejemplo', 'Copa ProveIt'], ['reward', 'Premio de ejemplo (opcional)', '$50.000 ARS'], ['provider', 'Quién lo aportaría (opcional)', 'Nombre del patrocinador'], ['judge', 'Nombre de juez ficticio (opcional)', 'Sin juez asignado']]) {
+      if (key === 'reward') {
+        const typeField = node('label', 'Tipo de premio'), typeSelect = node('select'); typeSelect.dataset.focus = 'reward-type';
+        for (const [value, type] of Object.entries(rewardTypes)) { const option = node('option', type.label); option.value = value; typeSelect.append(option); } typeSelect.value = meta.rewardType;
+        typeSelect.addEventListener('change', () => {
+          rewardDrafts[meta.rewardType] = meta.reward; meta.rewardType = rewardTypes[typeSelect.value] ? typeSelect.value : 'none';
+          meta.reward = rewardDrafts[meta.rewardType] || '';
+          const detail = root.querySelector('[data-focus="meta-reward"]'); if (detail) detail.value = meta.reward;
+          updateMeta();
+        }); typeField.append(typeSelect); fields.append(typeField);
+      }
       const field = node('label', label); const input = node('input'); input.type = 'text'; input.maxLength = 100; input.value = meta[key]; input.placeholder = placeholder; input.dataset.focus = 'meta-' + key;
-      input.addEventListener('input', () => { meta[key] = input.value.trim().slice(0, 100); updateMeta(); }); field.append(input); fields.append(field);
+      input.addEventListener('input', () => { meta[key] = input.value.trim().slice(0, 100); if (key === 'reward') rewardDrafts[meta.rewardType] = meta.reward; updateMeta(); }); field.append(input); fields.append(field);
     } controls.append(fields);
     const viewerField = node('label', 'Jugador desde el que mirás la sala'); const viewSelect = node('select'); viewSelect.dataset.focus = 'viewer';
     for (const group of state.groups) for (const player of group.players) { const option = node('option', player.name + (state.grouped ? ' · ' + group.name : '')); option.value = player.key; viewSelect.append(option); }
@@ -125,7 +191,8 @@ export function createWaitingRoom(root, actions) {
     } controls.append(buttons); tools.append(controls); root.append(tools);
     root.append(node('p', 'SIMULACIÓN LOCAL · Las cuentas, los premios y los cambios de esta sala no son reales. Los datos se pierden al recargar.', 'wr-footnote'));
     updateMeta(); updateClock();
+    previousStatuses = new Map(roster.map(p => [p.key, p.status]));
     if (focus) { const target = [...root.querySelectorAll('[data-focus]')].find(n => n.dataset.focus === focus); target?.focus({ preventScroll: true }); }
   }
-  return { render, updateClock };
+  return { render, updateClock, destroy() { cancelAnimationFrame(progressFrame); motionPreference.removeEventListener('change', onMotionPreferenceChange); } };
 }

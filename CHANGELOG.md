@@ -1,3 +1,12 @@
+## 3.13.0 — 2026-10-24
+
+- El círculo de confirmaciones interpola llenado y vaciado durante 720 ms, conservando el progreso visible si llegan cambios seguidos.
+- El círculo se reutiliza entre actualizaciones; filtros, edición y reloj no reinician la animación.
+- Transiciones discretas en botones, cambios de estado e ícono de premio; se respeta la preferencia de movimiento reducido.
+- Selector explícito de premio: dinero, regalo sorpresa, comida/bebida, tecnología, ropa/accesorios, experiencia y otro premio, además de sin premio.
+- Cada categoría tiene un ícono SVG local y conserva su propio texto durante la sesión; cambiar de categoría no arrastra el importe de dinero a otro tipo.
+- Los premios siguen identificados como ejemplos del simulador, sin afectar datos o cobros reales.
+
 ## 3.12.1 — 2026-10-24
 
 - El encabezado del duelo muestra el tamaño real del cruce, por ejemplo 5v5 o 5v2.
