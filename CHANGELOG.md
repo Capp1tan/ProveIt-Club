@@ -1,3 +1,14 @@
+## 3.8.0 — 2026-10-23
+
+- Creación de torneos en dos etapas simples y una sala de espera real, inspiradas en el boceto de Figma.
+- Datos, cupo, jurado, previsión de premio y portada opcional en una composición editorial clara.
+- Selección visual de cuentas, fecha/zona horaria y modelos de llaves interactivos según formato y cupo.
+- Portadas WebP optimizadas, almacenadas en privado y verificadas en servidor.
+- Confirmaciones por señal WebSocket mínima por torneo, con relectura de respaldo; cuenta regresiva y progreso de roles.
+- Borradores por cuenta y publicación idempotente; pagos y exenciones vigentes conservados.
+- Compatibilidad con torneos anteriores; precios por tramos y fichas no implementados.
+
+
 ## 3.7.0 — Correcciones, exenciones y administración
 
 - Encabezado de sesión sin falso estado de invitado y panel con recuperación del acceso.

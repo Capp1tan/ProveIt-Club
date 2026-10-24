@@ -52,7 +52,7 @@ export async function pendingInvitations() {
 }
 export async function respondInvitation(invitationId, accept, acceptOrganizerDecision = false,acceptTerms=false,termsVersion=null) {
   const client = await tournamentClient();
-  const result = resultData(await client.mutations.respondToTournamentInvitation({ invitationId, accept, acceptOrganizerDecision,acceptTerms,termsVersion }));
+  const result = resultData(await client.mutations.answerTournamentInvitation({ invitationId, accept, acceptOrganizerDecision,acceptTerms,termsVersion }));
   if (!result?.id) throw new Error('No se pudo confirmar la respuesta. Actualizá para revisar su estado.');
   return result;
 }
@@ -70,3 +70,9 @@ export async function recordClubDuelResult(tournamentId, winnerProfileId,resultR
 // Los permisos del premio se validan en AWS, no por los botones visibles.
 export async function saveTournamentPrize(values){const c=await tournamentClient();return resultData(await c.mutations.saveClubTournamentPrize(values));}
 export async function preparePrizeUpload(values){const c=await tournamentClient();return resultData(await c.mutations.prepareClubPrizeUpload(values));}
+
+// La señal despierta una relectura autorizada; el estado real siempre viene de AWS.
+export async function watchTournamentLobby(tournamentId,onChange,onError){
+ const client=await tournamentClient();
+ return client.subscriptions.onTournamentLobby({tournamentId}).subscribe({next:()=>onChange(),error:onError});
+}

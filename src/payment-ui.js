@@ -12,7 +12,7 @@ function render(row){
   if(row.status==='APPROVED' || row.status==='EXEMPT'){
     stopped=true;refresh.hidden=true;
     panel.append(node('h2',row.status==='EXEMPT'?'Creación gratuita autorizada':'Pago confirmado'),node('p','Tu torneo ya está habilitado y las invitaciones fueron enviadas.'));
-    const link=node('a','Ir al torneo ↗','primary-button');link.href='/torneo.html?id='+encodeURIComponent(id);panel.append(link);return;
+    const link=node('a','Entrar a la sala de espera ↗','primary-button');link.href='/torneo.html?id='+encodeURIComponent(id);panel.append(link);return;
   }
   if(row.status==='REVERSED'){stopped=true;panel.append(node('h2','Pago revertido'),node('p','El cobro fue devuelto o recibió un contracargo. Contactá al administrador.'));return;}
   if(Date.parse(row.expiresAt)<=Date.now()){

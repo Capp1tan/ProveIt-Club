@@ -5,12 +5,14 @@ import { DynamoDBDocumentClient, GetCommand, TransactWriteCommand } from '@aws-s
 
 import { read,fee,creationExemption,assertBillingAccess,ensureCheckout,publicCheckout } from '../billing/common';
 import { phoneOptional, assertActiveAccount } from '../lifecycle';
+import { validateCover } from '../tournament-cover';
 
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const formats = new Set(['DUEL', 'ROUND_ROBIN', 'SINGLE_ELIMINATION', 'DOUBLE_ELIMINATION', 'SWISS', 'FREE_FOR_ALL']);
 type Arguments = {
   tournamentId: string; name: string; activity: string; format: string;
   description?: string | null; conflicts?:string; participantIds: string[]; judgeIds: string[];
+  overview?:string;coverPath?:string;participantLimit?:number;prizeExpected?:boolean;
   treasurerId?: string | null;
   arbitrationMode: string; startsAt: string; timeZone: string; acceptOrganizerDecision?: boolean;
 };
@@ -44,6 +46,7 @@ export const handler = async (event: { arguments: Arguments; identity?: { sub?: 
   const name = text(args.name, 3, 80, 'Nombre');
   const activity = text(args.activity, 2, 80, 'Actividad');
   const description = text(args.description ?? '',10,1000,'Reglas');
+  const overview=text(args.overview ?? '',0,500,'Descripción');
   const conflicts=text(args.conflicts ?? '',0,500,'Conflictos de interés');
   if (!formats.has(args.format)) throw new Error('Elegí un formato válido.');
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(args.tournamentId)) {
@@ -56,6 +59,9 @@ export const handler = async (event: { arguments: Arguments; identity?: { sub?: 
     return value;
   };
   const participantIds = ids(args.participantIds, 2, 64, 'Participantes');
+  const participantLimit=args.participantLimit ?? participantIds.length;
+  if(!Number.isInteger(participantLimit) || participantLimit<2 || participantLimit>64 || participantLimit!==participantIds.length)throw new Error('Completá todas las invitaciones del cupo elegido.');
+  if(args.prizeExpected!==undefined && typeof args.prizeExpected!=='boolean')throw new Error('Indicá si se prevé un premio.');
   if (args.format === 'DUEL' && participantIds.length !== 2) throw new Error('El Duelo 1v1 requiere exactamente dos participantes.');
   const judgeIds = ids(args.judgeIds, noJudge ? 0 : 1, 16, 'Jueces');
   if (noJudge && judgeIds.length) throw new Error('Un torneo sin juez no puede tener jueces seleccionados.');
@@ -82,9 +88,11 @@ export const handler = async (event: { arguments: Arguments; identity?: { sub?: 
     if (!account?.phoneNumber && !await phoneOptional(accountSub)) throw new Error('Todos los integrantes y el organizador deben completar su teléfono en Mi perfil.');
   }
   const names = new Map(profiles.map(profile => [profile.id, profile.nickname]));
+  const coverPath=await validateCover(args.coverPath,sub,args.tournamentId);
   const now = new Date().toISOString();
   const item = {
     id: args.tournamentId, termsVersion:1,conflicts:declaration,clubRewards:false,name, activity, description, format: args.format,
+    overview,coverPath,participantLimit,prizeExpected:args.prizeExpected ?? false,
     participantIds, participantNames: participantIds.map(id => names.get(id)),
     judgeIds, judgeNames: judgeIds.map(id => names.get(id)),
     treasurerId, treasurerName: treasurerId ? names.get(treasurerId) : null,
@@ -101,7 +109,7 @@ export const handler = async (event: { arguments: Arguments; identity?: { sub?: 
       role: index < participantIds.length ? 'PARTICIPANT' : index < participantIds.length + judgeIds.length ? 'JUDGE' : 'TREASURER',
       status:'PENDING',
       arbitrationMode: args.arbitrationMode, startsAt: args.startsAt, timeZone: args.timeZone,
-      rulesSnapshot: description, consentVersion: noJudge ? 'NO_JUDGE_V1' : null,
+      rulesSnapshot: description+(args.prizeExpected?'\nPremio previsto: pendiente de definición y confirmación por el responsable. No está disponible todavía.':''), consentVersion: noJudge ? 'NO_JUDGE_V1' : null,
       consentAcceptedAt:null,
       invitedBySub: sub, createdAt: now, updatedAt: now, __typename: 'TournamentInvitation',
     }));

@@ -13,6 +13,12 @@ import { billing } from '../functions/billing/resource';
 import { maintenance } from '../functions/maintenance/resource';
 
 const schema = a.schema({
+  // Aviso público mínimo para una sala legible por cuentas del club; sin datos privados del invitado.
+  TournamentLobbySignal:a.customType({id:a.id().required(),tournamentId:a.id().required(),status:a.string().required(),changedAt:a.datetime().required()}),
+  answerTournamentInvitation:a.mutation().arguments({invitationId:a.id().required(),accept:a.boolean().required(),acceptOrganizerDecision:a.boolean(),acceptTerms:a.boolean(),termsVersion:a.integer()})
+    .returns(a.ref('TournamentLobbySignal')).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(respondInvitation)),
+  onTournamentLobby:a.subscription().for(a.ref('answerTournamentInvitation')).arguments({tournamentId:a.id().required()})
+    .authorization(allow=>[allow.authenticated()]).handler(a.handler.custom({entry:'./lobby-signal.js'})),
   // Avisos mínimos: no transmiten mensajes ni perfiles. El receptor se filtra
   // por el sub real del token, sin aceptar destinatarios desde el navegador.
   ChatSignal:a.customType({eventId:a.string().required(),recipients:a.string().required().array().required()}),
@@ -72,6 +78,7 @@ const schema = a.schema({
     activity: a.string().required(),
     format: a.string().required(),
     description: a.string(),
+    overview:a.string(),coverPath:a.string(),participantLimit:a.integer(),prizeExpected:a.boolean(),
     participantIds: a.string().required().array().required(),
     participantNames: a.string().required().array().required(),
     judgeIds: a.string().required().array().required(),
@@ -147,6 +154,7 @@ const schema = a.schema({
     activity: a.string().required(),
     format: a.string().required(),
     description: a.string(), conflicts:a.string(),
+    overview:a.string(),coverPath:a.string(),participantLimit:a.integer(),prizeExpected:a.boolean(),
     participantIds: a.string().required().array().required(),
     judgeIds: a.string().required().array().required(),
     treasurerId: a.string(),

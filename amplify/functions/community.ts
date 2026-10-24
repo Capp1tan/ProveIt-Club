@@ -5,10 +5,12 @@ import {randomUUID} from 'node:crypto';
 import {getSignedUrl} from '@aws-sdk/s3-request-presigner';
 import {assertActiveAccount,assertActiveTournament} from './lifecycle';
 import {leagueProgress} from './leagues';
+import {coverAction} from './tournament-cover';
 const s3=new S3Client({requestChecksumCalculation:'WHEN_REQUIRED'});
 const env=(k:string)=>process.env[k]!;
 export async function community(db:DynamoDBDocumentClient,sub:string,a:any){
  await assertActiveAccount(sub);
+ if(['COMMUNITY_COVER_UPLOAD','COMMUNITY_COVER_URL'].includes(a.action))return coverAction(db,sub,a);
  const get=async(t:string,id:string)=>(await db.send(new GetCommand({TableName:env(t),Key:{id},ConsistentRead:true}))).Item;
  const social=async(pk:string,sk='STATE')=>(await db.send(new GetCommand({TableName:env('SOCIAL_TABLE_NAME'),Key:{pk,sk},ConsistentRead:true}))).Item;
  const state=await social('USER#'+sub);

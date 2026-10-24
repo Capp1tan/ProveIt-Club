@@ -1,4 +1,5 @@
 import {judgePanel} from './judge-ui.js';
+import { tournamentCoverUrl } from './tournament-cover.js';
 import { mountChat } from './chat-ui.js';
 import { prizePanel } from './tournament-prize.js';
 import { sharePanel } from './tournament-share.js';
@@ -12,18 +13,28 @@ import { scheduleLabel, countdownLabel, noJudgeConsent } from './tournament-sche
 // Sala de espera y cuadro: las confirmaciones y el sorteo provienen de AWS.
 import { formats, formatImage } from './tournament-formats.js';
 import { avatarUrl, getCurrentUser, configureAmplify } from './auth-client.js';
-import { listClubTournaments, getClubTournament, registeredProfiles, ensureClubTournamentDraw, recordClubDuelResult } from './tournaments-api.js';
+import { listClubTournaments, getClubTournament, registeredProfiles, ensureClubTournamentDraw, recordClubDuelResult, watchTournamentLobby } from './tournaments-api.js';
 const notice=document.getElementById('tournamentsNotice'),detail=document.getElementById('tournamentDetail'),list=document.getElementById('tournamentsList');
 const element=(tag,text,className)=>{const node=document.createElement(tag);node.textContent=text;if(className)node.className=className;return node;};
 const stateNames={PENDING:'Esperando confirmación',ACCEPTED:'Confirmado',REJECTED:'Invitación rechazada'};
 let profiles=new Map(),lastVersion='',refreshing=false,currentUser=null,currentTournament=null;
 let drawCleanup;
+let lobbySubscription,lobbyRetry,refreshQueued=false,lobbyConnected=false,lobbyStopped=false;
+const coverRequests=new Map();
+function updateLobbyConnection(){const label=document.getElementById('lobbyConnection');if(label){label.textContent=lobbyConnected?'Confirmaciones en vivo':'Actualización automática · reconectando';label.classList.toggle('lobby-reconnect',!lobbyConnected);}}
+async function connectLobby(){
+ if(lobbyStopped || lobbySubscription || document.hidden || !detail)return;
+ try{lobbySubscription=await watchTournamentLobby(new URLSearchParams(location.search).get('id'),()=>void refreshTournament(true),()=>{
+  lobbySubscription?.unsubscribe();lobbySubscription=null;lobbyConnected=false;updateLobbyConnection();clearTimeout(lobbyRetry);lobbyRetry=setTimeout(()=>void connectLobby(),15000);
+ });}catch{clearTimeout(lobbyRetry);lobbyRetry=setTimeout(()=>void connectLobby(),15000);}
+}
+Hub.listen('api',({payload})=>{if(payload.event==='ConnectionStateChange'){lobbyConnected=payload.data?.connectionState==='Connected';updateLobbyConnection();if(lobbyConnected)void refreshTournament();}});
 let chatCleanup, chatId;
 function closeTournamentChat(){chatCleanup?.();chatCleanup=null;chatId=null;const root=document.getElementById('tournamentChat');if(root){root.replaceChildren();root.hidden=true;}}
 let isClubAdmin=false;
 const photoRequests=new Map();
 const profilePreview=detail ? new ProfilePreview({avatar,badges:badgeElements}) : null;
-Hub.listen('auth',({payload})=>{if(payload.event==='signedOut'){profilePreview?.lock();closeTournamentChat();}});
+Hub.listen('auth',({payload})=>{if(payload.event==='signedOut'){profilePreview?.lock();closeTournamentChat();lobbyStopped=true;clearTimeout(lobbyRetry);lobbySubscription?.unsubscribe();lobbySubscription=null;}});
 function avatar(id,name) {
   const node=element('span',Array.from(name.trim())[0]?.toUpperCase() || '?','person-avatar');
   node.setAttribute('aria-hidden','true');
@@ -147,23 +158,38 @@ function renderTournament(t) {
   detail.replaceChildren();
   const status=states(t),format=formats.find(f=>f.id===t.format);
   const label=t.winnerProfileId?'TORNEO FINALIZADO':t.draw && t.status==='READY'?'TODOS CONFIRMADOS · SORTEO GUARDADO':status.includes('REJECTED')?'INVITACIÓN RECHAZADA · SORTEO DETENIDO':t.rosterStatuses?'SALA DE ESPERA':'TORNEO ANTERIOR · EN PREPARACIÓN';
-  detail.append(element('p',label,'eyebrow'),element('h1',t.name),element('p',t.activity));
+  const hero=element('header','','tournament-cover'),heroContent=element('div','','tournament-cover-content');
+  heroContent.append(element('p',label,'eyebrow'),element('h1',t.name),element('p',t.activity));hero.append(heroContent);detail.append(hero);
+  if(t.coverPath){
+   if(!coverRequests.has(t.coverPath) || coverRequests.get(t.coverPath).expires<Date.now())coverRequests.set(t.coverPath,{expires:Date.now()+90000,promise:tournamentCoverUrl(t.id).catch(()=>{coverRequests.delete(t.coverPath);return '';})});
+   void coverRequests.get(t.coverPath).promise.then(url=>{if(!url || !hero.isConnected)return;const image=document.createElement('img');image.alt='Portada de '+t.name;image.src=url;hero.prepend(image);});
+  }
+  const stages=element('div','','lobby-steps');stages.append(element('span','01 · El desafío ✓'),element('span','02 · Configuración ✓'),element('strong','03 · Sala de espera'));detail.append(stages);
+  const lobby=element('section','','tournament-panel lobby-panel'),lobbyHeading=element('div','','lobby-heading');
+  const accepted=status.filter(s=>s==='ACCEPTED').length,total=status.length;
+  const connection=element('span','','lobby-live');connection.id='lobbyConnection';
+  lobbyHeading.append(element('h2',t.winnerProfileId?'Encuentro finalizado':t.status==='READY'?'Todos listos para competir':'Esperando a tu gente'),connection);
+  lobby.append(lobbyHeading,element('p',`${accepted} de ${total} roles confirmados. Las invitaciones se responden desde la campana del sitio.`,'lobby-overview'));
+  const track=element('div','','lobby-progress'),fill=element('span');fill.style.width=(total?accepted/total*100:0)+'%';track.setAttribute('role','progressbar');track.setAttribute('aria-label','Confirmación de integrantes');track.setAttribute('aria-valuenow',String(accepted));track.setAttribute('aria-valuemin','0');track.setAttribute('aria-valuemax',String(total));track.append(fill);lobby.append(track);
+  const p=t.participantIds.length,j=p+t.judgeIds.length;
+  lobby.append(roster('Participantes',t.participantIds,t.participantNames,status.slice(0,p)),roster('Jueces',t.judgeIds,t.judgeNames,status.slice(p,j)));
+  if(t.treasurerId)lobby.append(roster('Tesorero (torneo anterior)',[t.treasurerId],[t.treasurerName],status.slice(j)));
+  detail.append(lobby,schedulePanel(t));updateLobbyConnection();
   if(t.paymentMode==='TEST')detail.append(element('p','TORNEO DE PRUEBA · no corresponde a un cobro real','tournament-notice'));
   if(t.creationPaymentStatus==='REVERSED')detail.append(element('p','El pago de creación fue revertido. Contactá al administrador.','tournament-notice'));
   const arbitration=element('section','','tournament-notice arbitration-warning');
   arbitration.append(element('strong',t.arbitrationMode==='ORGANIZER' ? 'Sin juez · Decide el organizador' : 'Con juez · Decide un juez designado'));
   if(t.arbitrationMode==='ORGANIZER')arbitration.append(element('p','El organizador decide el resultado final, incluso si también participa.'),element('p','La condición se acepta explícitamente al unirse.'));
   const canEditPrize=t.arbitrationMode==='ORGANIZER' ? currentUser?.userId===t.createdBySub : (t.judgeIds || []).some((id,index)=>Boolean(profiles.get(id)?.owner && (profiles.get(id).owner===currentUser?.username || profiles.get(id).owner===currentUser?.userId || profiles.get(id).owner.startsWith(currentUser?.userId+'::'))) && (!t.rosterStatuses || t.rosterStatuses[t.participantIds.length+index]==='ACCEPTED'));
-  detail.append(prizePanel(t,{canEdit:canEditPrize,onSaved:saved=>{renderTournament(saved);lastVersion=saved.updatedAt+String(saved.draw);}}),arbitration,schedulePanel(t));
-  const info=element('section','','tournament-panel');info.append(element('h2',format?.name || t.format));
+  if(t.overview)heroContent.append(element('p',t.overview,'lobby-overview'));
+  detail.append(prizePanel(t,{canEdit:canEditPrize,onSaved:saved=>{renderTournament(saved);lastVersion=saved.updatedAt+String(saved.draw);}}));
+  const info=element('details','','tournament-panel');info.append(element('summary','Reglas, formato y condiciones'),element('h2',format?.name || t.format),arbitration);
   if(format && !t.draw){const image=element('div','','format-preview');image.innerHTML=formatImage(format.id);image.append(element('p',format.description));info.append(image);}
   const rules=element('p',t.description || 'El organizador todavía no agregó reglas.');rules.style.whiteSpace='pre-wrap';info.append(rules);detail.append(info);
   if(t.draw && (t.status==='READY' || t.status==='COMPLETED')) detail.append(drawBoard(t));
   else if(t.rosterStatuses) detail.append(element('p',status.includes('REJECTED')?'Una persona rechazó. El torneo no se sortea: por ahora es necesario crear otro con los integrantes que acepten.':'Esperando que todos los participantes, jueces y tesorero elegido confirmen. Los cruces se sortearán automáticamente después de la última aceptación.','tournament-notice'));
   else detail.append(element('p','Este torneo se creó antes del sistema de invitaciones; conserva sus integrantes históricos. El sorteo automático se aplica a los nuevos torneos.','tournament-notice'));
-  const p=t.participantIds.length,j=p+t.judgeIds.length;
-  detail.append(roster('Participantes',t.participantIds,t.participantNames,status.slice(0,p)),roster('Jueces',t.judgeIds,t.judgeNames,status.slice(p,j)),element('p',t.arbitrationMode==='ORGANIZER'?'El organizador también coordina el dinero.':'Los jueces también coordinan el dinero del torneo.','field-help'));
-  if(t.treasurerId)detail.append(roster('Tesorero (torneo anterior)',[t.treasurerId],[t.treasurerName],status.slice(j)));
+  info.append(element('p',t.arbitrationMode==='ORGANIZER'?'El organizador también coordina el dinero.':'Los jueces también coordinan el dinero del torneo.','field-help'));
   const refresh=element('button','Actualizar confirmaciones','format-choice');refresh.type='button';refresh.addEventListener('click',()=>void refreshTournament(true));
 
   detail.append(resultPanel(t),judgePanel(t,{isOrganizer:currentUser?.userId===t.createdBySub,onChanged:()=>refreshTournament(true)}));
@@ -180,7 +206,7 @@ function renderTournament(t) {
   updateClock();
 }
 async function refreshTournament(force=false) {
-  if(refreshing || document.hidden)return;refreshing=true;
+  if(document.hidden || lobbyStopped)return;if(refreshing){refreshQueued=true;return;}refreshing=true;
   try {
     const id=new URLSearchParams(location.search).get('id');if(!id)throw new Error('El enlace no incluye un torneo.');
     let t=await getClubTournament(id);if(!t){closeTournamentChat();profilePreview?.lock();drawCleanup?.();detail.replaceChildren();currentTournament=null;throw new Error('Este torneo fue eliminado o ya no está disponible.');}
@@ -189,7 +215,7 @@ async function refreshTournament(force=false) {
     if((force || version!==lastVersion) && !detail.querySelector('[data-prize-editing="true"]') && !detail.querySelector('.community-form:focus-within,.duel-result-form:focus-within')){renderTournament(t);lastVersion=version;}
     notice.hidden=true;
   }catch(error){notice.hidden=false;notice.textContent=error.message;notice.dataset.error='true';}
-  finally{refreshing=false;}
+  finally{refreshing=false;if(refreshQueued){refreshQueued=false;setTimeout(()=>void refreshTournament(),200);}}
 }
 try {
   if(detail) {
@@ -200,9 +226,11 @@ try {
     await Promise.all([loadBadges().catch(()=>{}),registeredProfiles({includeBio:true}).then(items=>{profiles=new Map(items.map(profile=>[profile.id,profile]));}).catch(()=>{})]);
     profilePreview.setProfiles(profiles);
     await refreshTournament();
+    void connectLobby();
     setInterval(updateClock,1000);
-    setInterval(()=>void refreshTournament(),15000);
-    document.addEventListener('visibilitychange',()=>{if(!document.hidden)void refreshTournament();});
+    // Señal WebSocket inmediata; relectura de respaldo para cambios desde clientes anteriores.
+    setInterval(()=>void refreshTournament(),30000);
+    document.addEventListener('visibilitychange',()=>{if(!document.hidden){void connectLobby();void refreshTournament();}});
     window.addEventListener('proveit:invitation-updated',()=>void refreshTournament(true));
   } else {
     const tournaments=await listClubTournaments();

@@ -3,226 +3,300 @@ import { noJudgeConsent, timeZones, zoneLabel, localToUtc, scheduleLabel } from 
 import { loadBadges, badgeElements, decorateAvatar } from './badges.js';
 import { Hub } from 'aws-amplify/utils';
 import { avatarUrl, configureAmplify, getCurrentUser } from './auth-client.js';
-import { formats, formatImage } from './tournament-formats.js';
-import { registeredProfiles, createClubTournament } from './tournaments-api.js';
+import { formats } from './tournament-formats.js';
+import { registeredProfiles, createClubTournament, tournamentClient } from './tournaments-api.js';
+import { prepareCover, uploadTournamentCover } from './tournament-cover.js';
+import { renderTournamentPreview } from './tournament-preview.js';
 
-const form = document.getElementById('tournamentForm');
-const fields = document.getElementById('tournamentFields');
-const notice = document.getElementById('tournamentNotice');
-const options = document.getElementById('formatOptions');
-const preview = document.getElementById('formatPreview');
-const search = document.getElementById('peopleSearch');
-const treasurer = document.getElementById('treasurer');
-const submit = document.getElementById('createTournament');
-const participants = new Set();
-const judges = new Set();
-let profiles = [];
-let pricingReady=false,creationIsFree=false;
-let connectionAttempt = 0;
-let pricingMessage = 'Todavía estamos consultando si podés crear torneos.';
-// Una consulta lenta debe terminar con una explicación y permitir reintentar.
+const $ = id => document.getElementById(id);
+const form = $('tournamentForm'), fields = $('tournamentFields'), submit = $('createTournament');
+const participants = new Set(), judges = new Set();
+let profiles = [], currentSub = '', selectedFormat = 'DUEL', step = 1, tournamentId = crypto.randomUUID();
+let loading = false, saving = false, coverWorking = false, pricingReady = false, creationIsFree = false, epoch = 0;
+let coverBlob = null, coverObjectUrl = '', coverPath = '', pendingRequest = null;
+let pricingMessage = 'Consultando tarifa…', draftTimer, modelTimer;
+const noJudge = () => form.elements.arbitrationMode.value === 'ORGANIZER';
+const capacity = () => Number(form.elements.participantLimit.value);
+const owner = p => p.owner?.split('::')[0];
+const draftKey = () => 'proveit:tournament-draft:v2:' + currentSub;
+const show = (text = '', error = false) => { $('tournamentNotice').textContent = text; $('tournamentNotice').dataset.error = String(error); };
+
 async function withDeadline(operation, message, milliseconds = 20000) {
   let timer;
   try { return await Promise.race([operation, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(message)), milliseconds); })]); }
   finally { clearTimeout(timer); }
 }
-let selectedFormat = formats[0].id;
-const mode = document.getElementById('arbitrationMode');
-const startsLocal = document.getElementById('startsLocal');
-const zone = document.getElementById('timeZone');
-const consent = document.getElementById('organizerConsent');
-for (const value of timeZones) { const option=document.createElement('option'); option.value=value; option.textContent=zoneLabel(value); zone.append(option); }
-zone.value='America/Argentina/Buenos_Aires';
-const noJudge = () => mode.value === 'ORGANIZER';
-function updateSchedule() {
-  try { const utc=localToUtc(startsLocal.value,zone.value); const label=scheduleLabel(utc,zone.value); document.getElementById('schedulePreview').textContent=label; document.getElementById('scheduleSummary').textContent=label; }
-  catch(error) { document.getElementById('schedulePreview').textContent=error.message; document.getElementById('scheduleSummary').textContent='Fecha pendiente'; }
+for (const value of timeZones) {
+  const option = document.createElement('option'); option.value = value; option.textContent = zoneLabel(value); $('timeZone').append(option);
 }
-function updateArbitration() {
-  if(noJudge()) judges.clear();
-  document.getElementById('judgesSection').hidden=noJudge();
-  document.getElementById('arbitrationWarning').hidden=!noJudge();
-  document.getElementById('organizerConsentLabel').hidden=!noJudge();
-  consent.required=noJudge(); consent.checked=false;
-  form.elements.description.required=noJudge(); form.elements.description.minLength=noJudge()?10:0;
-  renderPeople();
-}
-mode.addEventListener('change',()=>{updateArbitration();saveDraft();});
-startsLocal.addEventListener('input',updateSchedule); zone.addEventListener('change',updateSchedule);
-let loading = false;
-let saving = false;
-let tournamentId = crypto.randomUUID();
-const draftKey = 'proveit:tournament-draft';
-const resumeKey = 'proveit:tournament-resume';
-const show = (text, error = false) => { notice.textContent = text; notice.dataset.error = String(error); };
+$('timeZone').value = 'America/Argentina/Buenos_Aires';
+
+// Borrador por cuenta: conserva elecciones e ID para reintentos, sin teléfonos ni emails.
 function saveDraft() {
-  try { sessionStorage.setItem(draftKey, JSON.stringify({ format: selectedFormat, name: form.elements.name.value, activity: form.elements.activity.value, description: form.elements.description.value, arbitrationMode: mode.value, startsLocal: startsLocal.value, timeZone: zone.value })); } catch { /* El formulario funciona sin almacenamiento local. */ }
+  if (!currentSub || saving) return;
+  try {
+    sessionStorage.setItem(draftKey(), JSON.stringify({
+      name: form.elements.name.value, activity: form.elements.activity.value, overview: form.elements.overview.value,
+      description: form.elements.description.value, conflicts: form.elements.conflicts.value,
+      participantLimit: capacity(), arbitrationMode: form.elements.arbitrationMode.value,
+      prizeExpected: form.elements.prizeExpected.value, startsLocal: $('startsLocal').value, timeZone: $('timeZone').value,
+      participants: [...participants], judges: [...judges], format: selectedFormat, step, tournamentId, coverPath, pendingRequest,
+    })); $('draftState').textContent = '● Borrador guardado';
+  } catch { $('draftState').textContent = '● Borrador en esta página'; }
 }
-try {
-  const draft = JSON.parse(sessionStorage.getItem(draftKey) || 'null');
-  if (draft) {
-    if (formats.some(format => format.id === draft.format)) selectedFormat = draft.format;
-    if (['JUDGES','ORGANIZER'].includes(draft.arbitrationMode)) mode.value=draft.arbitrationMode;
-    if (timeZones.includes(draft.timeZone)) zone.value=draft.timeZone;
-    if (typeof draft.startsLocal==='string') startsLocal.value=draft.startsLocal;
-    for (const key of ['name','activity','description']) if (typeof draft[key] === 'string') form.elements[key].value = draft[key];
-  }
-} catch { /* Un borrador inválido no impide crear. */ }
+function restoreDraft() {
+  form.reset(); participants.clear(); judges.clear(); clearCover(); pendingRequest = null;
+  saving = false; coverWorking = false;
+  selectedFormat = 'DUEL'; tournamentId = crypto.randomUUID(); step = 1;
+  $('timeZone').value = 'America/Argentina/Buenos_Aires';
+  try {
+    const d = JSON.parse(sessionStorage.getItem(draftKey()) || 'null');
+    if (!d) return;
+    for (const key of ['name', 'activity', 'overview', 'description', 'conflicts', 'startsLocal']) if (typeof d[key] === 'string') form.elements[key].value = d[key];
+    if (Number.isInteger(d.participantLimit) && d.participantLimit >= 2 && d.participantLimit <= 64) form.elements.participantLimit.value = d.participantLimit;
+    if (['JUDGES', 'ORGANIZER'].includes(d.arbitrationMode)) form.elements.arbitrationMode.value = d.arbitrationMode;
+    if (['yes', 'no'].includes(d.prizeExpected)) form.elements.prizeExpected.value = d.prizeExpected;
+    if (timeZones.includes(d.timeZone)) $('timeZone').value = d.timeZone;
+    if (formats.some(f => f.id === d.format)) selectedFormat = d.format;
+    if (/^[a-f0-9-]{36}$/i.test(d.tournamentId)) tournamentId = d.tournamentId;
+    for (const id of Array.isArray(d.participants) ? d.participants : []) if (typeof id === 'string') participants.add(id);
+    for (const id of Array.isArray(d.judges) ? d.judges : []) if (typeof id === 'string') judges.add(id);
+    if (typeof d.coverPath === 'string' && d.coverPath.startsWith(`tournament-covers/${currentSub}/${tournamentId}/`)) coverPath = d.coverPath;
+    if (d.pendingRequest?.tournamentId === tournamentId) pendingRequest = d.pendingRequest;
+    step = d.step === 2 ? 2 : 1;
+    if (coverPath) $('coverStatus').textContent = 'La portada ya se subió y se conservará al publicar.';
+  } catch { /* Un borrador dañado nunca impide empezar otro. */ }
+}
+
+function syncPoster() {
+  $('posterName').textContent = form.elements.name.value.trim() || 'El nombre\nlo ponés vos.';
+  $('posterActivity').textContent = form.elements.activity.value.trim() || 'TU PRÓXIMO DESAFÍO';
+  $('reviewName').textContent = form.elements.name.value.trim() || 'Tu torneo';
+  $('arbitrationWarning').hidden = !noJudge(); $('prizeHint').hidden = form.elements.prizeExpected.value !== 'yes';
+}
+function syncArbitration() {
+  if (noJudge()) judges.clear();
+  $('judgesSection').hidden = noJudge(); $('organizerConsentLabel').hidden = !noJudge();
+  $('judgeModeHelp').textContent = noJudge() ? 'Sin juez: el organizador decide el resultado y coordina el dinero. Todos deben aceptarlo.' : 'El juez también coordina el dinero del torneo.';
+  $('organizerConsent').required = noJudge(); syncPoster();
+}
+function updateSchedule() {
+  try {
+    const utc = localToUtc($('startsLocal').value, $('timeZone').value), text = scheduleLabel(utc, $('timeZone').value);
+    $('schedulePreview').textContent = text; $('scheduleSummary').textContent = text;
+  } catch { $('schedulePreview').textContent = 'Elegí una fecha y hora futuras.'; $('scheduleSummary').textContent = 'Horario pendiente'; }
+}
 function updateSummary() {
-  document.getElementById('participantCount').textContent = `${participants.size} / ${selectedFormat === 'DUEL' ? 'exactamente 2' : 'mínimo 2'}`;
-  document.getElementById('judgeCount').textContent = `${judges.size} / ${noJudge() ? 'sin juez' : 'mínimo 1'}`;
-  const format = formats.find(item => item.id === selectedFormat);
-  document.getElementById('tournamentSummary').textContent = `${format.name} · ${participants.size} participantes · ${noJudge() ? 'sin juez · decide el organizador' : judges.size+' jueces'}`;
+  const format = formats.find(f => f.id === selectedFormat);
+  $('participantCount').textContent = `${participants.size} / ${capacity()}`;
+  $('judgeCount').textContent = noJudge() ? 'Sin juez' : `${judges.size} elegidos`;
+  $('tournamentSummary').textContent = `${format.name} · ${capacity()} participantes · ${noJudge() ? 'decide el organizador' : judges.size + ' jueces invitados'}`;
+  $('creationFee').textContent = pricingMessage;
+  submit.textContent = pendingRequest ? 'Retomar publicación ↗' : creationIsFree ? 'Crear y enviar invitaciones ↗' : 'Continuar al pago ↗';
+}
+function lockPreparedRequest() {
+  // Una solicitud de pago preparada es inmutable: el reintento no puede cobrar otra configuración.
+  for (const control of form.querySelectorAll('input,textarea,select,button')) {
+    if (control !== submit) control.disabled = Boolean(pendingRequest);
+  }
+  if (!pendingRequest) renderPeople();
+}
+function updateModel() {
+  clearTimeout(modelTimer); modelTimer = setTimeout(() => {
+    const names = [...participants].map(id => profiles.find(p => p.id === id)?.nickname).filter(Boolean);
+    renderTournamentPreview($('bracketPreview'), { format: selectedFormat, count: Math.max(2, Math.min(64, capacity() || 2)), names });
+  }, 100);
 }
 function selectFormat(id) {
   selectedFormat = id;
-  options.querySelectorAll('button').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.id === id)));
-  const format = formats.find(item => item.id === id);
-  preview.innerHTML = `${formatImage(id)}<div><p class="eyebrow">${format.tag}</p><h2>${format.name}</h2><p>${format.description}</p><p class="format-example">${format.example}</p><p>${format.detail}</p></div>`;
-  // Conservamos las selecciones al cambiar de formato; si sobran rivales, se pueden quitar.
-  renderPeople();
+  $('formatOptions').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.id === id)));
+  const description = document.createElement('p'); description.textContent = formats.find(f => f.id === id).description;
+  $('formatPreview').replaceChildren(description); updateSummary(); updateModel();
 }
-formats.forEach(format => {
-  const button = document.createElement('button');
-  button.className = 'format-choice'; button.type = 'button'; button.textContent = format.name; button.dataset.id = format.id;
-  button.addEventListener('click', () => { selectFormat(format.id); saveDraft(); });
-  options.append(button);
-});
-const owner = profile => profile.owner.split('::')[0];
-function usedByOtherRole(profile, role) {
-  const otherIds = [...(role !== 'participant' ? participants : []), ...(role !== 'judge' ? judges : []), ...(role !== 'treasurer' && treasurer.value ? [treasurer.value] : [])];
-  return profiles.some(other => otherIds.includes(other.id) && owner(other) === owner(profile));
+for (const format of formats) {
+  const b = document.createElement('button'); b.type = 'button'; b.className = 'format-choice'; b.dataset.id = format.id; b.textContent = format.name;
+  b.addEventListener('click', () => { selectFormat(format.id); saveDraft(); }); $('formatOptions').append(b);
 }
-// Caché compartida con vencimiento y reintentos: un error no se recuerda para siempre.
+
 function personAvatar(profile) {
-  const avatar=document.createElement('span');avatar.className='person-avatar';avatar.setAttribute('aria-hidden','true');
-  decorateAvatar(avatar,owner(profile));
-  const initial=Array.from(profile.nickname.trim())[0]?.toLocaleUpperCase('es') || '?';avatar.textContent=initial;
-  if(/^(profile-pictures|profile-private)\//.test(profile.avatarPath || '')){
-    const load=async(retry=false)=>{
-      try{
-        const url=await avatarUrl(profile.avatarPath,{profileId:profile.id,refresh:retry});
-        if(!avatar.isConnected)return;
-        const image=document.createElement('img');image.alt='';image.width=36;image.height=36;image.decoding='async';
-        image.addEventListener('error',()=>{avatar.textContent=initial;if(!retry)setTimeout(()=>void load(true),1000);},{once:true});
-        image.src=url;avatar.replaceChildren(image);
-      }catch{if(!retry && avatar.isConnected)setTimeout(()=>void load(true),1000);}
-    };void load();
-  }
-  return avatar;
-}
-function selectionState(selected) {
-  const state = document.createElement('span');
-  state.className = 'person-selection'; state.setAttribute('aria-hidden', 'true');
-  state.textContent = selected ? '✓ Seleccionado' : 'Elegir';
-  return state;
+  const node = document.createElement('span'); node.className = 'person-avatar'; node.setAttribute('aria-hidden', 'true');
+  const initial = Array.from(profile.nickname)[0]?.toUpperCase() || '?'; node.textContent = initial; decorateAvatar(node, owner(profile));
+  if (profile.avatarPath) void avatarUrl(profile.avatarPath, { profileId: profile.id }).then(url => {
+    if (!node.isConnected) return;
+    const img = document.createElement('img'); img.alt = ''; img.width = 30; img.height = 30; img.decoding = 'async'; img.src = url;
+    img.addEventListener('error', () => { node.textContent = initial; }, { once: true }); node.replaceChildren(img);
+  }).catch(() => {});
+  return node;
 }
 function renderPeople() {
-  const query = search.value.trim().toLocaleLowerCase('es');
-  const filtered = profiles.filter(profile => profile.nickname.toLocaleLowerCase('es').includes(query));
-  for (const [role, target, selected] of [['participant','participantsList',participants],['judge','judgesList',judges]]) {
-    const list = document.getElementById(target); list.replaceChildren();
-    for (const profile of filtered.filter(p=>role!=='judge' || p.judgeEnabled)) {
+  const query = $('peopleSearch').value.trim().toLocaleLowerCase('es');
+  const filtered = profiles.filter(p => p.nickname.toLocaleLowerCase('es').includes(query));
+  $('selectedParticipants').replaceChildren();
+  for (const id of participants) {
+    const p = profiles.find(p => p.id === id); if (!p) continue;
+    const b = document.createElement('button'); b.type = 'button'; b.setAttribute('aria-label', 'Quitar a ' + p.nickname);
+    b.append(personAvatar(p), document.createTextNode(p.nickname + ' ×')); b.addEventListener('click', () => { participants.delete(id); selectionChanged(); });
+    $('selectedParticipants').append(b);
+  }
+  for (const [role, target, chosen] of [['participant', 'participantsList', participants], ['judge', 'judgesList', judges]]) {
+    const list = $(target); list.replaceChildren();
+    for (const profile of filtered.filter(p => role !== 'judge' || p.judgeEnabled)) {
       const label = document.createElement('label'); label.className = 'person-choice';
-      const input = document.createElement('input'); input.type = 'checkbox'; input.value = profile.id; input.checked = selected.has(profile.id);
-      input.disabled = (role === 'participant' && selectedFormat === 'DUEL' && !input.checked && selected.size >= 2) || profiles.some(other => other.id !== profile.id && selected.has(other.id) && owner(other) === owner(profile));
-      input.addEventListener('change', () => {
-        if (input.checked && selected.size >= (role === 'participant' ? (selectedFormat === 'DUEL' ? 2 : 64) : 16)) { input.checked = false; return show('Llegaste al máximo de personas para ese rol.', true); }
-        input.checked ? selected.add(profile.id) : selected.delete(profile.id);
-        renderPeople();
-      });
+      const check = document.createElement('input'); check.type = 'checkbox'; check.checked = chosen.has(profile.id);
+      check.disabled = pendingRequest !== null || (!check.checked && chosen.size >= (role === 'participant' ? capacity() : 16)) || profiles.some(other => other.id !== profile.id && chosen.has(other.id) && owner(other) === owner(profile));
+      check.addEventListener('change', () => { check.checked ? chosen.add(profile.id) : chosen.delete(profile.id); selectionChanged(); });
       const name = document.createElement('span'); name.textContent = profile.nickname;
-      label.append(input,personAvatar(profile),name,badgeElements(owner(profile)),selectionState(input.checked)); list.append(label);
+      const state = document.createElement('span'); state.className = 'person-selection'; state.textContent = check.checked ? '✓ Invitado' : 'Elegir'; state.setAttribute('aria-hidden', 'true');
+      label.append(check, personAvatar(profile), name, badgeElements(owner(profile)), state); list.append(label);
     }
-    if (!list.childElementCount) { const empty = document.createElement('p'); empty.textContent = role==='judge'?'No hay jueces disponibles con ese nick. El rol se habilita en Mi perfil.':profiles.length ? 'No hay perfiles con ese nick.' : 'Todavía no hay perfiles para seleccionar.'; list.append(empty); }
+    if (!list.childElementCount) { const p = document.createElement('p'); p.className = 'editorial-help'; p.textContent = role === 'judge' ? 'No hay jueces disponibles con ese nick.' : 'No hay perfiles disponibles con ese nick.'; list.append(p); }
   }
-  updateSummary();
+  updateSummary(); updateModel();
 }
+function selectionChanged() { renderPeople(); saveDraft(); }
 async function refreshPeople() {
-  if (loading) return;
-  loading = true; submit.disabled = true;
-  const status = document.getElementById('peopleStatus'); status.textContent = 'Cargando cuentas del club…';
+  if (loading || !currentSub) return;
+  const activeEpoch = epoch; loading = true; $('reloadPeople').disabled = true;
+  $('peopleStatus').textContent = 'Cargando cuentas del club…';
   try {
-    void loadBadges().then(renderPeople).catch(() => {});
-    profiles = (await withDeadline(registeredProfiles(), 'La lista de cuentas tardó demasiado. Usá «Actualizar lista» para reintentar.')).filter(profile => profile.accountComplete);
-    for (const selected of [participants,judges]) for (const id of selected) if (!profiles.some(profile => profile.id === id)) selected.delete(id);
-    if (treasurer.value && !profiles.some(profile => profile.id === treasurer.value)) treasurer.value = '';
-    renderPeople(); status.textContent = `${profiles.length} perfiles disponibles. Para aparecer aquí, cada persona debe ingresar y guardar su nick y teléfono en Mi perfil.`;
-  } catch (error) { status.textContent = 'No pudimos cargar la lista. Usá «Actualizar lista» para reintentar.'; show(error.message, true); }
-  finally { loading = false; submit.disabled = !pricingReady; }
-}
-async function connectAccount() {
-  const attempt = ++connectionAttempt;
-  const gate = document.getElementById('accountGate');
-  pricingReady = false; submit.disabled = true;
-  fields.disabled = true; gate.hidden = false;
-  document.getElementById('accountGateText').textContent = 'Conectando tu cuenta…';
-  document.getElementById('tournamentLogin').hidden = true;
-  document.getElementById('retryConnection').hidden = true;
-  try {
-    if (!await withDeadline(configureAmplify(), 'AWS tardó demasiado en responder. Reintentá la conexión.')) throw new Error('No pudimos conectar con AWS. Reintentá la conexión.');
-    try { await withDeadline(getCurrentUser(), 'No pudimos comprobar tu sesión a tiempo. Reintentá la conexión.'); }
-    catch (error) {
-      if (error.name !== 'UserUnAuthenticatedException') throw error;
-      if (attempt !== connectionAttempt) return;
-      document.getElementById('accountGateText').textContent = 'Ingresá con tu cuenta para crear un torneo.';
-      document.getElementById('tournamentLogin').hidden = false;
-      return;
-    }
-    if (attempt !== connectionAttempt) return;
-    try { sessionStorage.removeItem(resumeKey); } catch {}
-    const pricing=await withDeadline(tournamentFee(), 'No pudimos consultar la tarifa a tiempo. Reintentá la conexión; no se realizó ningún cobro.');
-    if (attempt !== connectionAttempt) return;
-    creationIsFree=pricing.exempt===true;
-    pricingReady=pricing.enabled && pricing.canPay;
-    document.getElementById('creationFee').textContent=pricing.mode==='TEST' ? 'Modo de prueba: '+money(pricing.amountCents)+' ficticios. Sólo el Creador puede probar el pago.' : 'Tarifa por crear este torneo: '+money(pricing.amountCents)+'. Se paga una sola vez; las invitaciones se envían después de acreditarse.';
-    if(creationIsFree)document.getElementById('creationFee').textContent='Creación gratuita '+(pricing.exemptionSource==='CREATOR'?'permanente para tu cuenta de Creador.':'autorizada por el administrador para tu cuenta.')+' No se solicita un pago; las invitaciones se envían al crear.';
-    if(!pricing.enabled)document.getElementById('creationFee').textContent='La creación de torneos está pausada temporalmente.';
-    if(pricing.mode==='TEST' && !pricing.canPay)document.getElementById('creationFee').textContent='Los pagos siguen en modo de prueba y sólo están habilitados para la cuenta del Creador. Podés recibir invitaciones, pero todavía no crear un torneo desde esta cuenta. No se realizó ningún cobro.';
-    pricingMessage=document.getElementById('creationFee').textContent;
-    if (!pricingReady) {
-      document.getElementById('accountGateText').textContent=pricingMessage;
-      document.getElementById('peopleStatus').textContent='La creación de torneos no está habilitada para esta cuenta en este momento.';
-      show(pricingMessage); return;
-    }
-    fields.disabled = false; gate.hidden = true;
-    submit.textContent=creationIsFree?'Crear torneo gratis ↗':pricing.mode==='TEST'?'Preparar pago de prueba ↗':'Pagar y crear torneo ↗';
-    await refreshPeople();
-  } catch (error) {
-    if (attempt !== connectionAttempt) return;
-    fields.disabled = true; gate.hidden = false;
-    document.getElementById('accountGateText').textContent = error.message || 'No pudimos conectar con el servidor. Reintentá la conexión.';
-    document.getElementById('retryConnection').hidden = false;
-  }
+    const found = await withDeadline(registeredProfiles(), 'La lista tardó demasiado. Usá «Actualizar lista» para reintentar.');
+    if (activeEpoch !== epoch) return;
+    profiles = found.filter(p => p.accountComplete);
+    for (const chosen of [participants, judges]) for (const id of chosen) if (!profiles.some(p => p.id === id)) chosen.delete(id);
+    renderPeople(); $('peopleStatus').textContent = `${profiles.length} cuentas disponibles. Cada invitado debe tener su perfil completo.`;
+    void loadBadges().then(() => { if (activeEpoch === epoch) renderPeople(); }).catch(() => {});
+  } catch (e) { $('peopleStatus').textContent = e.message; }
+  finally { if (activeEpoch === epoch) { loading = false; $('reloadPeople').disabled = false; } }
 }
 
-document.getElementById('retryConnection').addEventListener('click', () => void connectAccount());
-document.getElementById('tournamentLogin').addEventListener('click', () => { saveDraft(); try { sessionStorage.setItem(resumeKey, '1'); } catch {} });
-document.getElementById('reloadPeople').addEventListener('click', refreshPeople);
-search.addEventListener('input', renderPeople);
-treasurer.addEventListener('change', renderPeople);
-form.addEventListener('input', saveDraft);
+// Las etapas ocultas no participan de la validación hasta que corresponde.
+function validateStepOne() {
+  for (const id of ['tournamentName', 'tournamentActivity', 'tournamentOverview', 'tournamentDescription', 'participantLimit']) {
+    if (!$(id).reportValidity()) return false;
+  }
+  if (form.elements.name.value.trim().length < 3 || form.elements.activity.value.trim().length < 2 || form.elements.description.value.trim().length < 10) {
+    show('Agregá un nombre, una actividad y reglas de al menos 10 caracteres.', true); return false;
+  }
+  if (coverWorking) { show('Esperá a que termine de prepararse la imagen.', true); return false; }
+  return true;
+}
+function setStep(value, focus = true) {
+  step = value; $('creationStep1').hidden = value !== 1; $('creationStep2').hidden = value !== 2;
+  document.querySelectorAll('[data-step-indicator]').forEach(n => {
+    const num = Number(n.dataset.stepIndicator); n.dataset.complete = String(num < value);
+    if (num === value) n.setAttribute('aria-current', 'step'); else n.removeAttribute('aria-current');
+  });
+  if (focus) { (value === 2 ? $('stepTwoTitle') : $('tournamentName')).focus(); $('creationTitle').scrollIntoView({ block: 'start', behavior: 'instant' }); }
+  if (value === 2 && !profiles.length) void refreshPeople();
+  saveDraft();
+}
+$('nextCreationStep').addEventListener('click', () => { show(); if (validateStepOne()) setStep(2); });
+$('previousCreationStep').addEventListener('click', () => { show(); setStep(1); });
+$('peopleSearch').addEventListener('input', renderPeople); $('reloadPeople').addEventListener('click', refreshPeople);
+form.elements.participantLimit.addEventListener('change', () => {
+  if (capacity() !== 2 && selectedFormat === 'DUEL') selectFormat('ROUND_ROBIN');
+  // Nunca quitar participantes silenciosamente: el usuario decide a quién deseleccionar.
+  renderPeople(); if (participants.size > capacity()) show('Hay más invitados que cupos. Quitá las selecciones sobrantes en la siguiente etapa.', true);
+});
+form.addEventListener('input', e => {
+  if (e.target.name === 'arbitrationMode') { $('organizerConsent').checked = false; syncArbitration(); renderPeople(); }
+  syncPoster(); updateSchedule(); updateSummary(); clearTimeout(draftTimer); draftTimer = setTimeout(saveDraft, 250);
+});
+
+function clearCover() {
+  if (coverObjectUrl) URL.revokeObjectURL(coverObjectUrl);
+  coverObjectUrl = ''; coverBlob = null; coverPath = ''; $('coverPreview').removeAttribute('src'); $('coverPreview').hidden = true;
+  $('posterEmpty').hidden = false; $('removeCover').hidden = true; $('coverInput').value = ''; $('chooseCover').querySelector('span').textContent = 'Agregar imagen';
+  $('coverStatus').textContent = 'JPG, PNG o WebP · hasta 5 MB. Se optimiza antes de subir.';
+}
+$('chooseCover').addEventListener('click', () => $('coverInput').click());
+$('removeCover').addEventListener('click', () => { clearCover(); saveDraft(); });
+$('coverInput').addEventListener('change', async () => {
+  const file = $('coverInput').files[0]; if (!file) return;
+  const activeEpoch = epoch; coverWorking = true; $('coverStatus').textContent = 'Preparando imagen…';
+  try {
+    const blob = await prepareCover(file); if (activeEpoch !== epoch) return;
+    clearCover(); coverBlob = blob; coverObjectUrl = URL.createObjectURL(blob); $('coverPreview').src = coverObjectUrl;
+    $('coverPreview').hidden = false; $('posterEmpty').hidden = true; $('removeCover').hidden = false;
+    $('chooseCover').querySelector('span').textContent = 'Cambiar imagen'; $('coverStatus').textContent = 'Imagen preparada. Se subirá cuando publiques el torneo.'; saveDraft();
+  } catch (e) { if (activeEpoch === epoch) $('coverStatus').textContent = e.message; }
+  finally { if (activeEpoch === epoch) coverWorking = false; }
+});
+
+async function connectAccount() {
+  const activeEpoch = ++epoch; pricingReady = false; fields.disabled = true; $('accountGate').hidden = false;
+  $('accountGateText').textContent = 'Conectando tu cuenta…'; $('retryConnection').hidden = true; $('tournamentLogin').hidden = true;
+  try {
+    if (!await withDeadline(configureAmplify(), 'No pudimos conectar con AWS. Reintentá.')) throw new Error('No pudimos conectar con AWS.');
+    const user = await withDeadline(getCurrentUser(), 'No pudimos comprobar tu sesión. Reintentá.');
+    if (activeEpoch !== epoch) return;
+    if (currentSub !== user.userId) { currentSub = user.userId; profiles = []; loading = false; restoreDraft(); }
+    const pricing = await withDeadline(tournamentFee(), 'No pudimos consultar la tarifa. Todavía no se realizó ningún cobro.');
+    if (activeEpoch !== epoch) return;
+    pricingReady = Boolean(pricing.enabled && pricing.canPay); creationIsFree = pricing.exempt === true;
+    pricingMessage = creationIsFree ? 'Creación gratuita autorizada para tu cuenta.' : `Tarifa de creación: ${money(pricing.amountCents)}. ${pricing.mode === 'TEST' ? 'Pago de prueba, sin cobro real.' : 'Un único pago del organizador.'}`;
+    if (!pricingReady) throw new Error(pricing.enabled ? 'La creación no está habilitada para esta cuenta en este momento.' : 'La creación de torneos está pausada temporalmente.');
+    fields.disabled = false; $('accountGate').hidden = true; submit.disabled = false;
+    syncArbitration(); syncPoster(); updateSchedule(); selectFormat(selectedFormat); setStep(pendingRequest ? 2 : step, false); lockPreparedRequest();
+    if (pendingRequest) show('Hay una publicación iniciada. Al continuar retomaremos esa solicitud con sus datos originales.');
+  } catch (e) {
+    if (activeEpoch !== epoch) return;
+    $('accountGateText').textContent = e.name === 'UserUnAuthenticatedException' ? 'Ingresá con tu cuenta para preparar el torneo.' : e.message;
+    $('tournamentLogin').hidden = e.name !== 'UserUnAuthenticatedException'; $('retryConnection').hidden = e.name === 'UserUnAuthenticatedException';
+  }
+}
+$('retryConnection').addEventListener('click', () => void connectAccount());
+$('tournamentLogin').addEventListener('click', () => { saveDraft(); try { sessionStorage.setItem('proveit:tournament-resume', '1'); } catch {} });
+
 form.addEventListener('submit', async event => {
   event.preventDefault(); if (saving || loading) return;
-  if (!pricingReady) return show(pricingMessage, true);
-  if (participants.size < 2) return show('Seleccioná al menos dos participantes con cuenta en ProveIt.', true);
-  if (selectedFormat === 'DUEL' && participants.size !== 2) return show('El Duelo 1v1 requiere exactamente dos participantes. Quitá las personas sobrantes.', true);
-  if (!noJudge() && !judges.size) return show('Seleccioná al menos un juez o elegí el modo sin juez.', true);
-  if (noJudge() && !consent.checked) return show(noJudgeConsent, true);
-  let startsAt;
-  try { startsAt=localToUtc(startsLocal.value,zone.value); if(Date.parse(startsAt)<=Date.now()) throw new Error('Elegí una fecha y hora futuras.'); }
-  catch(error) { return show(error.message,true); }
-  saving = true; submit.disabled = true; show(creationIsFree?'Creando el torneo sin cargo…':'Preparando el pago del torneo…');
+  if (step === 1) { if (validateStepOne()) setStep(2); return; }
+  if (!pricingReady) return show('Reintentá la conexión antes de publicar.', true);
+  if (!pendingRequest && !validateStepOne()) { setStep(1); return; }
+  let startsAt = pendingRequest?.startsAt;
+  if (!pendingRequest) {
+  if (participants.size !== capacity()) { $('participantsList').closest('details').open = true; return show(`Elegí exactamente ${capacity()} participantes. Por ahora seleccionaste ${participants.size}.`, true); }
+  if (selectedFormat === 'DUEL' && capacity() !== 2) return show('El Duelo 1v1 necesita exactamente dos participantes. Elegí otro formato o cambiá el cupo.', true);
+  if (!noJudge() && !judges.size) { $('judgesSection').closest('details').open = true; return show('Elegí al menos un juez o volvé a la primera etapa para elegir «Sin jurado».', true); }
+  if (noJudge() && !$('organizerConsent').checked) { $('organizerConsent').closest('details').open = true; return show(noJudgeConsent, true); }
+  try { startsAt = localToUtc($('startsLocal').value, $('timeZone').value); if (Date.parse(startsAt) <= Date.now()) throw new Error('Elegí una fecha y hora futuras.'); }
+  catch (e) { return show(e.message, true); }
+  }
+  const activeEpoch = epoch, activeSub = currentSub, activeDraftKey = draftKey();
+  saving = true; fields.disabled = true; show(coverBlob && !coverPath ? 'Subiendo la portada…' : 'Preparando publicación…');
   try {
-    // El mismo identificador permite reintentar si AWS respondió después del límite de espera.
-    const result = await withDeadline(createClubTournament({ tournamentId, arbitrationMode: mode.value, startsAt, timeZone: zone.value, acceptOrganizerDecision: noJudge() && consent.checked, name: form.elements.name.value.trim(), activity: form.elements.activity.value.trim(), description: form.elements.description.value.trim(),conflicts:form.elements.conflicts.value.trim(), format: selectedFormat, participantIds: [...participants], judgeIds: [...judges], treasurerId: treasurer.value || null }), 'La preparación del pago tardó demasiado. Podés reintentar desde este formulario; conservamos el identificador para no duplicar la solicitud.', 45000);
-    try { sessionStorage.removeItem(draftKey); } catch {}
-    location.href = `${result.status==='EXEMPT'?'/torneo.html':'/pago.html'}?id=${encodeURIComponent(result.id)}`;
-  } catch (error) { show(error.message || 'No se pudo guardar. Podés reintentar.', true); }
-  finally { saving = false; submit.disabled = !pricingReady; }
+    if (!pendingRequest) {
+      if (coverBlob && !coverPath) coverPath = await withDeadline(uploadTournamentCover(tournamentId, coverBlob), 'La subida tardó demasiado. Reintentá; no se inició ningún cobro.', 60000);
+      if (activeEpoch !== epoch) return;
+      pendingRequest = { tournamentId, name: form.elements.name.value.trim(), activity: form.elements.activity.value.trim(), overview: form.elements.overview.value.trim(),
+        description: form.elements.description.value.trim(), conflicts: form.elements.conflicts.value.trim(), format: selectedFormat,
+        participantIds: [...participants], judgeIds: [...judges], participantLimit: capacity(), arbitrationMode: form.elements.arbitrationMode.value,
+        startsAt, timeZone: $('timeZone').value, acceptOrganizerDecision: noJudge() && $('organizerConsent').checked,
+        prizeExpected: form.elements.prizeExpected.value === 'yes', coverPath: coverPath || null, treasurerId: null };
+      saving = false; saveDraft(); saving = true;
+    }
+    show(creationIsFree ? 'Creando torneo y enviando invitaciones…' : 'Preparando el checkout. Todavía no se realizó ningún cobro.');
+    const result = await withDeadline(createClubTournament(pendingRequest), 'La solicitud tardó demasiado. Conservamos su identificador para poder retomarla sin duplicarla.', 45000);
+    if (activeEpoch !== epoch || activeSub !== currentSub) return;
+    try { sessionStorage.removeItem(activeDraftKey); } catch {}
+    location.href = `${result.status === 'EXEMPT' ? '/torneo.html' : '/pago.html'}?id=${encodeURIComponent(result.id)}`;
+  } catch (e) {
+    if (activeEpoch !== epoch) return;
+    // Releer antes de permitir cambios: puede haberse guardado una solicitud aunque se perdiera la respuesta.
+    let known = false;
+    try { const client = await tournamentClient(); const r = await withDeadline(client.models.TournamentPayment.get({ id: tournamentId }), 'Sin respuesta', 10000); known = Boolean(r.data?.id); } catch { known = true; }
+    if (!known) pendingRequest = null;
+    show(e.message + (pendingRequest ? ' Al reintentar se conservarán los datos de esa publicación.' : ''), true);
+  } finally {
+    if (activeEpoch === epoch) { saving = false; fields.disabled = false; submit.disabled = !pricingReady; updateSummary(); lockPreparedRequest(); saveDraft(); }
+  }
 });
-Hub.listen('auth', ({payload}) => { if (['signedIn','signedOut'].includes(payload.event)) void connectAccount(); });
-selectFormat(selectedFormat);
-updateArbitration(); updateSchedule();
+Hub.listen('auth', ({ payload }) => {
+  if (payload.event === 'signedOut') {
+    saveDraft(); ++epoch; fields.disabled = true; currentSub = ''; profiles = []; participants.clear(); judges.clear(); clearCover();
+    form.reset(); pendingRequest = null; step = 1; syncArbitration(); renderPeople(); setStep(1, false);
+  }
+  if (['signedIn', 'signedOut'].includes(payload.event)) void connectAccount();
+});
+syncPoster(); updateSchedule(); selectFormat(selectedFormat);
 void connectAccount().finally(() => window.proveitLoadingDone?.('page'));
-

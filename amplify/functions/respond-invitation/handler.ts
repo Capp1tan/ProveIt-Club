@@ -6,7 +6,7 @@ import { prizeAction } from './prize';
 import { phoneOptional, assertActiveAccount, assertActiveTournament } from '../lifecycle';
 import { createDraw } from './draw';
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
-export const handler = async (event: { identity?: { sub?: string }; arguments: { prizeTitle?: string; prizeDescription?: string; prizeLinks?: string; prizeAttachments?: string; prizeRevision?: number; uploadContentType?: string; uploadSize?: number; invitationId?: string; accept?: boolean; tournamentId?: string; winnerProfileId?: string;resultReason?:string;resultKind?:string;acceptTerms?:boolean;termsVersion?:number;prizeHolder?:string;prizeFunder?:string;prizeFundingStatus?:string; acceptOrganizerDecision?: boolean } }) => {
+const respond = async (event: { identity?: { sub?: string }; arguments: { prizeTitle?: string; prizeDescription?: string; prizeLinks?: string; prizeAttachments?: string; prizeRevision?: number; uploadContentType?: string; uploadSize?: number; invitationId?: string; accept?: boolean; tournamentId?: string; winnerProfileId?: string;resultReason?:string;resultKind?:string;acceptTerms?:boolean;termsVersion?:number;prizeHolder?:string;prizeFunder?:string;prizeFundingStatus?:string; acceptOrganizerDecision?: boolean } }) => {
   const sub=event.identity?.sub;
   if(!sub)throw new Error('Iniciá sesión.');
   await assertActiveAccount(sub);
@@ -91,4 +91,11 @@ export const handler = async (event: { identity?: { sub?: string }; arguments: {
     }
   }
   throw new Error('Hay respuestas simultáneas. Actualizá y volvé a intentar.');
+};
+
+// Conserva el contrato anterior y publica sólo una señal mínima desde el nuevo flujo.
+export const handler=async(event:Parameters<typeof respond>[0] & {fieldName?:string;info?:{fieldName?:string}})=>{
+ const result=await respond(event);
+ if((event.fieldName || event.info?.fieldName)==='answerTournamentInvitation')return {id:result.id,tournamentId:result.tournamentId,status:result.status,changedAt:result.updatedAt};
+ return result;
 };

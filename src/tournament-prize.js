@@ -16,7 +16,7 @@ async function showAttachment(item,container){
 }
 export function prizePanel(t,{canEdit,onSaved}){
   const section=el('section','','prize-showcase');
-  section.append(el('p','ESTO ESTÁ EN JUEGO','prize-kicker'),el('h2',t.prizeTitle || 'El premio está por anunciarse'),el('span',t.prizeFundingStatus==='CONFIRMED'?'CONFIRMADO POR EL RESPONSABLE':'PENDIENTE DE CONFIRMACIÓN · NO DISPONIBLE','prize-provisional'));
+  section.append(el('p',t.prizeExpected===false && !t.prizeTitle?'COMPETIR POR EL DESAFÍO':'ESTO ESTÁ EN JUEGO','prize-kicker'),el('h2',t.prizeTitle || (t.prizeExpected===false?'Torneo sin premio anunciado':'El premio está por anunciarse')),el('span',t.prizeFundingStatus==='CONFIRMED'?'CONFIRMADO POR EL RESPONSABLE':'PENDIENTE DE CONFIRMACIÓN · NO DISPONIBLE','prize-provisional'));
   section.append(el('p','Posee o entrega: '+(t.prizeHolder || 'Sin declarar')+' · Financia: '+(t.prizeFunder || 'Sin declarar'),'field-help'),el('p','La gestión del premio es externa a ProveIt. La confirmación es una declaración del responsable; no implica custodia ni garantía de la plataforma.','field-help'));
   if(t.prizeDescription)section.append(el('p',t.prizeDescription,'prize-description'));
   const attachments=parse(t.prizeAttachments),links=parse(t.prizeLinks);

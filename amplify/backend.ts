@@ -117,6 +117,11 @@ backend.social.addEnvironment('INVITATION_TABLE_NAME',invitations.tableName);
 backend.social.addEnvironment('PROFILE_BUCKET_NAME',backend.storage.resources.bucket.bucketName);
 backend.storage.resources.bucket.grantRead(backend.social.resources.lambda,'profile-pictures/*');
 backend.storage.resources.bucket.grantReadWrite(backend.social.resources.lambda,'profile-private/*');
+// Portadas: sólo funciones autenticadas emiten URLs temporales y validan la propiedad.
+backend.storage.resources.bucket.grantPut(backend.social.resources.lambda,'tournament-covers/*');
+backend.storage.resources.bucket.grantRead(backend.social.resources.lambda,'tournament-covers/*');
+backend.storage.resources.bucket.grantRead(backend.createTournament.resources.lambda,'tournament-covers/*');
+backend.createTournament.addEnvironment('PROFILE_BUCKET_NAME',backend.storage.resources.bucket.bucketName);
 backend.storage.resources.bucket.grantRead(accountFunction,'profile-private/*');
 backend.clubAccount.addEnvironment('PROFILE_BUCKET_NAME',backend.storage.resources.bucket.bucketName);
 profiles.grant(accountFunction,'dynamodb:Scan');
