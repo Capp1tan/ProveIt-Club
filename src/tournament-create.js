@@ -41,8 +41,8 @@ function saveDraft() {
       participantLimit: capacity(), arbitrationMode: form.elements.arbitrationMode.value,
       prizeExpected: form.elements.prizeExpected.value, startsLocal: $('startsLocal').value, timeZone: $('timeZone').value,
       participants: [...participants], judges: [...judges], format: selectedFormat, step, tournamentId, coverPath, pendingRequest,
-    })); $('draftState').textContent = '● Borrador guardado';
-  } catch { $('draftState').textContent = '● Borrador en esta página'; }
+    }));
+  } catch { /* Guardar es opcional y no muestra etiquetas en la interfaz. */ }
 }
 function restoreDraft() {
   form.reset(); participants.clear(); judges.clear(); clearCover(); pendingRequest = null;
@@ -93,12 +93,17 @@ function updateSummary() {
   $('tournamentSummary').textContent = `${format.name} · ${capacity()} participantes · ${noJudge() ? 'decide el organizador' : judges.size + ' jueces invitados'}`;
   $('creationFee').textContent = pricingMessage;
   submit.textContent = pendingRequest ? 'Retomar publicación ↗' : creationIsFree ? 'Crear y enviar invitaciones ↗' : 'Continuar al pago ↗';
+  $('preparedRequestActions').hidden = !pendingRequest;
+  $('originalRequestLink').href = '/pago.html?id=' + encodeURIComponent(tournamentId);
+  for (const link of document.querySelectorAll('[data-demo-link]')) link.href = `/simular-torneo.html?format=${encodeURIComponent(selectedFormat)}&count=${Math.max(2, Math.min(16, capacity() || 2))}`;
 }
 function lockPreparedRequest() {
   // Una solicitud de pago preparada es inmutable: el reintento no puede cobrar otra configuración.
   for (const control of form.querySelectorAll('input,textarea,select,button')) {
-    if (control !== submit) control.disabled = Boolean(pendingRequest);
+    if (![submit, $('previousCreationStep'), $('nextCreationStep'), $('newLocalTournament')].includes(control)) control.disabled = Boolean(pendingRequest);
   }
+  // Volver es navegación; nunca cambia ni duplica una solicitud de pago.
+  $('previousCreationStep').disabled = false;
   if (!pendingRequest) renderPeople();
 }
 function updateModel() {
@@ -135,6 +140,7 @@ function renderPeople() {
   for (const id of participants) {
     const p = profiles.find(p => p.id === id); if (!p) continue;
     const b = document.createElement('button'); b.type = 'button'; b.setAttribute('aria-label', 'Quitar a ' + p.nickname);
+    b.disabled = Boolean(pendingRequest);
     b.append(personAvatar(p), document.createTextNode(p.nickname + ' ×')); b.addEventListener('click', () => { participants.delete(id); selectionChanged(); });
     $('selectedParticipants').append(b);
   }
@@ -192,6 +198,14 @@ function setStep(value, focus = true) {
 }
 $('nextCreationStep').addEventListener('click', () => { show(); if (validateStepOne()) setStep(2); });
 $('previousCreationStep').addEventListener('click', () => { show(); setStep(1); });
+$('newLocalTournament').addEventListener('click', () => {
+  if (saving) return;
+  // Cambiar el ID conserva intactos los registros y cobros de la solicitud anterior.
+  pendingRequest = null; tournamentId = crypto.randomUUID();
+  if (coverPath) { coverPath = ''; if (!coverBlob) $('coverStatus').textContent = 'Volvé a elegir la imagen para esta nueva creación.'; }
+  lockPreparedRequest(); updateSummary(); setStep(1); saveDraft();
+  show('Podés editar los datos para crear otro torneo. La solicitud anterior no fue cancelada ni reembolsada.');
+});
 $('peopleSearch').addEventListener('input', renderPeople); $('reloadPeople').addEventListener('click', refreshPeople);
 form.elements.participantLimit.addEventListener('change', () => {
   if (capacity() !== 2 && selectedFormat === 'DUEL') selectFormat('ROUND_ROBIN');

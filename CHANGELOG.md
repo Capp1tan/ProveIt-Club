@@ -1,3 +1,12 @@
+## 3.9.0 — 2026-10-23
+
+- Se elimina la etiqueta visible de borrador, conservando el guardado interno por cuenta.
+- Se corrige la navegación hacia la etapa anterior cuando hay una publicación preparada.
+- Se permite editar los datos como torneo nuevo sin modificar ni cancelar la solicitud original.
+- Simulador local con jugadores ficticios editables, equipos 2v2/3v3/5v5, confirmaciones, cuenta regresiva y resultados simulados.
+- Llaves interactivas y clasificación ficticia; sin llamadas a AWS, invitaciones, cobros ni cambios de puntos.
+- Los torneos reales siguen siendo individuales; las vistas por equipos están identificadas como simulación.
+
 ## 3.8.0 — 2026-10-23
 
 - Creación de torneos en dos etapas simples y una sala de espera real, inspiradas en el boceto de Figma.

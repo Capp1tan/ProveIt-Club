@@ -54,7 +54,7 @@
   <section class="creation-surface" aria-labelledby="creationTitle">
     <header class="creation-heading">
       <div class="creation-title"><span class="creation-symbol" aria-hidden="true"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 3h8v6a4 4 0 0 1-8 0V3Zm0 2H4v2a4 4 0 0 0 4 4m8-6h4v2a4 4 0 0 1-4 4m-4 2v5m-4 3h8m-7-3h6"/></svg></span><h1 id="creationTitle">Crear torneo</h1></div>
-      <span id="draftState" class="draft-state" role="status">● Borrador</span>
+      <a class="creation-demo-link" href="simular-torneo.html" data-demo-link>Probar con jugadores ficticios ↗</a>
     </header>
     <ol class="creation-steps" aria-label="Etapas para crear el torneo">
       <li data-step-indicator="1" aria-current="step"><span>01</span> El desafío</li>
@@ -72,7 +72,7 @@
               <label for="tournamentActivity">Juego o actividad <span>*</span></label><input id="tournamentActivity" name="activity" minlength="2" maxlength="80" required placeholder="LoL, tenis, fútbol, trivia…">
               <label for="tournamentOverview">Descripción <small>opcional</small></label><textarea id="tournamentOverview" name="overview" maxlength="500" rows="2" placeholder="Un encuentro para competir y compartir."></textarea>
               <label for="tournamentDescription">Reglas <span>*</span></label><textarea id="tournamentDescription" name="description" minlength="10" maxlength="1000" required rows="4" placeholder="Cómo se compite, cómo se gana y qué pasa si hay un empate."></textarea>
-              <div class="compact-field"><label for="participantLimit">Número de participantes <span>*</span></label><input id="participantLimit" name="participantLimit" type="number" min="2" max="64" step="1" value="2" required></div>
+              <div class="compact-field"><label for="participantLimit">Número de participantes <span>*</span></label><input id="participantLimit" name="participantLimit" type="number" min="2" max="64" step="1" value="2" required><p class="editorial-help">La publicación real es individual por ahora. Podés explorar equipos 5v5 y otras modalidades en el simulador.</p></div>
               <fieldset class="editorial-choice"><legend>¿El torneo cuenta con un jurado?</legend><label><input type="radio" name="arbitrationMode" value="JUDGES" checked><span>Sí</span></label><label><input type="radio" name="arbitrationMode" value="ORGANIZER"><span>No</span></label></fieldset>
               <p class="editorial-hint" id="arbitrationWarning" hidden>Sin juez, el organizador decidirá el resultado, incluso si participa. Todos deberán aceptar esta condición antes de comenzar.</p>
               <fieldset class="editorial-choice"><legend>¿Se prevé un premio?</legend><label><input type="radio" name="prizeExpected" value="yes"><span>Sí</span></label><label><input type="radio" name="prizeExpected" value="no" checked><span>No</span></label></fieldset>
@@ -94,7 +94,7 @@
           <footer class="creation-footer"><a href="torneos.html" class="editorial-link">Cancelar</a><button class="editorial-primary" id="nextCreationStep" type="button">Siguiente etapa <span>↗</span></button></footer>
         </section>
         <section id="creationStep2" class="creation-step" aria-labelledby="stepTwoTitle" hidden>
-          <div class="stage-intro"><p class="editorial-kicker">PREPARAR EL ENCUENTRO</p><h2 id="stepTwoTitle" tabindex="-1">Elegí con quién y cómo competir.</h2><p>Las invitaciones se enviarán al publicar. Ahora estás preparando el torneo.</p></div>
+          <div class="stage-intro"><p class="editorial-kicker">PREPARAR EL ENCUENTRO</p><h2 id="stepTwoTitle" tabindex="-1">Elegí con quién y cómo competir.</h2><p>Las invitaciones se enviarán al publicar. Ahora estás preparando el torneo.</p><a href="simular-torneo.html" class="creation-demo-link" data-demo-link>Simular llaves con bots y equipos 5v5 ↗</a></div>
           <div class="setup-grid">
             <div class="setup-controls">
               <details class="setup-section" open><summary><span>01</span> Participantes <strong id="participantCount">0 / 2</strong></summary>
@@ -109,6 +109,7 @@
           <footer class="creation-footer"><button type="button" class="editorial-link" id="previousCreationStep">← Etapa anterior</button><button class="editorial-primary" type="submit" id="createTournament">Publicar torneo <span>↗</span></button></footer>
         </section>
       </fieldset>
+      <div id="preparedRequestActions" class="prepared-request-actions" hidden><p>Esta publicación ya fue preparada. Podés revisar sus datos y volver a la solicitud original, o usarlos como punto de partida para otro torneo.</p><a id="originalRequestLink" class="editorial-link" href="torneos.html">Ver solicitud original ↗</a><button id="newLocalTournament" class="editorial-secondary" type="button">Editar como torneo nuevo</button></div>
       <div id="tournamentNotice" class="editorial-message" role="status" aria-live="polite"></div>
     </form>
   </section>
