@@ -1,6 +1,8 @@
-# Simulador local — v3.11.1
+# Simulador local — v3.12.0
 
 Entrada: `simular-torneo.html`. Se puede abrir desde la cabecera de la creación real o desde la segunda etapa.
+
+Ahora abre la sala de espera con el diseño oscuro A. Configurar simulación permite cambiar los equipos; Volver a la sala conserva la prueba. La asistencia de la sala se cuenta por persona y cada equipo sólo está confirmado cuando todos sus integrantes lo están. Ver `SALA-DE-ESPERA.md` para uso y límites.
 
 ## Qué permite
 

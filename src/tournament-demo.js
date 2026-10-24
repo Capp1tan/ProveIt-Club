@@ -1,12 +1,13 @@
 // Laboratorio enteramente local. No importa clientes AWS, pagos, cuentas ni notificaciones.
 import { formats } from './tournament-formats.js';
+import { createWaitingRoom } from './tournament-waiting-room.js';
 
 const $ = id => document.getElementById(id);
 const el = (tag, text = '', cls) => { const n = document.createElement(tag); n.textContent = text; if (cls) n.className = cls; return n; };
 const MAX_PLAYERS = 64;
 const bank = Array.from({ length: MAX_PLAYERS }, (_, i) => ({
   id: 'demo-' + (i + 1), name: 'Equipo ' + (i + 1), solo: 'Bot ' + String(i + 1).padStart(2, '0'),
-  members: Array.from({ length: MAX_PLAYERS }, (_, j) => 'Bot ' + (i + 1) + '.' + (j + 1)), confirmed: false,
+  members: Array.from({ length: MAX_PLAYERS }, (_, j) => 'Bot ' + (i + 1) + '.' + (j + 1)), confirmed: false, attendance: [],
 }));
 let totalPlayers = 4, count = 4, teamSize = 1, format = 'SINGLE_ELIMINATION', rounds = [], matches = new Map(), order = [];
 let started = false, startsAt = Date.now() + 5 * 60 * 1000, hasReset = false;
@@ -21,6 +22,44 @@ const allConfirmed = () => active().every(p => p.confirmed);
 const isFinished = () => matches.size > 0 && [...matches.values()].every(m => m.done);
 const canPlay = () => !hasPendingConfiguration() && allConfirmed() && started && !isFinished() && !confirmedPodium;
 const announce = text => { $('demoNotice').textContent = text; };
+// La sala cuenta personas. El motor de llaves sigue contando unidades de competencia (equipos o individuos).
+const memberStatus = (entry, index) => entry.attendance[index] || (entry.confirmed ? 'confirmed' : 'pending');
+function confirmEntry(entry, value) {
+  entry.attendance = Array.from({ length: entrySize(entry) }, () => value ? 'confirmed' : 'pending'); entry.confirmed = value;
+}
+function setMemberStatus(key, status) {
+  if (hasPendingConfiguration() || started || !['confirmed', 'pending', 'declined'].includes(status)) return;
+  const [id, rawIndex] = key.split(':'), index = Number(rawIndex), entry = active().find(p => p.id === id);
+  if (!entry || !Number.isInteger(index) || index < 0 || index >= entrySize(entry)) return;
+  const statuses = Array.from({ length: entrySize(entry) }, (_, i) => memberStatus(entry, i)); statuses[index] = status;
+  entry.attendance = statuses; entry.confirmed = statuses.every(value => value === 'confirmed');
+  announce('Asistencia de ejemplo actualizada.'); renderEditors(); render();
+}
+function roomModel() {
+  let index = 0;
+  return {
+    grouped: grouped(), pending: hasPendingConfiguration(), started, startsAt, finished: isFinished(), podiumConfirmed: Boolean(confirmedPodium),
+    formatName: formats.find(f => f.id === format)?.name || 'Torneo', notice: $('demoNotice').textContent,
+    groups: grouped() ? active().map(entry => ({ id: entry.id, name: entry.name, players: Array.from({ length: entrySize(entry) }, (_, i) => ({ key: entry.id + ':' + i, name: entry.members[i], status: memberStatus(entry, i), index: index++ })) })) : [{ id: 'individual', name: 'Participantes', players: active().map(entry => ({ key: entry.id + ':0', name: entry.solo, status: memberStatus(entry, 0), index: index++ })) }],
+  };
+}
+function setDemoView(view) {
+  document.body.dataset.demoView = view; $('waitingRoomRoot').hidden = view !== 'room'; $('demoWorkspace').hidden = view === 'room';
+  $('demoViewToggle').textContent = view === 'room' ? 'Configurar simulación' : 'Volver a la sala';
+  window.scrollTo({ top: 0, behavior: 'instant' });
+}
+function confirmNextPerson() {
+  if (hasPendingConfiguration() || started) return;
+  for (const entry of active()) for (let i = 0; i < entrySize(entry); i++) if (memberStatus(entry, i) === 'pending') { setMemberStatus(entry.id + ':' + i, 'confirmed'); return; }
+}
+function confirmEveryone() {
+  if (hasPendingConfiguration() || started) return;
+  active().forEach(entry => confirmEntry(entry, true)); renderEditors(); announce('Todos los jugadores ficticios confirmaron. Podés iniciar la simulación.'); render();
+}
+function startSimulation() {
+  if (hasPendingConfiguration() || !allConfirmed() || started) return;
+  started = true; renderEditors(); announce('Prueba iniciada. Elegí ganadores tocando los nombres o simulá resultados.'); render(); setDemoView('results');
+}
 
 // Acepta separadores habituales sin interpretar «5-2» como una resta ni cambiar los tamaños elegidos.
 function parseDistribution(text, total) {
@@ -199,7 +238,8 @@ function renderEditors() {
     const heading = el('div', '', 'demo-entry-heading'), check = el('input'); check.type = 'checkbox'; check.checked = entry.confirmed;
     check.id = 'demo-confirm-' + i; const label = el('label', (grouped() ? 'Equipo ' : 'Jugador ') + (i + 1)); label.htmlFor = check.id;
     const status = el('span', entry.confirmed ? 'Confirmado' : 'Pendiente', 'demo-status');
-    check.addEventListener('change', () => { if (hasPendingConfiguration()) return; entry.confirmed = check.checked; row.dataset.confirmed = String(entry.confirmed); status.textContent = entry.confirmed ? 'Confirmado' : 'Pendiente'; render(); });
+    check.disabled = started;
+    check.addEventListener('change', () => { if (hasPendingConfiguration() || started) return; confirmEntry(entry, check.checked); row.dataset.confirmed = String(entry.confirmed); status.textContent = entry.confirmed ? 'Confirmado' : 'Pendiente'; render(); });
     heading.append(check, label, status); row.append(heading);
     const input = el('input'); input.maxLength = 40; input.value = name(entry); input.setAttribute('aria-label', (grouped() ? 'Nombre del equipo ' : 'Nombre del jugador ') + (i + 1));
     input.addEventListener('input', () => { const value = input.value.trim().slice(0, 40); if (!grouped()) entry.solo = value || 'Bot ' + (i + 1); else entry.name = value || 'Equipo ' + (i + 1); render(); }); row.append(input);
@@ -379,6 +419,7 @@ function renderPodium() {
   }); root.append(confirm);
 }
 function updateClock() {
+  waitingRoom.updateClock();
   if (hasPendingConfiguration()) $('demoClock').textContent = 'Configuración pendiente';
   else if (confirmedPodium) $('demoClock').textContent = 'Podio confirmado';
   else if (isFinished()) $('demoClock').textContent = format === 'SWISS' ? 'Primera ronda terminada' : 'Encuentros terminados · falta confirmar podio';
@@ -412,6 +453,7 @@ function render() {
   $('demoAudit').replaceChildren();
   for (const event of audit.slice(-100).reverse()) $('demoAudit').append(el('li', event.at + ' · ' + event.text));
   if (audit.length > 100) $('demoAudit').append(el('li', `Se muestran los últimos 100 de ${audit.length} eventos de esta prueba.`));
+  waitingRoom.render(roomModel());
 }
 function restoreControls() {
   if (!lastConfig) return;
@@ -448,13 +490,14 @@ async function configure(shuffle = false) {
   $('demoPodiumHelp').textContent = format === 'SWISS' ? 'Primera ronda de demostración; no determina puestos finales.' : count < 3 ? 'Con dos rivales sólo puede haber primer y segundo puesto.' : format === 'SINGLE_ELIMINATION' && places === 3 ? 'Se agrega un encuentro por el tercer puesto entre los perdedores de las semifinales; si uno tiene pase libre, se resuelve automáticamente.' : 'Los puestos no asignan premios. En Round Robin los empates necesitan una decisión explícita.';
   $('demoCustomSetup').hidden = !custom; $('demoTeamSize').hidden = custom; $('demoTeamSize').previousElementSibling.hidden = custom;
   confirmedPodium = null; podiumDraft = []; podiumReason = ''; audit = [];
-  started = false; startsAt = Date.now() + 5 * 60 * 1000; bank.forEach(p => { p.confirmed = false; });
+  started = false; startsAt = Date.now() + 5 * 60 * 1000; bank.forEach(p => { p.confirmed = false; p.attendance = []; });
   buildDraw(shuffle);
   $('demoRoundPicker').hidden = format !== 'ROUND_ROBIN'; $('demoRound').replaceChildren();
   if (format === 'ROUND_ROBIN') rounds.forEach((round, i) => { const option = el('option', round.title); option.value = String(i); $('demoRound').append(option); });
   renderEditors(); render();
   lastConfig = { totalPlayers, custom, teamSize, format, places };
   announce((adjusted ? 'El total no se divide en equipos del tamaño anterior: se pasó a individual. Elegí otra división disponible. ' : '') + 'Prueba preparada. Podés cambiar todos los nombres sin invitar a nadie.');
+  waitingRoom.render(roomModel());
 }
 $('demoFormat').addEventListener('change', () => configure());
 $('demoRound').addEventListener('change', renderBoard);
@@ -475,9 +518,9 @@ $('demoTeamMode').addEventListener('change', () => {
 $('demoApplyCustom').addEventListener('click', () => void configure());
 $('demoShuffle').addEventListener('click', () => configure(true));
 $('demoReset').addEventListener('click', () => configure());
-$('demoConfirmNext').addEventListener('click', () => { if (hasPendingConfiguration()) return; const entry = active().find(p => !p.confirmed); if (entry) entry.confirmed = true; renderEditors(); render(); });
-$('demoConfirmAll').addEventListener('click', () => { if (hasPendingConfiguration()) return; active().forEach(p => { p.confirmed = true; }); renderEditors(); render(); announce('Todos los bots confirmaron. Podés iniciar ahora sin esperar al reloj.'); });
-$('demoStart').addEventListener('click', () => { if (hasPendingConfiguration() || !allConfirmed()) return; started = true; render(); announce('Prueba iniciada. Elegí ganadores tocando los nombres o simulá resultados.'); });
+$('demoConfirmNext').addEventListener('click', confirmNextPerson);
+$('demoConfirmAll').addEventListener('click', confirmEveryone);
+$('demoStart').addEventListener('click', startSimulation);
 function nextResult() {
   if (!canPlay()) return false;
   const m = [...matches.values()].find(m => !m.done && matchPlayers(m).every(p => p !== undefined) && matchPlayers(m).filter(Boolean).length > 1);
@@ -507,5 +550,16 @@ for (const button of document.querySelectorAll('[data-preset]')) button.addEvent
   }
   $('demoPlaces').value = button.dataset.preset === 'cup' ? '3' : '2'; void configure();
 });
+const waitingRoom = createWaitingRoom($('waitingRoomRoot'), {
+  onStatus: setMemberStatus,
+  onDecline: async key => { if (hasPendingConfiguration() || started) return; if (await confirmAction('Cambiar asistencia de ejemplo', 'Este jugador ficticio aparecerá como No asiste. Podés volver a confirmar su asistencia antes de iniciar.', 'No asiste')) setMemberStatus(key, 'declined'); },
+  onConfigure: () => setDemoView('setup'), onResults: () => setDemoView('results'),
+  onConfirmNext: confirmNextPerson, onConfirmAll: confirmEveryone, onStart: startSimulation,
+  onEditTeam: id => {
+    setDemoView('setup'); const index = active().findIndex(entry => entry.id === id);
+    const target = document.querySelector(`[aria-label="Nombre del equipo ${index + 1}"]`); target?.scrollIntoView({ block: 'center' }); target?.focus();
+  },
+});
+$('demoViewToggle').addEventListener('click', () => setDemoView(document.body.dataset.demoView === 'room' ? 'setup' : 'room'));
 $('demoCount').value = String(totalPlayers); syncTeamSizes(teamSize); syncFormats(format);
-configure(); setInterval(updateClock, 1000);
+setDemoView('room'); configure(); setInterval(updateClock, 1000);

@@ -5,11 +5,12 @@
   <title>Simulador de torneos — Prove.it Club</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
-  <link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="visual-theme.css"><link rel="stylesheet" href="tournament.css"><link rel="stylesheet" href="tournament-creation.css"><link rel="stylesheet" href="tournament-demo.css">
+  <link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="visual-theme.css"><link rel="stylesheet" href="tournament.css"><link rel="stylesheet" href="tournament-creation.css"><link rel="stylesheet" href="tournament-demo.css"><link rel="stylesheet" href="tournament-waiting-room.css">
 </head>
 <body class="proveit-theme create-page demo-page">
-  <header class="topbar"><a class="brand" href="index.html" aria-label="Prove.it Club, inicio"><span>prove<span class="brand-dot">.</span>it<span class="brand-club">CLUB</span></span></a><nav class="top-actions"><a class="back-link" href="crear-torneo.html">← Crear un torneo real</a></nav></header>
-  <main class="creation-shell">
+  <header class="topbar"><a class="brand" href="index.html" aria-label="Prove.it Club, inicio"><span>prove<span class="brand-dot">.</span>it<span class="brand-club">CLUB</span></span></a><nav class="top-actions"><span class="wr-demo-label">SIMULACIÓN LOCAL</span><button id="demoViewToggle" class="wr-nav-button" type="button">Configurar simulación</button><a class="back-link" href="crear-torneo.html">Crear torneo real ↗</a></nav></header>
+  <main id="waitingRoomRoot" class="waiting-room"></main>
+  <main id="demoWorkspace" class="creation-shell" hidden>
     <section class="creation-surface" aria-labelledby="demoTitle">
       <header class="creation-heading"><div><p class="editorial-kicker">LABORATORIO DEL CLUB</p><h1 id="demoTitle">Probá tu próximo torneo.</h1></div><span class="demo-badge">SIMULACIÓN LOCAL</span></header>
       <p class="demo-intro">Jugadores ficticios, nombres editables y resultados de prueba. Esta pantalla no crea cuentas ni torneos reales, no envía invitaciones y no cobra dinero.</p>
@@ -32,7 +33,7 @@
         </aside>
         <div class="demo-stage">
           <p id="demoPendingChanges" class="demo-pending-changes" role="status" aria-live="polite" hidden></p>
-          <section class="demo-lobby" aria-labelledby="demoLobbyTitle"><div class="demo-lobby-top"><h2 id="demoLobbyTitle">Sala de espera ficticia</h2><span id="demoPhase" class="demo-phase">Esperando confirmaciones</span></div><p id="demoConfirmations" role="status"></p><div id="demoProgress" class="demo-progress" role="progressbar" aria-label="Confirmación de bots" aria-valuemin="0"><span></span></div><p id="demoClock" class="demo-clock" role="timer" aria-live="off"></p><div class="demo-actions"><button id="demoConfirmNext" type="button" class="editorial-secondary">Confirmar un bot</button><button id="demoConfirmAll" type="button" class="editorial-secondary">Confirmar todos</button><button id="demoStart" type="button" class="editorial-primary">Iniciar ahora ↗</button></div></section>
+          <section class="demo-lobby" aria-labelledby="demoLobbyTitle" hidden><div class="demo-lobby-top"><h2 id="demoLobbyTitle">Sala de espera ficticia</h2><span id="demoPhase" class="demo-phase">Esperando confirmaciones</span></div><p id="demoConfirmations" role="status"></p><div id="demoProgress" class="demo-progress" role="progressbar" aria-label="Confirmación de bots" aria-valuemin="0"><span></span></div><p id="demoClock" class="demo-clock" role="timer" aria-live="off"></p><div class="demo-actions"><button id="demoConfirmNext" type="button" class="editorial-secondary">Confirmar un bot</button><button id="demoConfirmAll" type="button" class="editorial-secondary">Confirmar todos</button><button id="demoStart" type="button" class="editorial-primary">Iniciar ahora ↗</button></div></section>
           <div class="demo-results-actions"><button id="demoNextResult" type="button" class="editorial-secondary">Simular siguiente resultado</button><button id="demoFinish" type="button" class="editorial-secondary">Completar simulación</button></div>
           <p id="demoNotice" class="editorial-message" role="status" aria-live="polite"></p>
           <h2 id="demoBoardTitle">Llaves de demostración</h2><p class="editorial-help" id="demoFormatHelp"></p>

@@ -1,3 +1,12 @@
+## 3.12.0 — 2026-10-24
+
+- Sala de espera del simulador con el diseño A: cristal oscuro, fondo compartido, contador, premio opcional y equipos con nombres editables.
+- Vista de sala separada de configuración y resultados, conservando la prueba en memoria al navegar.
+- Asistencia por integrante, filtros Todos/Listos/Pendientes/No asiste y botón propio que cambia a Asistencia confirmada.
+- El inicio exige la confirmación de todas las personas, también en equipos de tamaños distintos; la asistencia se bloquea al iniciar.
+- Controles explícitos para simular estados, elegir desde qué jugador se mira y personalizar nombre, premio y juez de ejemplo.
+- Sin recursos nuevos de AWS, sin cuentas ficticias persistidas ni premios reales; publicación real por equipos sigue pendiente.
+
 ## 3.11.1 — 2026-10-24
 
 - Distribuciones personalizadas aceptan comas, guiones cortos/largos y separadores habituales; 5-2 se interpreta como equipos de cinco y dos.
