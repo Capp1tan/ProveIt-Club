@@ -17,6 +17,11 @@ function avatar(label, seed, cls = '') {
 export function createWaitingRoom(root, actions) {
   let state, filter = 'all', viewer = '', toolsOpen = false, stateControls = false;
   const meta = { title: 'Copa ProveIt', reward: '', provider: '', judge: '' };
+  function updateMeta() {
+    // Actualizar sólo texto evita perder foco o clics al editar las opciones de la sala.
+    const values = { title: meta.title || 'Copa ProveIt', reward: meta.reward || 'Sin premio definido', rewardCaption: meta.reward ? 'Premio de ejemplo' + (meta.provider ? ' · ' + meta.provider : '') : 'Podés agregar uno en las opciones de la sala', judge: meta.judge || 'Sin juez asignado', judgeCaption: meta.judge ? 'Nombre ficticio · simulación' : 'Organización de ejemplo' };
+    for (const [key, value] of Object.entries(values)) { const target = root.querySelector(`[data-room-meta="${key}"]`); if (target) target.textContent = value; }
+  }
   const players = () => state.groups.flatMap(group => group.players);
   const me = () => players().find(p => p.key === viewer) || players()[0];
   function updateClock() {
@@ -38,12 +43,12 @@ export function createWaitingRoom(root, actions) {
     const top = node('div', '', 'wr-overview');
     const tournament = node('section', '', 'wr-glass wr-event');
     const eventIcon = node('span', '', 'wr-event-icon'); eventIcon.append(icon('trophy'));
-    const eventText = node('div'); eventText.append(node('h2', meta.title), node('p', `${state.formatName} · ${roster.length} jugadores${state.grouped ? ' · ' + state.groups.length + ' equipos' : ' · Individual'}`));
+    const eventText = node('div'), eventTitle = node('h2', meta.title || 'Copa ProveIt'); eventTitle.dataset.roomMeta = 'title'; eventText.append(eventTitle, node('p', `${state.formatName} · ${roster.length} jugadores${state.grouped ? ' · ' + state.groups.length + ' equipos' : ' · Individual'}`));
     tournament.append(eventIcon, eventText); top.append(tournament);
     const clock = node('section', '', 'wr-glass wr-clock'); clock.append(icon('clock'));
     const clockText = node('div'), digits = node('strong'); digits.dataset.roomClock = ''; digits.setAttribute('role', 'timer'); digits.setAttribute('aria-live', 'off'); const caption = node('span'); caption.dataset.clockCaption = ''; clockText.append(digits, caption); clock.append(clockText); top.append(clock);
     const prize = node('section', '', 'wr-glass wr-reward'); prize.append(icon('trophy'));
-    const prizeText = node('div'); prizeText.append(node('strong', meta.reward || 'Sin premio definido'), node('span', meta.reward ? 'Premio de ejemplo' + (meta.provider ? ' · ' + meta.provider : '') : 'Podés agregar uno en las opciones de la sala'));
+    const prizeText = node('div'), rewardValue = node('strong'), rewardCaption = node('span'); rewardValue.dataset.roomMeta = 'reward'; rewardCaption.dataset.roomMeta = 'rewardCaption'; prizeText.append(rewardValue, rewardCaption);
     prize.append(prizeText); top.append(prize); root.append(top);
 
     const hero = node('section', '', 'wr-glass wr-hero'); hero.setAttribute('aria-labelledby', 'waitingRoomTitle');
@@ -53,7 +58,7 @@ export function createWaitingRoom(root, actions) {
     hero.append(heroCopy);
     const ring = node('div', '', 'wr-ring'); ring.style.setProperty('--ready', `${state.pending ? 0 : counts.confirmed / Math.max(1, counts.all) * 100}%`); ring.setAttribute('role', 'img'); ring.setAttribute('aria-label', `${counts.confirmed} de ${counts.all} jugadores confirmados`);
     const ringInner = node('div'); ringInner.append(node('strong', `${state.pending ? '—' : counts.confirmed} de ${counts.all}`), node('span', 'confirmados')); ring.append(ringInner); hero.append(ring);
-    const judge = node('div', '', 'wr-judge'); judge.append(icon('shield'), node('span', 'Juez del torneo'), node('strong', meta.judge || 'Sin juez asignado'), node('small', meta.judge ? 'Nombre ficticio · simulación' : 'Organización de ejemplo')); hero.append(judge); root.append(hero);
+    const judge = node('div', '', 'wr-judge'), judgeName = node('strong'), judgeCaption = node('small'); judgeName.dataset.roomMeta = 'judge'; judgeCaption.dataset.roomMeta = 'judgeCaption'; judge.append(icon('shield'), node('span', 'Juez del torneo'), judgeName, judgeCaption); hero.append(judge); root.append(hero);
 
     const toolbar = node('section', '', 'wr-glass wr-toolbar'), filters = node('div', '', 'wr-filters'); filters.setAttribute('role', 'group'); filters.setAttribute('aria-label', 'Filtrar asistencia');
     for (const [key, label] of [['all', 'Todos'], ['confirmed', 'Listos'], ['pending', 'Pendientes'], ['declined', 'No asiste']]) {
@@ -107,7 +112,7 @@ export function createWaitingRoom(root, actions) {
     const fields = node('div', '', 'wr-meta-fields');
     for (const [key, label, placeholder] of [['title', 'Nombre del torneo de ejemplo', 'Copa ProveIt'], ['reward', 'Premio de ejemplo (opcional)', '$50.000 ARS'], ['provider', 'Quién lo aportaría (opcional)', 'Nombre del patrocinador'], ['judge', 'Nombre de juez ficticio (opcional)', 'Sin juez asignado']]) {
       const field = node('label', label); const input = node('input'); input.type = 'text'; input.maxLength = 100; input.value = meta[key]; input.placeholder = placeholder; input.dataset.focus = 'meta-' + key;
-      input.addEventListener('change', () => { meta[key] = input.value.trim().slice(0, 100); if (key === 'title' && !meta.title) meta.title = 'Copa ProveIt'; render(state); }); field.append(input); fields.append(field);
+      input.addEventListener('input', () => { meta[key] = input.value.trim().slice(0, 100); updateMeta(); }); field.append(input); fields.append(field);
     } controls.append(fields);
     const viewerField = node('label', 'Jugador desde el que mirás la sala'); const viewSelect = node('select'); viewSelect.dataset.focus = 'viewer';
     for (const group of state.groups) for (const player of group.players) { const option = node('option', player.name + (state.grouped ? ' · ' + group.name : '')); option.value = player.key; viewSelect.append(option); }
@@ -119,7 +124,7 @@ export function createWaitingRoom(root, actions) {
       const b = button(label, label.startsWith('Iniciar') ? 'wr-primary' : 'wr-secondary', action); b.disabled = disabled; buttons.append(b);
     } controls.append(buttons); tools.append(controls); root.append(tools);
     root.append(node('p', 'SIMULACIÓN LOCAL · Las cuentas, los premios y los cambios de esta sala no son reales. Los datos se pierden al recargar.', 'wr-footnote'));
-    updateClock();
+    updateMeta(); updateClock();
     if (focus) { const target = [...root.querySelectorAll('[data-focus]')].find(n => n.dataset.focus === focus); target?.focus({ preventScroll: true }); }
   }
   return { render, updateClock };

@@ -39,7 +39,7 @@ function roomModel() {
   let index = 0;
   return {
     grouped: grouped(), pending: hasPendingConfiguration(), started, startsAt, finished: isFinished(), podiumConfirmed: Boolean(confirmedPodium),
-    formatName: formats.find(f => f.id === format)?.name || 'Torneo', notice: $('demoNotice').textContent,
+    formatName: format === 'DUEL' ? 'Enfrentamiento ' + duelLabel() : formats.find(f => f.id === format)?.name || 'Torneo', notice: $('demoNotice').textContent,
     groups: grouped() ? active().map(entry => ({ id: entry.id, name: entry.name, players: Array.from({ length: entrySize(entry) }, (_, i) => ({ key: entry.id + ':' + i, name: entry.members[i], status: memberStatus(entry, i), index: index++ })) })) : [{ id: 'individual', name: 'Participantes', players: active().map(entry => ({ key: entry.id + ':0', name: entry.solo, status: memberStatus(entry, 0), index: index++ })) }],
   };
 }

@@ -1,3 +1,8 @@
+## 3.12.1 — 2026-10-24
+
+- El encabezado del duelo muestra el tamaño real del cruce, por ejemplo 5v5 o 5v2.
+- Editar los datos ilustrativos de la sala actualiza su texto sin reconstruir el formulario ni perder foco.
+
 ## 3.12.0 — 2026-10-24
 
 - Sala de espera del simulador con el diseño A: cristal oscuro, fondo compartido, contador, premio opcional y equipos con nombres editables.
