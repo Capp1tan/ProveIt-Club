@@ -1,3 +1,8 @@
+## 3.14.1 — 2026-10-24
+
+- El indicador de conexión en vivo se conserva al filtrar participantes en la sala real.
+- Encabezado más compacto y nombres con emblemas alineados en las tarjetas de participantes.
+
 ## 3.14.0 — 2026-10-24
 
 - Diseño claro en gris suave y azul vibrante; modo oscuro y botón de sol/luna en las nueve páginas del sitio.

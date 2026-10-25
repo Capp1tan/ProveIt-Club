@@ -4,7 +4,7 @@ import { prizeIcon } from './prize-types.js';
 import '../tournament-real-lobby.css';
 const el = (tag,text='',cls='') => { const n=document.createElement(tag);n.textContent=text;n.className=cls;return n; };
 // Sólo datos recibidos de AWS. La vista no confirma jugadores ni inventa estados.
-export function createRealLobby({ profilePreview, getUser, onChanged }) {
+export function createRealLobby({ profilePreview, getUser, getConnection, onChanged }) {
   const root=el('section','','real-lobby'), ring=el('div','','rl-ring'), ringText=el('strong');
   const inner=el('div');inner.append(ringText,el('small','confirmados'));ring.append(inner);
   const reduced=window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -54,7 +54,7 @@ export function createRealLobby({ profilePreview, getUser, onChanged }) {
     top.append(judge);root.append(top);
     const hero=el('section','','rl-card rl-hero'),copy=el('div');
     copy.append(el('p',t.winnerProfileId?'ENCUENTRO FINALIZADO':'FASE DE CONFIRMACIÓN','rl-kicker'),el('h2',t.winnerProfileId?'Desafío completado':'Sala de espera'),el('p',t.winnerProfileId?'Revisá el resultado y la participación.':'Confirmá tu asistencia para preparar el encuentro.'));
-    const live=el('small','','lobby-live');live.id='lobbyConnection';copy.append(live);
+    const connected=Boolean(getConnection?.());const live=el('small',connected?'Confirmaciones en vivo':'Actualización automática · reconectando','lobby-live');live.id='lobbyConnection';live.classList.toggle('lobby-reconnect',!connected);copy.append(live);
     const scheduleNote=el('small','El horario no confirma personas ni inicia automáticamente el torneo.');copy.append(scheduleNote);hero.append(copy,ring);root.append(hero);
     ringText.textContent=accepted+' de '+total;ring.setAttribute('role','img');ring.setAttribute('aria-label',accepted+' de '+total+' participantes confirmados');
     animate(total?accepted/total:0,context!==t.id);context=t.id;

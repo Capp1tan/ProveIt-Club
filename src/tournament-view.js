@@ -34,7 +34,7 @@ function closeTournamentChat(){chatCleanup?.();chatCleanup=null;chatId=null;cons
 let isClubAdmin=false;
 const photoRequests=new Map();
 const profilePreview=detail ? new ProfilePreview({avatar,badges:badgeElements}) : null;
-const realLobby=detail ? createRealLobby({profilePreview,getUser:()=>currentUser,onChanged:()=>refreshTournament(true)}) : null;
+const realLobby=detail ? createRealLobby({profilePreview,getUser:()=>currentUser,getConnection:()=>lobbyConnected,onChanged:()=>refreshTournament(true)}) : null;
 Hub.listen('auth',({payload})=>{if(payload.event==='signedOut'){profilePreview?.lock();closeTournamentChat();lobbyStopped=true;clearTimeout(lobbyRetry);lobbySubscription?.unsubscribe();lobbySubscription=null;realLobby?.destroy();}});
 function avatar(id,name) {
   const node=element('span',Array.from(name.trim())[0]?.toUpperCase() || '?','person-avatar');
