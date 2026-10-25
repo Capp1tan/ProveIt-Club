@@ -13,6 +13,7 @@ type Arguments = {
   tournamentId: string; name: string; activity: string; format: string;
   description?: string | null; conflicts?:string; participantIds: string[]; judgeIds: string[];
   overview?:string;coverPath?:string;participantLimit?:number;prizeExpected?:boolean;
+  prizeType?:string;prizeTitle?:string;prizeDescription?:string;prizeHolder?:string;prizeFunder?:string;
   treasurerId?: string | null;
   arbitrationMode: string; startsAt: string; timeZone: string; acceptOrganizerDecision?: boolean;
 };
@@ -62,6 +63,14 @@ export const handler = async (event: { arguments: Arguments; identity?: { sub?: 
   const participantLimit=args.participantLimit ?? participantIds.length;
   if(!Number.isInteger(participantLimit) || participantLimit<2 || participantLimit>64 || participantLimit!==participantIds.length)throw new Error('Completá todas las invitaciones del cupo elegido.');
   if(args.prizeExpected!==undefined && typeof args.prizeExpected!=='boolean')throw new Error('Indicá si se prevé un premio.');
+  const prizeType=args.prizeType || 'OTHER';
+  if(!['MONEY','SURPRISE','FOOD','TECH','CLOTHING','EXPERIENCE','OTHER'].includes(prizeType))throw new Error('Elegí un tipo de premio válido.');
+  const prizeTitle=text(args.prizeTitle ?? '',0,120,'Premio'),prizeDescription=text(args.prizeDescription ?? '',0,1200,'Detalle del premio');
+  const prizeHolder=text(args.prizeHolder ?? '',0,120,'Responsable del premio'),prizeFunder=text(args.prizeFunder ?? '',0,120,'Aportante');
+  if(!args.prizeExpected && (prizeTitle || prizeDescription || prizeHolder || prizeFunder))throw new Error('El torneo está marcado sin premio. Revisá esa elección.');
+  if(prizeTitle && (!prizeHolder || !prizeFunder))throw new Error('Indicá quién entrega y quién financia el premio.');
+  if(!prizeTitle && (prizeDescription || prizeHolder || prizeFunder))throw new Error('Agregá el nombre o importe del premio.');
+
   if (args.format === 'DUEL' && participantIds.length !== 2) throw new Error('El Duelo 1v1 requiere exactamente dos participantes.');
   const judgeIds = ids(args.judgeIds, noJudge ? 0 : 1, 16, 'Jueces');
   if (noJudge && judgeIds.length) throw new Error('Un torneo sin juez no puede tener jueces seleccionados.');
@@ -93,6 +102,7 @@ export const handler = async (event: { arguments: Arguments; identity?: { sub?: 
   const item = {
     id: args.tournamentId, termsVersion:1,conflicts:declaration,clubRewards:false,name, activity, description, format: args.format,
     overview,coverPath,participantLimit,prizeExpected:args.prizeExpected ?? false,
+    prizeType,prizeTitle,prizeDescription,prizeHolder,prizeFunder,prizeFundingStatus:'PENDING',prizeRevision:0,
     participantIds, participantNames: participantIds.map(id => names.get(id)),
     judgeIds, judgeNames: judgeIds.map(id => names.get(id)),
     treasurerId, treasurerName: treasurerId ? names.get(treasurerId) : null,
@@ -109,7 +119,7 @@ export const handler = async (event: { arguments: Arguments; identity?: { sub?: 
       role: index < participantIds.length ? 'PARTICIPANT' : index < participantIds.length + judgeIds.length ? 'JUDGE' : 'TREASURER',
       status:'PENDING',
       arbitrationMode: args.arbitrationMode, startsAt: args.startsAt, timeZone: args.timeZone,
-      rulesSnapshot: description+(args.prizeExpected?'\nPremio previsto: pendiente de definición y confirmación por el responsable. No está disponible todavía.':''), consentVersion: noJudge ? 'NO_JUDGE_V1' : null,
+      rulesSnapshot: description+(args.prizeExpected?'\nPremio propuesto: '+(prizeTitle || 'Por definir')+(prizeDescription?' · '+prizeDescription:'')+' · Tipo: '+prizeType+' · Entrega: '+(prizeHolder || 'Sin declarar')+' · Financia: '+(prizeFunder || 'Sin declarar')+' · Pendiente de confirmación, no disponible.':''), consentVersion: noJudge ? 'NO_JUDGE_V1' : null,
       consentAcceptedAt:null,
       invitedBySub: sub, createdAt: now, updatedAt: now, __typename: 'TournamentInvitation',
     }));

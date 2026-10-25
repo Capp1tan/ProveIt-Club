@@ -1,3 +1,14 @@
+## 3.14.0 — 2026-10-24
+
+- Diseño claro en gris suave y azul vibrante; modo oscuro y botón de sol/luna en las nueve páginas del sitio.
+- Preferencia guardada en el navegador, sincronizada entre pestañas y aplicada antes del primer dibujo, sin esperar autenticación.
+- Marca geométrica compartida y paleta uniforme en perfiles, chat, administración, pagos y formularios.
+- Segunda etapa reorganizada: participantes, tarjetas de formatos y modelo de llaves a la izquierda; arbitraje, horario y propuesta de premio a la derecha.
+- Categoría explícita, título o importe con moneda, detalle, aportante y responsable del premio al crear. AWS valida los datos y guarda el premio como pendiente.
+- Sala de espera para torneos reales: contador por participante, círculo animado, filtros, fotos/nombres públicos, estado separado del jurado y acceso a las llaves.
+- Respuesta a la invitación desde la sala, previa aceptación de condiciones vigentes; permisos, confirmaciones y sorteo siguen en AWS.
+- No se crean recursos AWS adicionales ni se modifican tarifas o medios de pago. Los formatos reales mantienen sus reglas actuales; la edición de equipos personalizados continúa en el simulador opcional.
+
 ## 3.13.1 — 2026-10-24
 
 - Se reemplaza la denominación bots por jugadores de ejemplo en los controles y accesos al simulador.

@@ -1,3 +1,4 @@
+import { createRealLobby } from './tournament-real-lobby.js';
 import {judgePanel} from './judge-ui.js';
 import { tournamentCoverUrl } from './tournament-cover.js';
 import { mountChat } from './chat-ui.js';
@@ -9,14 +10,13 @@ import { deleteTournament } from './maintenance-api.js';
 import { ProfilePreview } from './profile-preview.js';
 import { connectBracket } from './bracket-lines.js';
 import { Hub } from 'aws-amplify/utils';
-import { scheduleLabel, countdownLabel, noJudgeConsent } from './tournament-schedule.js';
+import { scheduleLabel, noJudgeConsent } from './tournament-schedule.js';
 // Sala de espera y cuadro: las confirmaciones y el sorteo provienen de AWS.
 import { formats, formatImage } from './tournament-formats.js';
 import { avatarUrl, getCurrentUser, configureAmplify } from './auth-client.js';
 import { listClubTournaments, getClubTournament, registeredProfiles, ensureClubTournamentDraw, recordClubDuelResult, watchTournamentLobby } from './tournaments-api.js';
 const notice=document.getElementById('tournamentsNotice'),detail=document.getElementById('tournamentDetail'),list=document.getElementById('tournamentsList');
 const element=(tag,text,className)=>{const node=document.createElement(tag);node.textContent=text;if(className)node.className=className;return node;};
-const stateNames={PENDING:'Esperando confirmación',ACCEPTED:'Confirmado',REJECTED:'Invitación rechazada'};
 let profiles=new Map(),lastVersion='',refreshing=false,currentUser=null,currentTournament=null;
 let drawCleanup;
 let lobbySubscription,lobbyRetry,refreshQueued=false,lobbyConnected=false,lobbyStopped=false;
@@ -34,34 +34,22 @@ function closeTournamentChat(){chatCleanup?.();chatCleanup=null;chatId=null;cons
 let isClubAdmin=false;
 const photoRequests=new Map();
 const profilePreview=detail ? new ProfilePreview({avatar,badges:badgeElements}) : null;
-Hub.listen('auth',({payload})=>{if(payload.event==='signedOut'){profilePreview?.lock();closeTournamentChat();lobbyStopped=true;clearTimeout(lobbyRetry);lobbySubscription?.unsubscribe();lobbySubscription=null;}});
+const realLobby=detail ? createRealLobby({profilePreview,getUser:()=>currentUser,onChanged:()=>refreshTournament(true)}) : null;
+Hub.listen('auth',({payload})=>{if(payload.event==='signedOut'){profilePreview?.lock();closeTournamentChat();lobbyStopped=true;clearTimeout(lobbyRetry);lobbySubscription?.unsubscribe();lobbySubscription=null;realLobby?.destroy();}});
 function avatar(id,name) {
   const node=element('span',Array.from(name.trim())[0]?.toUpperCase() || '?','person-avatar');
   node.setAttribute('aria-hidden','true');
   decorateAvatar(node, profiles.get(id)?.owner?.split('::')[0]);
   const path=profiles.get(id)?.avatarPath;
   if(/^(profile-pictures|profile-private)\//.test(path || '')) {
-    if(!photoRequests.has(path)) photoRequests.set(path,avatarUrl(path).catch(()=>''));
+    if(!photoRequests.has(path)) photoRequests.set(path,avatarUrl(path,{profileId:id}).catch(()=>''));
     void photoRequests.get(path).then(url=>{if(!url)return;const img=document.createElement('img');img.alt='';img.loading='lazy';img.src=url;img.addEventListener('error',()=>{node.textContent=Array.from(name)[0] || '?';},{once:true});node.replaceChildren(img);});
   }
   return node;
 }
 function states(t) {return t.rosterStatuses || Array(t.participantIds.length+t.judgeIds.length+(t.treasurerId?1:0)).fill('ACCEPTED');}
-function roster(title,ids,names,statuses) {
-  const section=element('section','','tournament-panel');
-  section.append(element('h2',title+' · '+statuses.filter(s=>s==='ACCEPTED').length+' confirmados'));
-  const rows=element('ul','','waiting-roster');
-  names.forEach((name,i)=>{
-    const state=statuses[i] || 'PENDING';
-    const row=element('li','','waiting-person');row.dataset.state=state;
-    const stateLabel=state==='ACCEPTED' && currentTournament?.arbitrationMode==='ORGANIZER' ? 'Confirmado · aceptó sin juez' : stateNames[state] || 'Pendiente';
-    row.append(profilePreview.button(ids[i],name),element('span',stateLabel,'waiting-state'));rows.append(row);
-  });
-  if(!names.length) rows.append(element('li',title==='Jueces' ? 'Sin juez · decide el organizador' : 'Sin tesorero'));
-  section.append(rows);return section;
-}
 function drawBoard(t) {
-  const section=element('section','','tournament-panel');
+  const section=element('section','','tournament-panel'); section.id='tournamentDraw';
   section.append(element('h2','Cruces sorteados'));
   let draw;
   try {draw=JSON.parse(t.draw);} catch {section.append(element('p','No pudimos leer el sorteo guardado. Actualizá para reintentar.'));return section;}
@@ -103,21 +91,9 @@ function drawBoard(t) {
 }
 // Sólo pinta el reloj. La autorización y la hora para decidir se comprueban en AWS.
 function updateClock() {
-  const timer=document.getElementById('tournamentCountdown');
-  if(timer && currentTournament?.startsAt) timer.textContent=currentTournament.winnerProfileId ? 'Torneo finalizado' : countdownLabel(currentTournament.startsAt);
+  realLobby?.clock();
   const button=document.getElementById('recordDuelWinner');
   if(button && !button.dataset.saving) button.disabled=Date.now()<Date.parse(currentTournament.startsAt);
-}
-function schedulePanel(t) {
-  const section=element('section','','tournament-panel tournament-schedule');
-  section.append(element('h2','Cuándo se juega'),element('p',scheduleLabel(t.startsAt,t.timeZone)));
-  if(t.startsAt) {
-    const timer=element('p','','tournament-countdown');timer.id='tournamentCountdown';timer.setAttribute('role','timer');timer.setAttribute('aria-live','off');section.append(timer);
-    const localZone=Intl.DateTimeFormat().resolvedOptions().timeZone;
-    if(localZone && localZone!==t.timeZone) section.append(element('p','En tu zona: '+scheduleLabel(t.startsAt,localZone),'field-help'));
-    section.append(element('small','El reloj usa la hora de tu dispositivo. Llegar al horario no inicia la partida ni confirma personas.','field-help'));
-  }
-  return section;
 }
 function resultPanel(t) {
   const section=element('section','','tournament-panel');section.append(element('h2','Resultado del torneo'));
@@ -165,16 +141,7 @@ function renderTournament(t) {
    void coverRequests.get(t.coverPath).promise.then(url=>{if(!url || !hero.isConnected)return;const image=document.createElement('img');image.alt='Portada de '+t.name;image.src=url;hero.prepend(image);});
   }
   const stages=element('div','','lobby-steps');stages.append(element('span','01 · El desafío ✓'),element('span','02 · Configuración ✓'),element('strong','03 · Sala de espera'));detail.append(stages);
-  const lobby=element('section','','tournament-panel lobby-panel'),lobbyHeading=element('div','','lobby-heading');
-  const accepted=status.filter(s=>s==='ACCEPTED').length,total=status.length;
-  const connection=element('span','','lobby-live');connection.id='lobbyConnection';
-  lobbyHeading.append(element('h2',t.winnerProfileId?'Encuentro finalizado':t.status==='READY'?'Todos listos para competir':'Esperando a tu gente'),connection);
-  lobby.append(lobbyHeading,element('p',`${accepted} de ${total} roles confirmados. Las invitaciones se responden desde la campana del sitio.`,'lobby-overview'));
-  const track=element('div','','lobby-progress'),fill=element('span');fill.style.width=(total?accepted/total*100:0)+'%';track.setAttribute('role','progressbar');track.setAttribute('aria-label','Confirmación de integrantes');track.setAttribute('aria-valuenow',String(accepted));track.setAttribute('aria-valuemin','0');track.setAttribute('aria-valuemax',String(total));track.append(fill);lobby.append(track);
-  const p=t.participantIds.length,j=p+t.judgeIds.length;
-  lobby.append(roster('Participantes',t.participantIds,t.participantNames,status.slice(0,p)),roster('Jueces',t.judgeIds,t.judgeNames,status.slice(p,j)));
-  if(t.treasurerId)lobby.append(roster('Tesorero (torneo anterior)',[t.treasurerId],[t.treasurerName],status.slice(j)));
-  detail.append(lobby,schedulePanel(t));updateLobbyConnection();
+  detail.append(realLobby.render(t));updateLobbyConnection();
   if(t.paymentMode==='TEST')detail.append(element('p','TORNEO DE PRUEBA · no corresponde a un cobro real','tournament-notice'));
   if(t.creationPaymentStatus==='REVERSED')detail.append(element('p','El pago de creación fue revertido. Contactá al administrador.','tournament-notice'));
   const arbitration=element('section','','tournament-notice arbitration-warning');
@@ -187,7 +154,7 @@ function renderTournament(t) {
   if(format && !t.draw){const image=element('div','','format-preview');image.innerHTML=formatImage(format.id);image.append(element('p',format.description));info.append(image);}
   const rules=element('p',t.description || 'El organizador todavía no agregó reglas.');rules.style.whiteSpace='pre-wrap';info.append(rules);detail.append(info);
   if(t.draw && (t.status==='READY' || t.status==='COMPLETED')) detail.append(drawBoard(t));
-  else if(t.rosterStatuses) detail.append(element('p',status.includes('REJECTED')?'Una persona rechazó. El torneo no se sortea: por ahora es necesario crear otro con los integrantes que acepten.':'Esperando que todos los participantes, jueces y tesorero elegido confirmen. Los cruces se sortearán automáticamente después de la última aceptación.','tournament-notice'));
+  else if(t.rosterStatuses) detail.append(element('p',status.includes('REJECTED')?'Una persona rechazó. El torneo no se sortea: por ahora es necesario crear otro con los integrantes que acepten.':'Esperando que todos los participantes y responsables confirmen. Los cruces se sortearán automáticamente después de la última aceptación.','tournament-notice'));
   else detail.append(element('p','Este torneo se creó antes del sistema de invitaciones; conserva sus integrantes históricos. El sorteo automático se aplica a los nuevos torneos.','tournament-notice'));
   info.append(element('p',t.arbitrationMode==='ORGANIZER'?'El organizador también coordina el dinero.':'Los jueces también coordinan el dinero del torneo.','field-help'));
   const refresh=element('button','Actualizar confirmaciones','format-choice');refresh.type='button';refresh.addEventListener('click',()=>void refreshTournament(true));

@@ -28,6 +28,8 @@ export async function prizeAction(db:DynamoDBDocumentClient,sub:string,args:any)
     const url=await getSignedUrl(s3,new PutObjectCommand({Bucket,Key:path,ContentType:type,ContentLength:size}),{expiresIn:120});
     return {path,url};
   }
+  const prizeType=args.prizeType || t.prizeType || 'OTHER';
+  if(!['MONEY','SURPRISE','FOOD','TECH','CLOTHING','EXPERIENCE','OTHER'].includes(prizeType))throw new Error('Tipo de premio inválido.');
   const title=String(args.prizeTitle || '').trim(),description=String(args.prizeDescription || '').trim();
   if(title.length>120 || description.length>1200)throw new Error('El título admite 120 caracteres y la descripción 1200.');
   if(!Number.isInteger(args.prizeRevision) || args.prizeRevision<0)throw new Error('Revisión inválida.');
@@ -55,9 +57,9 @@ export async function prizeAction(db:DynamoDBDocumentClient,sub:string,args:any)
   }
   try {
     await db.send(new TransactWriteCommand({TransactItems:[...invites,{Update:{TableName,Key,
-      UpdateExpression:'SET prizeTitle=:title, prizeDescription=:description, prizeLinks=:links, prizeAttachments=:attachments, prizeRevision=:next, prizeUpdatedAt=:now, prizeUpdatedBySub=:sub, updatedAt=:now, prizeHolder=:holder, prizeFunder=:funder,prizeFundingStatus=:funding,termsVersion=:tv,rosterStatuses=:rs,#s=:waiting,membershipRevision=:mr',
+      UpdateExpression:'SET prizeType=:type, prizeTitle=:title, prizeDescription=:description, prizeLinks=:links, prizeAttachments=:attachments, prizeRevision=:next, prizeUpdatedAt=:now, prizeUpdatedBySub=:sub, updatedAt=:now, prizeHolder=:holder, prizeFunder=:funder,prizeFundingStatus=:funding,termsVersion=:tv,rosterStatuses=:rs,#s=:waiting,membershipRevision=:mr',
       ConditionExpression:'attribute_exists(id) AND attribute_not_exists(deletedAt) AND attribute_not_exists(winnerProfileId) AND #s <> :completed AND (attribute_not_exists(creationPaymentStatus) OR creationPaymentStatus=:paid OR creationPaymentStatus=:exempt) AND (attribute_not_exists(prizeRevision) OR prizeRevision=:previous) AND (attribute_not_exists(membershipRevision) OR membershipRevision=:oldMr)',
-      ExpressionAttributeNames:{'#s':'status'},ExpressionAttributeValues:{':holder':holder,':funder':funder,':funding':funding || 'PENDING',':tv':version,':rs':Array(invites.length).fill('PENDING'),':waiting':'AWAITING_RESPONSES',':mr':(t.membershipRevision || 0)+1,':oldMr':t.membershipRevision || 0,':title':title,':description':description,':links':JSON.stringify(links),':attachments':JSON.stringify(attachments),':next':args.prizeRevision+1,':now':now,':sub':sub,':previous':args.prizeRevision,':completed':'COMPLETED',':paid':'APPROVED',':exempt':'EXEMPT'}}}]}));
+      ExpressionAttributeNames:{'#s':'status'},ExpressionAttributeValues:{':type':prizeType,':holder':holder,':funder':funder,':funding':funding || 'PENDING',':tv':version,':rs':Array(invites.length).fill('PENDING'),':waiting':'AWAITING_RESPONSES',':mr':(t.membershipRevision || 0)+1,':oldMr':t.membershipRevision || 0,':title':title,':description':description,':links':JSON.stringify(links),':attachments':JSON.stringify(attachments),':next':args.prizeRevision+1,':now':now,':sub':sub,':previous':args.prizeRevision,':completed':'COMPLETED',':paid':'APPROVED',':exempt':'EXEMPT'}}}]}));
     return (await db.send(new GetCommand({TableName,Key,ConsistentRead:true}))).Item;
   }catch(error){if((error as Error).name==='TransactionCanceledException')throw new Error('El premio o el torneo cambió. Cancelá la edición y actualizá antes de guardar.');throw error;}
 }

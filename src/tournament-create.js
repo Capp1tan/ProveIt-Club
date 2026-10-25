@@ -3,7 +3,7 @@ import { noJudgeConsent, timeZones, zoneLabel, localToUtc, scheduleLabel } from 
 import { loadBadges, badgeElements, decorateAvatar } from './badges.js';
 import { Hub } from 'aws-amplify/utils';
 import { avatarUrl, configureAmplify, getCurrentUser } from './auth-client.js';
-import { formats } from './tournament-formats.js';
+import { formats, formatImage } from './tournament-formats.js';
 import { registeredProfiles, createClubTournament, tournamentClient } from './tournaments-api.js';
 import { prepareCover, uploadTournamentCover } from './tournament-cover.js';
 import { renderTournamentPreview } from './tournament-preview.js';
@@ -39,6 +39,7 @@ function saveDraft() {
       name: form.elements.name.value, activity: form.elements.activity.value, overview: form.elements.overview.value,
       description: form.elements.description.value, conflicts: form.elements.conflicts.value,
       participantLimit: capacity(), arbitrationMode: form.elements.arbitrationMode.value,
+      prizeType:form.elements.prizeType.value,prizeTitle:form.elements.prizeTitle.value,prizeDescription:form.elements.prizeDescription.value,prizeHolder:form.elements.prizeHolder.value,prizeFunder:form.elements.prizeFunder.value,
       prizeExpected: form.elements.prizeExpected.value, startsLocal: $('startsLocal').value, timeZone: $('timeZone').value,
       participants: [...participants], judges: [...judges], format: selectedFormat, step, tournamentId, coverPath, pendingRequest,
     }));
@@ -52,7 +53,7 @@ function restoreDraft() {
   try {
     const d = JSON.parse(sessionStorage.getItem(draftKey()) || 'null');
     if (!d) return;
-    for (const key of ['name', 'activity', 'overview', 'description', 'conflicts', 'startsLocal']) if (typeof d[key] === 'string') form.elements[key].value = d[key];
+    for (const key of ['name', 'activity', 'overview', 'description', 'conflicts', 'startsLocal','prizeType','prizeTitle','prizeDescription','prizeHolder','prizeFunder']) if (typeof d[key] === 'string') form.elements[key].value = d[key];
     if (Number.isInteger(d.participantLimit) && d.participantLimit >= 2 && d.participantLimit <= 64) form.elements.participantLimit.value = d.participantLimit;
     if (['JUDGES', 'ORGANIZER'].includes(d.arbitrationMode)) form.elements.arbitrationMode.value = d.arbitrationMode;
     if (['yes', 'no'].includes(d.prizeExpected)) form.elements.prizeExpected.value = d.prizeExpected;
@@ -73,6 +74,9 @@ function syncPoster() {
   $('posterActivity').textContent = form.elements.activity.value.trim() || 'TU PRÓXIMO DESAFÍO';
   $('reviewName').textContent = form.elements.name.value.trim() || 'Tu torneo';
   $('arbitrationWarning').hidden = !noJudge(); $('prizeHint').hidden = form.elements.prizeExpected.value !== 'yes';
+  const withPrize=form.elements.prizeExpected.value==='yes';$('creationPrizeSection').hidden=!withPrize;
+  $('creationPrizeTitleLabel').textContent=form.elements.prizeType.value==='MONEY'?'Importe y moneda (por ejemplo, 50.000 ARS)':'Nombre del premio';
+  for(const id of ['creationPrizeType','creationPrizeTitle','creationPrizeHolder','creationPrizeFunder'])$(id).required=withPrize;
 }
 function syncArbitration() {
   if (noJudge()) judges.clear();
@@ -119,7 +123,7 @@ function selectFormat(id) {
   $('formatPreview').replaceChildren(description); updateSummary(); updateModel();
 }
 for (const format of formats) {
-  const b = document.createElement('button'); b.type = 'button'; b.className = 'format-choice'; b.dataset.id = format.id; b.textContent = format.name;
+  const b = document.createElement('button'); b.type = 'button'; b.className = 'format-choice'; b.dataset.id = format.id; const image=document.createElement('span');image.className='format-thumbnail';image.innerHTML=formatImage(format.id);const label=document.createElement('span');label.textContent=format.name;b.append(image,label);
   b.addEventListener('click', () => { selectFormat(format.id); saveDraft(); }); $('formatOptions').append(b);
 }
 
@@ -152,7 +156,7 @@ function renderPeople() {
       check.disabled = pendingRequest !== null || (!check.checked && chosen.size >= (role === 'participant' ? capacity() : 16)) || profiles.some(other => other.id !== profile.id && chosen.has(other.id) && owner(other) === owner(profile));
       check.addEventListener('change', () => { check.checked ? chosen.add(profile.id) : chosen.delete(profile.id); selectionChanged(); });
       const name = document.createElement('span'); name.textContent = profile.nickname;
-      const state = document.createElement('span'); state.className = 'person-selection'; state.textContent = check.checked ? '✓ Invitado' : 'Elegir'; state.setAttribute('aria-hidden', 'true');
+      const state = document.createElement('span'); state.className = 'person-selection'; state.textContent = check.checked ? '✓ Seleccionado' : 'Elegir'; state.setAttribute('aria-hidden', 'true');
       label.append(check, personAvatar(profile), name, badgeElements(owner(profile)), state); list.append(label);
     }
     if (!list.childElementCount) { const p = document.createElement('p'); p.className = 'editorial-help'; p.textContent = role === 'judge' ? 'No hay jueces disponibles con ese nick.' : 'No hay perfiles disponibles con ese nick.'; list.append(p); }
@@ -276,6 +280,7 @@ form.addEventListener('submit', async event => {
   try { startsAt = localToUtc($('startsLocal').value, $('timeZone').value); if (Date.parse(startsAt) <= Date.now()) throw new Error('Elegí una fecha y hora futuras.'); }
   catch (e) { return show(e.message, true); }
   }
+  if(!pendingRequest && form.elements.prizeExpected.value==='yes'){for(const id of ['creationPrizeType','creationPrizeTitle','creationPrizeHolder','creationPrizeFunder'])if(!$(id).reportValidity())return;}
   const activeEpoch = epoch, activeSub = currentSub, activeDraftKey = draftKey();
   saving = true; fields.disabled = true; show(coverBlob && !coverPath ? 'Subiendo la portada…' : 'Preparando publicación…');
   try {
@@ -286,6 +291,7 @@ form.addEventListener('submit', async event => {
         description: form.elements.description.value.trim(), conflicts: form.elements.conflicts.value.trim(), format: selectedFormat,
         participantIds: [...participants], judgeIds: [...judges], participantLimit: capacity(), arbitrationMode: form.elements.arbitrationMode.value,
         startsAt, timeZone: $('timeZone').value, acceptOrganizerDecision: noJudge() && $('organizerConsent').checked,
+        ...(form.elements.prizeExpected.value==='yes'?{prizeType:form.elements.prizeType.value,prizeTitle:form.elements.prizeTitle.value.trim(),prizeDescription:form.elements.prizeDescription.value.trim(),prizeHolder:form.elements.prizeHolder.value.trim(),prizeFunder:form.elements.prizeFunder.value.trim()}:{}),
         prizeExpected: form.elements.prizeExpected.value === 'yes', coverPath: coverPath || null, treasurerId: null };
       saving = false; saveDraft(); saving = true;
     }

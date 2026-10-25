@@ -1,3 +1,4 @@
+import { prizeTypes, prizeIcon } from './prize-types.js';
 import { preparePrizeUpload, saveTournamentPrize } from './tournaments-api.js';
 const el=(tag,text,cls)=>{const n=document.createElement(tag);n.textContent=text;if(cls)n.className=cls;return n;};
 const parse=value=>{try{const data=JSON.parse(value || '[]');return Array.isArray(data)?data:[];}catch{return [];}};
@@ -18,6 +19,7 @@ export function prizePanel(t,{canEdit,onSaved}){
   const withoutPrize=t.prizeExpected===false && !t.prizeTitle;
   const section=el(withoutPrize?'details':'section','',withoutPrize?'tournament-panel':'prize-showcase');
   if(withoutPrize)section.append(el('summary','Premio · este encuentro se creó sin uno anunciado'));
+  if(!withoutPrize){const glyph=prizeIcon(t.prizeType);glyph.classList.add('prize-category-icon');section.append(glyph);}
   section.append(el('p',withoutPrize?'COMPETIR POR EL DESAFÍO':'ESTO ESTÁ EN JUEGO','prize-kicker'),el('h2',t.prizeTitle || (withoutPrize?'Torneo sin premio anunciado':'El premio está por anunciarse')),el('span',withoutPrize?'SIN PREMIO DECLARADO':t.prizeFundingStatus==='CONFIRMED'?'CONFIRMADO POR EL RESPONSABLE':'PENDIENTE DE CONFIRMACIÓN · NO DISPONIBLE','prize-provisional'));
   section.append(el('p','Posee o entrega: '+(t.prizeHolder || 'Sin declarar')+' · Financia: '+(t.prizeFunder || 'Sin declarar'),'field-help'),el('p','La gestión del premio es externa a ProveIt. La confirmación es una declaración del responsable; no implica custodia ni garantía de la plataforma.','field-help'));
   if(t.prizeDescription)section.append(el('p',t.prizeDescription,'prize-description'));
@@ -34,6 +36,7 @@ export function prizePanel(t,{canEdit,onSaved}){
 function prizeForm(t,attachments,{onSaved,onCancel}){
   const form=el('form','','prize-form');
   const field=(text,input)=>{const label=el('label',text);label.append(input);form.append(label);};
+  const type=el('select');for(const [value,label] of Object.entries(prizeTypes)){const option=el('option',label);option.value=value;type.append(option);}type.value=t.prizeType || 'OTHER';field('Tipo de premio',type);
   const title=el('input');title.maxLength=120;title.value=t.prizeTitle || '';field('Nombre del premio',title);
   const description=el('textarea');description.maxLength=1200;description.rows=3;description.value=t.prizeDescription || '';field('Descripción',description);
   const holder=el('input');holder.maxLength=120;holder.value=t.prizeHolder || '';holder.required=true;field('Quién posee o entregará el premio',holder);
@@ -69,7 +72,7 @@ function prizeForm(t,attachments,{onSaved,onCancel}){
         keep.push(uploaded.get(file));
       }
       message.textContent='Guardando premio…';
-      const saved=await saveTournamentPrize({tournamentId:t.id,prizeTitle:title.value.trim(),prizeDescription:description.value.trim(),prizeLinks:JSON.stringify(urls),prizeAttachments:JSON.stringify(keep),prizeRevision:t.prizeRevision || 0,prizeHolder:holder.value.trim(),prizeFunder:funder.value.trim(),prizeFundingStatus:funding.value});
+      const saved=await saveTournamentPrize({tournamentId:t.id,prizeType:type.value,prizeTitle:title.value.trim(),prizeDescription:description.value.trim(),prizeLinks:JSON.stringify(urls),prizeAttachments:JSON.stringify(keep),prizeRevision:t.prizeRevision || 0,prizeHolder:holder.value.trim(),prizeFunder:funder.value.trim(),prizeFundingStatus:funding.value});
       if(!saved?.id)throw new Error('AWS no confirmó el cambio. Actualizá antes de volver a guardar.');
       delete form.parentElement.dataset.prizeEditing;onSaved(saved);
     }catch(error){message.textContent=error.message;save.disabled=false;cancel.disabled=false;}

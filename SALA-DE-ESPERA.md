@@ -1,3 +1,7 @@
+# Sala real disponible desde 3.14.0
+
+La nueva sala se aplica ahora a `torneo.html` con datos de AWS. Ver `TEMA-Y-SALA-REAL.md`. La documentación siguiente describe específicamente la herramienta opcional de simulación, no la sala real.
+
 # Sala de espera — v3.13.1
 
 ## Entrada y navegación

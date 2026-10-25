@@ -1,3 +1,7 @@
+# Actualización 3.14.0
+
+Tema claro/oscuro compartido, propuesta de premio en la etapa 2 y sala final conectada a cuentas reales. Ver `TEMA-Y-SALA-REAL.md` para la implementación y sus límites.
+
 # Crear torneos por etapas — v3.8.0
 
 ## El recorrido
