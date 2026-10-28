@@ -1,4 +1,4 @@
-import {clubDirectory} from './community-api.js';
+import {communityAction,clubDirectory} from './community-api.js';
 import { configureAmplify, getCurrentUser, profileClient } from './auth-client.js';
 
 export async function tournamentClient() {
@@ -30,9 +30,7 @@ export async function listClubTournaments() {
   return tournaments.filter(t=>!t.deletedAt && t.status!=='DELETED').sort((a,b) => b.createdAt.localeCompare(a.createdAt));
 }
 export async function getClubTournament(id) {
-  const client = await tournamentClient();
-  const row=resultData(await client.models.Tournament.get({ id }));
-  return row && !row.deletedAt && row.status!=='DELETED' ? row : null;
+  return communityAction('ROOM',{tournamentId:id});
 }
 
 

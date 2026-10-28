@@ -1,3 +1,7 @@
+import {S3Client,GetObjectCommand} from '@aws-sdk/client-s3';
+import {getSignedUrl} from '@aws-sdk/s3-request-presigner';
+import {roomDeadline,roomIsClosed,historyResult} from '../../shared/tournament-room';
+const covers=new S3Client({});
 import {DynamoDBDocumentClient,ScanCommand} from '@aws-sdk/lib-dynamodb';
 
 // Lanzamiento de ligas: los eventos anteriores siguen en el historial, sin XP retroactiva.
@@ -21,7 +25,7 @@ export async function leagueProgress(db:DynamoDBDocumentClient,profileId:string)
   const page=await db.send(new ScanCommand({TableName:process.env.TOURNAMENT_TABLE_NAME!,
    FilterExpression:'(contains(participantIds,:id) OR contains(judgeIds,:id)) AND attribute_not_exists(deletedAt)',
    ExpressionAttributeValues:{':id':profileId},ExclusiveStartKey:key,
-   ProjectionExpression:'id,#name,activity,#status,participantIds,judgeIds,rosterStatuses,winnerProfileId,createdAt,startsAt,decidedAt,creationPaymentStatus,resultKind',
+   ProjectionExpression:'id,#name,activity,#status,participantIds,judgeIds,rosterStatuses,winnerProfileId,createdAt,startsAt,decidedAt,creationPaymentStatus,resultKind,coverPath,createdBySub',
    ExpressionAttributeNames:{'#name':'name','#status':'status'}}));
   events.push(...(page.Items || []));key=page.LastEvaluatedKey;
  }while(key);
@@ -54,9 +58,13 @@ export async function leagueProgress(db:DynamoDBDocumentClient,profileId:string)
  return {xp,rank:current?{...current,index}:null,nextMinimum:next?.minimum || null,
   seasonStart:LEAGUE_START,creditedEvents:credited.length,
   achievements:achievements.reverse(),
-  history:accepted.sort((a,b)=>(b.decidedAt || b.startsAt || b.createdAt).localeCompare(a.decidedAt || a.startsAt || a.createdAt)).slice(0,20).map(t=>({
-   id:t.id,name:t.name,activity:t.activity,status:t.status,date:t.decidedAt || t.startsAt || t.createdAt,
-   role:t.participantIds.includes(profileId)?'Participante':'Juez',
-   result:t.status==='COMPLETED'?(t.winnerProfileId===profileId?'Victoria':'Participó'):'Confirmado',
+  history:await Promise.all(accepted.sort((a,b)=>(b.decidedAt || b.startsAt || b.createdAt).localeCompare(a.decidedAt || a.startsAt || a.createdAt)).slice(0,20).map(async t=>{
+   let coverUrl='';
+   if(typeof t.coverPath==='string' && t.coverPath.startsWith(`tournament-covers/${t.createdBySub}/${t.id}/`) && t.coverPath.endsWith('.webp')){
+    try{coverUrl=await getSignedUrl(covers,new GetObjectCommand({Bucket:process.env.PROFILE_BUCKET_NAME!,Key:t.coverPath}),{expiresIn:120});}catch{/* El historial funciona aunque la portada falle. */}
+   }
+   return {id:t.id,name:t.name,activity:t.activity,status:t.status,date:t.decidedAt || t.startsAt || t.createdAt,
+    role:t.participantIds.includes(profileId)?'Participante':'Juez',...historyResult(t,profileId),coverUrl,
+    roomClosed:roomIsClosed(t),roomClosesAt:roomDeadline(t)};
   }))};
 }

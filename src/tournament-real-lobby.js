@@ -1,10 +1,11 @@
+import {roomDeadline,tournamentIsLive} from '../shared/tournament-room.ts';
 import { pendingInvitations, respondInvitation } from './tournaments-api.js';
 import { noJudgeConsent, countdownLabel, scheduleLabel } from './tournament-schedule.js';
 import { prizeIcon } from './prize-types.js';
 import '../tournament-real-lobby.css';
 const el = (tag,text='',cls='') => { const n=document.createElement(tag);n.textContent=text;n.className=cls;return n; };
 // Sólo datos recibidos de AWS. La vista no confirma jugadores ni inventa estados.
-export function createRealLobby({ profilePreview, getUser, getConnection, onChanged }) {
+export function createRealLobby({ profilePreview, getUser, getConnection, getNow=()=>Date.now(), onChanged }) {
   const root=el('section','','real-lobby'), ring=el('div','','rl-ring'), ringText=el('strong');
   const inner=el('div');inner.append(el('small','PARTICIPANTES CONFIRMADOS'),ringText);const track=el('span','','rl-progress-track');track.append(el('span'));ring.append(inner,track);
   const reduced=window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -17,7 +18,15 @@ export function createRealLobby({ profilePreview, getUser, getConnection, onChan
     const from=shown,start=performance.now();
     const step=now=>{const p=Math.min(1,(now-start)/720),e=p<.5?4*p*p*p:1-Math.pow(-2*p+2,3)/2;paint(from+(value-from)*e);if(p<1)frame=requestAnimationFrame(step);else frame=0;};frame=requestAnimationFrame(step);
   }
-  function clock() { const n=headerStats?.querySelector('[data-real-clock]');if(n)n.textContent=t.winnerProfileId?'Finalizado':t.startsAt?countdownLabel(t.startsAt):'Horario sin definir'; }
+  function clock() {
+    if(!t)return;const n=headerStats?.querySelector('[data-real-clock]'),live=tournamentIsLive(t,getNow()),deadline=roomDeadline(t),done=Boolean(t.winnerProfileId || t.status==='COMPLETED');
+    if(n){n.classList.toggle('rl-live-badge',live);n.setAttribute('role',live?'status':'timer');n.textContent=live?'PARTIDA EN CURSO':done?'Finalizado':t.startsAt?(getNow()>=Date.parse(t.startsAt)?'Esperando confirmaciones':countdownLabel(t.startsAt)):'Horario sin definir';}
+    const caption=headerStats?.querySelector('[data-clock-caption]');if(caption)caption.textContent=live?'EN VIVO':done?'TORNEO FINALIZADO':'INICIO PREVISTO';
+    const phase=root.querySelector('.rl-kicker');if(phase)phase.textContent=(done?'ENCUENTRO FINALIZADO':live?'EN CURSO':'FASE DE CONFIRMACIÓN')+' · '+t.name+' · '+t.activity;
+    const heading=root.querySelector('.rl-hero h1');if(heading)heading.textContent=done?'Desafío completado':live?'El torneo está en curso':'Sala de espera y confirmación de asistencia';
+    const intro=root.querySelector('[data-lobby-intro]');if(intro)intro.textContent=done?'Revisá el resultado y la participación.':live?'La competencia ya comenzó.':'Confirmá tu asistencia para preparar el encuentro.';
+    const remaining=root.querySelector('[data-room-closing]');if(remaining && deadline!==null){const seconds=Math.max(0,Math.ceil((deadline-getNow())/1000));remaining.textContent=Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0');}
+  }
   async function answer(accept,message) {
     if(busy)return;
     if(!accept && !window.confirm('¿Rechazar tu invitación a «'+t.name+'»? El sorteo quedará detenido.'))return;
@@ -41,7 +50,7 @@ export function createRealLobby({ profilePreview, getUser, getConnection, onChan
     const people=t.participantIds.map((id,i)=>({id,name:t.participantNames[i],status:statuses[i] || 'PENDING'}));
     const accepted=people.filter(p=>p.status==='ACCEPTED').length,total=people.length;
     const top=el('div','','rl-overview');
-    const timing=el('section','','rl-card');timing.append(el('small','INICIO PREVISTO'));const digits=el('strong');digits.dataset.realClock='';digits.setAttribute('role','timer');digits.setAttribute('aria-live','off');timing.append(digits,el('span',scheduleLabel(t.startsAt,t.timeZone)));top.append(timing);
+    const timing=el('section','','rl-card');const caption=el('small','INICIO PREVISTO');caption.dataset.clockCaption='';timing.append(caption);const digits=el('strong');digits.dataset.realClock='';digits.setAttribute('role','timer');digits.setAttribute('aria-live','off');timing.append(digits,el('span',scheduleLabel(t.startsAt,t.timeZone)));top.append(timing);
     const prize=el('section','','rl-card rl-prize');prize.append(prizeIcon(t.prizeType));
     const prizeCopy=el('div');
     const announced=Boolean(t.prizeTitle),confirmed=announced && t.prizeFundingStatus==='CONFIRMED';
@@ -56,6 +65,8 @@ export function createRealLobby({ profilePreview, getUser, getConnection, onChan
     headerStats=top;const nav=document.querySelector('header.topbar .top-actions');if(nav)nav.before(top);else root.append(top);
     const hero=el('section','','rl-card rl-hero'),copy=el('div');
     copy.append(el('p',(t.winnerProfileId?'ENCUENTRO FINALIZADO':'FASE DE CONFIRMACIÓN')+' · '+t.name+' · '+t.activity,'rl-kicker'),el('h1',t.winnerProfileId?'Desafío completado':'Sala de espera y confirmación de asistencia'),el('p',t.winnerProfileId?'Revisá el resultado y la participación.':'Confirmá tu asistencia para preparar el encuentro.'));
+    copy.querySelector('p:last-child').dataset.lobbyIntro='';
+    const deadline=roomDeadline(t);if(deadline!==null){const closing=el('aside','','rl-closing-notice');closing.setAttribute('role','status');const time=el('strong');time.dataset.roomClosing='';closing.append(el('span','Esta sala se cerrará automáticamente en '),time,el('p','El resultado ya está guardado. Podés salir de la sala sin problemas; tu participación seguirá en el historial.'));root.append(closing);}
     const connected=Boolean(getConnection?.());const live=el('small',connected?'Confirmaciones en vivo':'Actualización automática · reconectando','lobby-live');live.id='lobbyConnection';live.classList.toggle('lobby-reconnect',!connected);copy.append(live);
     const scheduleNote=el('small','El horario no confirma personas ni inicia automáticamente el torneo.');copy.append(scheduleNote);hero.append(copy,ring);root.append(hero);
     ringText.textContent=accepted+' / '+total;ring.setAttribute('role','img');ring.setAttribute('aria-label',accepted+' de '+total+' participantes confirmados');

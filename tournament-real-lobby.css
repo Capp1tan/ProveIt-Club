@@ -33,3 +33,12 @@ html[data-theme=dark] .real-lobby .rl-person[data-state=ACCEPTED]{--rl-status:#6
 @keyframes rl-response-change{0%{box-shadow:0 0 0 3px color-mix(in srgb,var(--rl-status) 22%,transparent)}100%{box-shadow:0 0 0 0 transparent}}
 header.topbar>.rl-overview.rl-overview-single{grid-template-columns:1fr;max-width:260px}
 @media(prefers-reduced-motion:reduce){.real-lobby .rl-person{transition:none}.real-lobby .rl-state-changed{animation:none}}
+
+/* Estado en vivo: las ondas son decorativas y no bloquean ninguna interacción. */
+header.topbar>.rl-overview .rl-live-badge{display:inline-flex;align-items:center;gap:14px;font-size:14px;color:#e40068;border:1px solid #d72b6955;background:#d72b690b;border-radius:22px;padding:10px 14px;line-height:1.2;isolation:isolate}
+.rl-live-badge:before{content:'';width:9px;height:9px;flex:0 0 9px;border-radius:50%;background:currentColor;box-shadow:0 0 0 0 #df237d44;animation:rl-live-pulse 1.8s ease-out infinite}
+@keyframes rl-live-pulse{0%{box-shadow:0 0 0 0 #df237d66}70%,100%{box-shadow:0 0 0 11px #df237d00}}
+html[data-theme=dark] header.topbar>.rl-overview .rl-live-badge{color:#ff629e}
+.rl-closing-notice{padding:17px 20px;margin-bottom:16px;border-radius:10px;border:1px solid var(--site-line);background:var(--site-tint);color:var(--site-text);font-size:14px}.rl-closing-notice strong{font-variant-numeric:tabular-nums;color:var(--site-accent);font-size:20px}.rl-closing-notice p{font-size:12px;line-height:1.65;margin:8px 0 0;color:var(--site-muted)}
+.room-closed{max-width:760px;margin:40px auto;line-height:1.7}.room-closed .primary-button{display:inline-block;margin-top:15px}
+@media(prefers-reduced-motion:reduce){.rl-live-badge:before{animation:none;box-shadow:0 0 0 4px #df237d22}}

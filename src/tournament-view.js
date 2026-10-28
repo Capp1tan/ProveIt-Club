@@ -1,3 +1,4 @@
+import {roomDeadline,roomIsClosed} from '../shared/tournament-room.ts';
 import { createRealLobby } from './tournament-real-lobby.js';
 import {judgePanel} from './judge-ui.js';
 import { tournamentCoverUrl } from './tournament-cover.js';
@@ -17,7 +18,8 @@ import { listClubTournaments, getClubTournament, registeredProfiles, ensureClubT
 const notice=document.getElementById('tournamentsNotice'),detail=document.getElementById('tournamentDetail'),list=document.getElementById('tournamentsList');
 const element=(tag,text,className)=>{const node=document.createElement(tag);node.textContent=text;if(className)node.className=className;return node;};
 let profiles=new Map(),lastVersion='',refreshing=false,currentUser=null,currentTournament=null;
-let drawCleanup;
+let drawCleanup;let serverOffset=0;
+const roomNow=()=>Date.now()+serverOffset;
 let lobbySubscription,lobbyRetry,refreshQueued=false,lobbyConnected=false,lobbyStopped=false;
 const coverRequests=new Map();
 function updateLobbyConnection(){const label=document.getElementById('lobbyConnection');if(label){label.textContent=lobbyConnected?'Confirmaciones en vivo':'Actualización automática · reconectando';label.classList.toggle('lobby-reconnect',!lobbyConnected);}}
@@ -33,7 +35,7 @@ function closeTournamentChat(){chatCleanup?.();chatCleanup=null;chatId=null;cons
 let isClubAdmin=false;
 const photoRequests=new Map();
 const profilePreview=detail ? new ProfilePreview({avatar,badges:badgeElements}) : null;
-const realLobby=detail ? createRealLobby({profilePreview,getUser:()=>currentUser,getConnection:()=>lobbyConnected,onChanged:()=>refreshTournament(true)}) : null;
+const realLobby=detail ? createRealLobby({profilePreview,getUser:()=>currentUser,getConnection:()=>lobbyConnected,getNow:roomNow,onChanged:()=>refreshTournament(true)}) : null;
 Hub.listen('auth',({payload})=>{if(payload.event==='signedOut'){profilePreview?.lock();closeTournamentChat();lobbyStopped=true;clearTimeout(lobbyRetry);lobbySubscription?.unsubscribe();lobbySubscription=null;realLobby?.destroy();}});
 function avatar(id,name) {
   const node=element('span',Array.from(name.trim())[0]?.toUpperCase() || '?','person-avatar');
@@ -89,7 +91,13 @@ function drawBoard(t) {
   return section;
 }
 // Sólo pinta el reloj. La autorización y la hora para decidir se comprueban en AWS.
+function showClosedRoom(t){
+ lobbyStopped=true;clearTimeout(lobbyRetry);lobbySubscription?.unsubscribe();lobbySubscription=null;closeTournamentChat();profilePreview?.lock();drawCleanup?.();drawCleanup=null;realLobby?.destroy();currentTournament=null;
+ const card=element('section','','tournament-panel room-closed');card.append(element('h1','La sala está cerrada'),element('p',t.name || 'Torneo finalizado'),element('p','Pasaron los cinco minutos posteriores al resultado. La sala y el chat ya no están disponibles. Tu participación se conserva en el historial.'));
+ const link=element('a','Ir a mi historial','primary-button');link.href='/perfil.html';card.append(link);detail.replaceChildren(card);notice.hidden=true;
+}
 function updateClock() {
+  if(currentTournament && roomIsClosed(currentTournament,roomNow())){showClosedRoom(currentTournament);return;}
   realLobby?.clock();
   if(currentTournament && !currentTournament.winnerProfileId && !detail.querySelector('.tournament-decision') && Date.now()>=Date.parse(currentTournament.startsAt)){const decision=resultPanel(currentTournament);if(decision)detail.append(decision);}
   const button=document.getElementById('recordDuelWinner');
@@ -127,6 +135,7 @@ function resultPanel(t) {
 }
 function renderTournament(t) {
   profilePreview?.dismiss();drawCleanup?.();drawCleanup=null;
+  if(t.roomClosed || roomIsClosed(t,roomNow())){showClosedRoom(t);return;}
   currentTournament=t;
   const chatRoot=document.getElementById('tournamentChat');
   if(chatRoot && chatId!==t.id){closeTournamentChat();chatRoot.hidden=false;chatId=t.id;chatCleanup=mountChat(chatRoot,{roomType:'TOURNAMENT',roomId:t.id});}
@@ -171,9 +180,11 @@ async function refreshTournament(force=false) {
   try {
     const id=new URLSearchParams(location.search).get('id');if(!id)throw new Error('El enlace no incluye un torneo.');
     let t=await getClubTournament(id);if(!t){closeTournamentChat();profilePreview?.lock();drawCleanup?.();detail.replaceChildren();currentTournament=null;throw new Error('Este torneo fue eliminado o ya no está disponible.');}
+    if(Number.isFinite(t.serverNow))serverOffset=t.serverNow-Date.now();
+    if(t.roomClosed || roomIsClosed(t,roomNow())){showClosedRoom(t);return;}
     if (!t.draw && t.rosterStatuses?.length && t.rosterStatuses.every(state=>state==='ACCEPTED') && (await getCurrentUser()).userId===t.createdBySub) t=await ensureClubTournamentDraw(id) || t;
     const version=t.updatedAt+String(t.draw);
-    if((force || version!==lastVersion) && !detail.querySelector('[data-prize-editing="true"]') && !detail.querySelector('.community-form:focus-within,.duel-result-form:focus-within')){renderTournament(t);lastVersion=version;}
+    if((force || version!==lastVersion) && (t.winnerProfileId || (!detail.querySelector('[data-prize-editing="true"]') && !detail.querySelector('.community-form:focus-within,.duel-result-form:focus-within')))){renderTournament(t);lastVersion=version;}
     notice.hidden=true;
   }catch(error){notice.hidden=false;notice.textContent=error.message;notice.dataset.error='true';}
   finally{refreshing=false;if(refreshQueued){refreshQueued=false;setTimeout(()=>void refreshTournament(),200);}}
@@ -187,11 +198,11 @@ try {
     await Promise.all([loadBadges().catch(()=>{}),registeredProfiles({includeBio:true}).then(items=>{profiles=new Map(items.map(profile=>[profile.id,profile]));}).catch(()=>{})]);
     profilePreview.setProfiles(profiles);
     await refreshTournament();
-    void connectLobby();
+    if(!lobbyStopped)void connectLobby();
     setInterval(updateClock,1000);
     // Señal WebSocket inmediata; relectura de respaldo para cambios desde clientes anteriores.
     setInterval(()=>void refreshTournament(),30000);
-    document.addEventListener('visibilitychange',()=>{if(!document.hidden){void connectLobby();void refreshTournament();}});
+    document.addEventListener('visibilitychange',()=>{if(!document.hidden){updateClock();if(!lobbyStopped){void connectLobby();void refreshTournament();}}});
     window.addEventListener('proveit:invitation-updated',()=>void refreshTournament(true));
   } else {
     const tournaments=await listClubTournaments();

@@ -59,10 +59,16 @@ export function profileProgress(profile){
    history.lastElementChild.remove();achievements.lastElementChild.remove();
    if(!data.history.length)history.append(node('p','Todavía no hay participaciones confirmadas. Tu próximo desafío puede ser el primero.'));
    else{
+    const labels=node('div','','league-history-labels');labels.setAttribute('aria-hidden','true');labels.append(node('span','TORNEO'),node('span','FECHA'),node('span','RESULTADO'));history.append(labels);
     const list=node('ul','','league-event-list');
-    for(const event of data.history){const li=node('li'),link=node('a','','league-event');link.href='/torneo.html?id='+encodeURIComponent(event.id);
-     const copy=node('div');copy.append(node('strong',event.name),node('small',event.activity+' · '+date(event.date)+' · '+event.role));
-     link.append(copy,node('span',event.result,'league-result'));li.append(link);list.append(li);
+    for(const event of data.history){const li=node('li'),closed=event.roomClosed || (event.roomClosesAt && Date.now()>=event.roomClosesAt),link=node(closed?'article':'a','','league-event');
+     if(!closed)link.href='/torneo.html?id='+encodeURIComponent(event.id);
+     const identity=node('div','','league-event-identity'),image=node('img');image.className='league-event-image';image.loading='lazy';image.decoding='async';image.width=112;image.height=68;
+     const fallback='/tournaments/'+(event.status==='COMPLETED'?'trophy':'arena')+'.svg';image.src=event.coverUrl || fallback;image.alt=event.coverUrl?'Portada de '+event.name:'';image.addEventListener('error',()=>{image.src=fallback;image.alt='';},{once:true});
+     const copy=node('div');copy.append(node('strong',event.name),node('small',event.activity+' · '+event.role));if(closed)copy.append(node('small','Sala cerrada','league-room-closed'));identity.append(image,copy);
+     const when=node('time',date(event.date),'league-event-date');when.dateTime=event.date;
+     const result=node('span',event.result,'league-result');result.dataset.tone=['gold','silver','bronze'].includes(event.resultTone)?event.resultTone:'neutral';
+     link.append(identity,when,result);li.append(link);list.append(li);
     }history.append(list);
     if(data.history.length===20)history.append(node('small','Se muestran las últimas 20 participaciones.'));
    }

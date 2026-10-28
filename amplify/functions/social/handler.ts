@@ -3,7 +3,7 @@ import {community} from '../community';
 // Las revisiones y las transacciones protegen el cupo frente a aceptaciones simultáneas.
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient,GetCommand,QueryCommand,UpdateCommand,TransactWriteCommand } from '@aws-sdk/lib-dynamodb';
-import { assertActiveAccount,assertActiveTournament } from '../lifecycle';
+import { assertActiveAccount,assertActiveTournament,assertOpenTournamentRoom } from '../lifecycle';
 const db=DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const table=()=>process.env.SOCIAL_TABLE_NAME!;
 const read=async(env:string,id:string)=>(await db.send(new GetCommand({TableName:process.env[env]!,Key:{id},ConsistentRead:true}))).Item;
@@ -85,7 +85,7 @@ export const handler=async(event:Event)=>{
   if(!has(mine.friends,target.sub) || !has(other.friends,sub))throw new Error('Este chat está disponible únicamente entre amigos.');
   pk='DM#'+[sub,target.sub].sort().join('#');roomCheck=check(other);
  }else if(a.roomType==='TOURNAMENT' && uuid(a.roomId)){
-  const t=await read('TOURNAMENT_TABLE_NAME',a.roomId);assertActiveTournament(t);tournament=t;
+  const t=await read('TOURNAMENT_TABLE_NAME',a.roomId);assertOpenTournamentRoom(t);tournament=t;
   const ids=[...t!.participantIds,...t!.judgeIds,...(t!.treasurerId?[t!.treasurerId]:[])];
   // Ya comprobamos que este perfil pertenece al sub autenticado: no hace falta
   // leer todos los perfiles de la sala en cada consulta de mensajes.
@@ -144,6 +144,7 @@ export const handler=async(event:Event)=>{
   items.push({Update:{TableName:table(),Key:{pk:'USER#'+target.sub,sk:'INBOX#'+profile.id},UpdateExpression:'SET peerProfileId=:id,peerName=:name,lastAt=:now,receivedCount=if_not_exists(receivedCount,:zero)+:one',ExpressionAttributeValues:{':id':profile.id,':name':profile.nickname,':now':now,':zero':0,':one':1}}});
   items.push({Update:{TableName:table(),Key:inboxKey!,UpdateExpression:'SET peerProfileId=:id,peerName=:name,lastAt=:now',ExpressionAttributeValues:{':id':target.profileId,':name':targetName,':now':now}}});
  }
+ if(tournament)assertOpenTournamentRoom(tournament);
  await transact(items);return finishSend({ok:true,message});
 };
 async function transact(items:any[]){for(let attempt=0;attempt<3;attempt++){try{await db.send(new TransactWriteCommand({TransactItems:items}));return;}catch(error){const reasons=(error as any).CancellationReasons || [];if(attempt<2 && ((error as Error).name==='TransactionConflictException' || reasons.some((r:any)=>r.Code==='TransactionConflict'))){await new Promise(resolve=>setTimeout(resolve,50+attempt*80));continue;}if((error as Error).name==='TransactionCanceledException')throw new Error('La conversación cambió o enviaste demasiado rápido. Volvé a intentar.');throw error;}}}

@@ -3,7 +3,7 @@ import {DynamoDBDocumentClient,GetCommand,ScanCommand,QueryCommand,PutCommand,Up
 import {S3Client,GetObjectCommand,PutObjectCommand} from '@aws-sdk/client-s3';
 import {randomUUID} from 'node:crypto';
 import {getSignedUrl} from '@aws-sdk/s3-request-presigner';
-import {assertActiveAccount,assertActiveTournament} from './lifecycle';
+import {assertActiveAccount,assertActiveTournament,roomDeadline,roomIsClosed} from './lifecycle';
 import {leagueProgress} from './leagues';
 import {coverAction} from './tournament-cover';
 const s3=new S3Client({requestChecksumCalculation:'WHEN_REQUIRED'});
@@ -12,6 +12,12 @@ export async function community(db:DynamoDBDocumentClient,sub:string,a:any){
  await assertActiveAccount(sub);
  if(['COMMUNITY_COVER_UPLOAD','COMMUNITY_COVER_URL'].includes(a.action))return coverAction(db,sub,a);
  const get=async(t:string,id:string)=>(await db.send(new GetCommand({TableName:env(t),Key:{id},ConsistentRead:true}))).Item;
+ if(a.action==='COMMUNITY_ROOM'){
+  if(typeof a.tournamentId!=='string' || !/^[a-f0-9-]{36}$/i.test(a.tournamentId))throw new Error('Torneo inválido.');
+  const t=await get('TOURNAMENT_TABLE_NAME',a.tournamentId);if(!t || t.deletedAt || t.status==='DELETED')return null;assertActiveTournament(t);const serverNow=Date.now();
+  // Una sala cerrada sólo devuelve el aviso, nunca los mensajes ni el contenido de la sala.
+  return roomIsClosed(t,serverNow)?{id:t.id,name:t.name,roomClosed:true,roomClosesAt:roomDeadline(t),serverNow}:{...t,roomClosesAt:roomDeadline(t),serverNow};
+ }
  const social=async(pk:string,sk='STATE')=>(await db.send(new GetCommand({TableName:env('SOCIAL_TABLE_NAME'),Key:{pk,sk},ConsistentRead:true}))).Item;
  const state=await social('USER#'+sub);
  const admin=(await get('CLAIM_TABLE_NAME','creator'))?.accountSub===sub;
