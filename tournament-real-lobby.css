@@ -20,3 +20,5 @@ body:has(.real-lobby) .tournament-main{width:min(1440px,calc(100% - 40px));max-w
 
 .real-lobby .rl-ring>div{flex-direction:column}.real-lobby .rl-progress-track{display:block;flex:0 0 6px;min-height:6px;width:100%}.real-lobby .rl-hero h1{max-width:760px}
 header.topbar>.rl-overview>.rl-card:last-child{grid-column:auto}
+.real-lobby .rl-person .participant-trigger .club-badges{flex:0 0 auto;width:auto;max-width:45%;flex-wrap:wrap}.real-lobby .rl-person .participant-trigger .participant-name{min-width:0;flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
