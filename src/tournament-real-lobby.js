@@ -6,7 +6,7 @@ const el = (tag,text='',cls='') => { const n=document.createElement(tag);n.textC
 // Sólo datos recibidos de AWS. La vista no confirma jugadores ni inventa estados.
 export function createRealLobby({ profilePreview, getUser, getConnection, onChanged }) {
   const root=el('section','','real-lobby'), ring=el('div','','rl-ring'), ringText=el('strong');
-  const inner=el('div');inner.append(el('small','PARTICIPANTES CONFIRMADOS'),ringText);const track=el('div','','rl-progress-track');track.append(el('span'));ring.append(inner,track);
+  const inner=el('div');inner.append(el('small','PARTICIPANTES CONFIRMADOS'),ringText);const track=el('span','','rl-progress-track');track.append(el('span'));ring.append(inner,track);
   const reduced=window.matchMedia('(prefers-reduced-motion: reduce)');
   let headerStats;
   let t, filter='all', shown=null,target=0,frame=0,context='',busy=false,consents=new Set(),actionId=0;
