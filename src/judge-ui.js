@@ -2,11 +2,11 @@ import {communityAction} from './community-api.js';
 import '../community.css';
 const el=(tag,text,cls)=>{const n=document.createElement(tag);n.textContent=text;if(cls)n.className=cls;return n;};
 export function judgePanel(t,{isOrganizer,onChanged}){
- const root=el('section','','tournament-panel');root.append(el('h2','Condiciones y reputación de jueces'));
- root.append(el('p','Condiciones versión '+(t.termsVersion || 0)+'. Cada juez acepta el cargo y confirma que entiende las reglas. Los cambios materiales requieren una nueva aceptación de todos.'));
+ const root=el('section','','tournament-panel');root.append(el('h2',t.judgeIds?.length?'Condiciones y reputación de jueces':'Condiciones del torneo'));
+ if(t.judgeIds?.length)root.append(el('p','Condiciones versión '+(t.termsVersion || 0)+'. Cada juez acepta el cargo y confirma que entiende las reglas. Los cambios materiales requieren una nueva aceptación de todos.'));
  if(t.conflicts)root.append(el('p','Conflictos de interés declarados: '+t.conflicts,'arbitration-warning'));
  if(t.judgeIds?.some(id=>t.participantIds.includes(id)))root.append(el('p','Un juez también compite. Su interés se declara a todos los integrantes.','arbitration-warning'));
- root.append(el('small','Los vínculos personales se declaran por los integrantes; el sitio no puede descubrirlos automáticamente. Las recompensas del club requieren un juez independiente.'));
+ if(t.judgeIds?.length)root.append(el('small','Los vínculos personales se declaran por los integrantes; el sitio no puede descubrirlos automáticamente. Las recompensas del club requieren un juez independiente.'));
  if(isOrganizer && !t.winnerProfileId){
   const form=el('form','','community-form'),rules=el('textarea'),conflicts=el('textarea'),submit=el('button','Actualizar y pedir nueva aceptación','social-button'),message=el('p','','community-notice');
   rules.value=t.description || '';rules.required=true;rules.minLength=10;rules.maxLength=1000;rules.rows=3;conflicts.value=t.conflicts || '';conflicts.maxLength=500;conflicts.rows=2;

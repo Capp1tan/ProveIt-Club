@@ -3,14 +3,13 @@ import {judgePanel} from './judge-ui.js';
 import { tournamentCoverUrl } from './tournament-cover.js';
 import { mountChat } from './chat-ui.js';
 import { prizePanel } from './tournament-prize.js';
-import { sharePanel } from './tournament-share.js';
 import { myPendingPayments, money } from './billing-api.js';
 import { loadBadges, badgeElements, decorateAvatar, initializeAccess } from './badges.js';
 import { deleteTournament } from './maintenance-api.js';
 import { ProfilePreview } from './profile-preview.js';
 import { connectBracket } from './bracket-lines.js';
 import { Hub } from 'aws-amplify/utils';
-import { scheduleLabel, noJudgeConsent } from './tournament-schedule.js';
+import { scheduleLabel } from './tournament-schedule.js';
 // Sala de espera y cuadro: las confirmaciones y el sorteo provienen de AWS.
 import { formats, formatImage } from './tournament-formats.js';
 import { avatarUrl, getCurrentUser, configureAmplify } from './auth-client.js';
@@ -92,22 +91,22 @@ function drawBoard(t) {
 // Sólo pinta el reloj. La autorización y la hora para decidir se comprueban en AWS.
 function updateClock() {
   realLobby?.clock();
+  if(currentTournament && !currentTournament.winnerProfileId && !detail.querySelector('.tournament-decision') && Date.now()>=Date.parse(currentTournament.startsAt)){const decision=resultPanel(currentTournament);if(decision)detail.append(decision);}
   const button=document.getElementById('recordDuelWinner');
   if(button && !button.dataset.saving) button.disabled=Date.now()<Date.parse(currentTournament.startsAt);
 }
 function resultPanel(t) {
-  const section=element('section','','tournament-panel');section.append(element('h2','Resultado del torneo'));
+  const section=element('section','','tournament-panel');
   if(t.winnerProfileId) {
+    section.append(element('h2','Resultado del torneo'));
     section.append(element('p','🏆 '+t.winnerName,'duel-winner'),element('p','Decidido por '+(t.decidedByLabel || 'el árbitro acordado')+' · '+scheduleLabel(t.decidedAt,t.timeZone)),element('p','Resultado definitivo. No se puede cambiar desde esta pantalla.','field-help'));
     return section;
   }
   const noJudge=t.arbitrationMode==='ORGANIZER';
   const isJudge=(t.judgeIds || []).some(id=>{const owner=profiles.get(id)?.owner;return owner && (owner===currentUser?.username || owner===currentUser?.userId || owner.startsWith(currentUser?.userId+'::'));});
   const canDecide=noJudge ? currentUser?.userId===t.createdBySub : isJudge;
-  section.append(element('p',noJudge ? 'El organizador registrará al ganador, incluso si también juega.' : 'Un juez designado registrará al ganador.'));
-  if(!t.startsAt) {section.append(element('p','El registro de ganador se habilita en los nuevos duelos con fecha programada.','field-help'));return section;}
-  if(t.status!=='READY' || !t.draw) {section.append(element('p','Primero deben confirmar todos los integrantes y generarse el cruce.','field-help'));return section;}
-  if(!canDecide) return section;
+  if(!canDecide || !t.startsAt || t.status!=='READY' || !t.draw || Date.now()<Date.parse(t.startsAt))return null;
+  const decision=element('details','','tournament-panel tournament-decision');decision.append(element('summary','Registrar decisión'));
   const form=element('form','','duel-result-form'),label=element('label','Quién ganó');
   const select=element('select');select.required=true;select.id='duelWinner';label.htmlFor=select.id;
   const empty=element('option','Elegí al ganador');empty.value='';select.append(empty);
@@ -124,7 +123,7 @@ function resultPanel(t) {
     button.disabled=true;button.dataset.saving='true';message.textContent='Guardando resultado…';
     try {const saved=await recordClubDuelResult(t.id,select.value,reason.value,kind.value);if(!saved?.winnerProfileId)throw new Error('AWS no confirmó el resultado. Actualizá para revisar su estado.');currentTournament=saved;renderTournament(saved);lastVersion=saved.updatedAt+String(saved.draw);}
     catch(error) {message.textContent=error.message;delete button.dataset.saving;updateClock();}
-  });section.append(form);return section;
+  });decision.append(form);return decision;
 }
 function renderTournament(t) {
   profilePreview?.dismiss();drawCleanup?.();drawCleanup=null;
@@ -143,23 +142,19 @@ function renderTournament(t) {
   detail.append(realLobby.render(t));updateLobbyConnection();
   if(t.paymentMode==='TEST')detail.append(element('p','TORNEO DE PRUEBA · no corresponde a un cobro real','tournament-notice'));
   if(t.creationPaymentStatus==='REVERSED')detail.append(element('p','El pago de creación fue revertido. Contactá al administrador.','tournament-notice'));
-  const arbitration=element('section','','tournament-notice arbitration-warning');
-  arbitration.append(element('strong',t.arbitrationMode==='ORGANIZER' ? 'Sin juez · Decide el organizador' : 'Con juez · Decide un juez designado'));
-  if(t.arbitrationMode==='ORGANIZER')arbitration.append(element('p','El organizador decide el resultado final, incluso si también participa.'),element('p','La condición se acepta explícitamente al unirse.'));
   const canEditPrize=t.arbitrationMode==='ORGANIZER' ? currentUser?.userId===t.createdBySub : (t.judgeIds || []).some((id,index)=>Boolean(profiles.get(id)?.owner && (profiles.get(id).owner===currentUser?.username || profiles.get(id).owner===currentUser?.userId || profiles.get(id).owner.startsWith(currentUser?.userId+'::'))) && (!t.rosterStatuses || t.rosterStatuses[t.participantIds.length+index]==='ACCEPTED'));
   if(t.overview)heroContent.append(element('p',t.overview,'lobby-overview'));
-  detail.append(prizePanel(t,{canEdit:canEditPrize,onSaved:saved=>{renderTournament(saved);lastVersion=saved.updatedAt+String(saved.draw);}}));
-  const info=element('details','','tournament-panel');info.append(element('summary','Reglas, formato y condiciones'),element('h2',format?.name || t.format),arbitration);
+  if(t.prizeTitle || t.prizeExpected===true)detail.append(prizePanel(t,{canEdit:canEditPrize,onSaved:saved=>{renderTournament(saved);lastVersion=saved.updatedAt+String(saved.draw);}}));
+  const info=element('details','','tournament-panel');info.append(element('summary','Reglas, formato y condiciones'),element('h2',format?.name || t.format));
   if(format && !t.draw){const image=element('div','','format-preview');image.innerHTML=formatImage(format.id);image.append(element('p',format.description));info.append(image);}
   const rules=element('p',t.description || 'El organizador todavía no agregó reglas.');rules.style.whiteSpace='pre-wrap';info.append(rules);if(t.overview)info.append(element('p',t.overview));if(t.coverPath)info.append(hero);detail.append(info);
   if(t.draw && (t.status==='READY' || t.status==='COMPLETED')) detail.append(drawBoard(t));
   else if(t.rosterStatuses) detail.append(element('p',status.includes('REJECTED')?'Una persona rechazó. El torneo no se sortea: por ahora es necesario crear otro con los integrantes que acepten.':'Esperando que todos los participantes y responsables confirmen. Los cruces se sortearán automáticamente después de la última aceptación.','tournament-notice'));
   else detail.append(element('p','Este torneo se creó antes del sistema de invitaciones; conserva sus integrantes históricos. El sorteo automático se aplica a los nuevos torneos.','tournament-notice'));
-  info.append(element('p',t.arbitrationMode==='ORGANIZER'?'El organizador también coordina el dinero.':'Los jueces también coordinan el dinero del torneo.','field-help'));
-  const refresh=element('button','Actualizar confirmaciones','format-choice');refresh.type='button';refresh.addEventListener('click',()=>void refreshTournament(true));
-
-  detail.append(resultPanel(t),judgePanel(t,{isOrganizer:currentUser?.userId===t.createdBySub,onChanged:()=>refreshTournament(true)}));
-  detail.append(sharePanel(t),refresh,element('p','El juez registra al ganador general. Los resultados de cada cruce aún no se actualizan individualmente. El premio se gestiona externamente.','field-help'));
+  const outcome=resultPanel(t);if(outcome)detail.append(outcome);
+  if(t.judgeIds?.length || currentUser?.userId===t.createdBySub){
+    const conditions=element('details','','tournament-panel');conditions.append(element('summary',t.judgeIds?.length?'Condiciones y jueces':'Administrar condiciones'),judgePanel(t,{isOrganizer:currentUser?.userId===t.createdBySub,onChanged:()=>refreshTournament(true)}));detail.append(conditions);
+  }
   if(isClubAdmin || currentUser?.userId===t.createdBySub) {
     const remove=element('button','Eliminar torneo','danger-button');remove.type='button';
     remove.addEventListener('click',async()=>{

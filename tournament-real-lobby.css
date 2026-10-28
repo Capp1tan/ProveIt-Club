@@ -22,3 +22,14 @@ body:has(.real-lobby) .tournament-main{width:min(1440px,calc(100% - 40px));max-w
 header.topbar>.rl-overview>.rl-card:last-child{grid-column:auto}
 .real-lobby .rl-person .participant-trigger .club-badges{flex:0 0 auto;width:auto;max-width:45%;flex-wrap:wrap}.real-lobby .rl-person .participant-trigger .participant-name{min-width:0;flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
+/* Estados de asistencia: color estable y énfasis breve sólo cuando cambia la respuesta. */
+.real-lobby .rl-person{transition:border-color .45s ease,background-color .45s ease;--rl-status:var(--site-muted)}
+.real-lobby .rl-person[data-state=ACCEPTED]{--rl-status:#21844c;border-color:color-mix(in srgb,var(--rl-status) 48%,var(--site-line));background:color-mix(in srgb,var(--rl-status) 5%,var(--site-panel))}
+.real-lobby .rl-person[data-state=PENDING]{--rl-status:#9a6a10;border-color:color-mix(in srgb,var(--rl-status) 40%,var(--site-line))}
+.real-lobby .rl-person[data-state=REJECTED]{--rl-status:#b24747;border-color:color-mix(in srgb,var(--rl-status) 40%,var(--site-line))}
+html[data-theme=dark] .real-lobby .rl-person[data-state=ACCEPTED]{--rl-status:#6bd49b}html[data-theme=dark] .real-lobby .rl-person[data-state=PENDING]{--rl-status:#e5be65}html[data-theme=dark] .real-lobby .rl-person[data-state=REJECTED]{--rl-status:#ef9292}
+.real-lobby .rl-person .rl-state{color:var(--rl-status);background:color-mix(in srgb,var(--rl-status) 12%,var(--site-panel));border:1px solid color-mix(in srgb,var(--rl-status) 32%,transparent)}
+.real-lobby .rl-state-changed{animation:rl-response-change .85s ease-out}
+@keyframes rl-response-change{0%{box-shadow:0 0 0 3px color-mix(in srgb,var(--rl-status) 22%,transparent)}100%{box-shadow:0 0 0 0 transparent}}
+header.topbar>.rl-overview.rl-overview-single{grid-template-columns:1fr;max-width:260px}
+@media(prefers-reduced-motion:reduce){.real-lobby .rl-person{transition:none}.real-lobby .rl-state-changed{animation:none}}

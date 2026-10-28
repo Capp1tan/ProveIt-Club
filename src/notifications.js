@@ -1,3 +1,4 @@
+import { notificationSoundEnabled, watchNotificationSound } from './notification-preferences.js';
 import { noJudgeConsent, scheduleLabel } from './tournament-schedule.js';
 // Campana de invitaciones. Consulta cada 20 s con la página visible; no envía emails ni push.
 import '../notifications.css';
@@ -15,18 +16,16 @@ if (nav) {
   const panel = document.createElement('section'); panel.id = 'clubNotificationsPanel'; panel.className = 'notification-panel';
   panel.hidden = true; panel.setAttribute('aria-label','Invitaciones a torneos');
   const title = document.createElement('h2'); title.textContent = 'Tus invitaciones';
-  const sound = document.createElement('button'); sound.type = 'button'; sound.className = 'notification-sound';
   const description = document.createElement('p'); description.className = 'notification-help'; description.textContent = 'Aceptá o rechazá el rol propuesto. Se actualiza mientras estás en el sitio.';
   const message = document.createElement('p'); message.className = 'notification-message'; message.setAttribute('role','status'); message.setAttribute('aria-live','polite');
   const list = document.createElement('div'); list.className = 'notification-list';
   const refresh = document.createElement('button'); refresh.type = 'button'; refresh.textContent = 'Actualizar'; refresh.className = 'notification-refresh';
-  panel.append(title,sound,description,message,list,refresh); root.append(bell,panel); nav.prepend(root);
+  panel.append(title,description,message,list,refresh); root.append(bell,panel); nav.prepend(root);
   let userId = '', invitations = [], busy = false, answering = false, generation = 0;
   const consentChecks = new Set();
   let audio, queuedSound = false, soundEnabled = true;
-  try { soundEnabled = localStorage.getItem('proveit:notification-sound') !== 'off'; } catch {}
-  const soundLabel = () => { sound.textContent = soundEnabled ? 'Sonido activado · silenciar' : 'Sonido desactivado · activar'; sound.setAttribute('aria-pressed',String(soundEnabled)); };
-  soundLabel();
+  soundEnabled = notificationSoundEnabled();
+  watchNotificationSound(()=>{soundEnabled=notificationSoundEnabled();if(!soundEnabled)queuedSound=false;});
   // Audio sintetizado: no requiere archivos externos. Se habilita mediante un gesto del usuario.
   function chime() {
     if (!soundEnabled) { queuedSound = false; return; }
@@ -52,11 +51,6 @@ if (nav) {
   }
   document.addEventListener('pointerdown',unlockAudio);
   document.addEventListener('keydown',unlockAudio);
-  sound.addEventListener('click',async () => {
-    soundEnabled = !soundEnabled; soundLabel();
-    try { localStorage.setItem('proveit:notification-sound',soundEnabled ? 'on' : 'off'); } catch {}
-    if (soundEnabled) { await unlockAudio(); chime(); } else queuedSound = false;
-  });
   function render() {
     badge.hidden = !invitations.length; badge.textContent = invitations.length > 99 ? '99+' : String(invitations.length);
     bell.setAttribute('aria-label', 'Notificaciones: ' + invitations.length + ' invitaciones pendientes');

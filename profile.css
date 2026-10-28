@@ -10,3 +10,5 @@
 
 /* Ajustes voluntarios discretos; el borrado exige frase y confirmación final. */
 .account-settings{margin:22px 0;color:#a9b4ae;font-size:13px}.account-settings>summary{cursor:pointer;width:fit-content;padding:8px 0}.account-removal{margin:10px 0;padding:12px 16px;border:1px solid #ffffff18;border-radius:12px;max-width:640px}.account-removal>summary{cursor:pointer;font-size:12px}.account-removal p{line-height:1.65}.account-removal .danger-button{font-size:12px;padding:9px 12px}
+
+.profile-sound-setting{display:flex;align-items:center;gap:10px;margin:20px 0 8px;font-size:14px;cursor:pointer}.profile-sound-setting input{width:18px;height:18px;accent-color:var(--site-accent)}

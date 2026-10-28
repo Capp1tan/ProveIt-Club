@@ -1,3 +1,4 @@
+import { notificationSoundSetting } from './notification-preferences.js';
 import { deleteMyAccount } from './maintenance-api.js';
 import { fetchAuthSession, signOut } from './auth-client.js';
 
@@ -6,8 +7,10 @@ const el=(tag,text)=>{const n=document.createElement(tag);n.textContent=text;ret
 export function mountAccountActions(isCreator) {
   // Las herramientas del Creador están en Administración; el perfil sólo
   // conserva la baja voluntaria de las cuentas normales.
+  if(document.getElementById('accountSettings'))return;
+  const settings=el('details','');settings.id='accountSettings';settings.className='account-settings';settings.append(el('summary','Configuración de cuenta'),notificationSoundSetting());
+  const help=el('p','Esta preferencia se guarda en este navegador.');help.className='field-help';settings.append(help);document.querySelector('main').append(settings);
   if(isCreator)return;
-  const settings=el('details','');settings.className='account-settings';settings.append(el('summary','Configuración de cuenta'));
   const section=el('details','');section.className='account-removal';section.id='accountActions';section.append(el('summary','Eliminar mi cuenta'));settings.append(section);
   const message=el('p','');message.setAttribute('role','status');
   if(isCreator) {
@@ -39,5 +42,5 @@ export function mountAccountActions(isCreator) {
       } catch(error){message.textContent='No se completó la baja: '+error.message+' Volvé a pulsar el botón para retomar la limpieza.';button.disabled=false;input.disabled=false;}
     });section.append(label,button);
   }
-  section.append(message);document.querySelector('main').append(settings);
+  section.append(message);
 }

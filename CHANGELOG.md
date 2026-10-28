@@ -1,3 +1,10 @@
+## 3.14.3 — 2026-10-28
+
+- Sonido de invitaciones configurable desde el perfil, fuera de la campana; conserva la preferencia de este navegador.
+- Estados de asistencia con colores y transición suave, respetando movimiento reducido.
+- Sala sin bloques de premio o jueces cuando no corresponden, sin compartir ni actualización manual.
+- Resultado público sólo después de registrar una decisión; acción privada para organizador o juez tras el horario de inicio y las confirmaciones.
+
 ## 3.14.2 — 2026-10-28
 
 - Sala real con la estructura aprobada: reloj y premio en cabecera, bloque de confirmación con progreso horizontal, filtros y botón principal en una fila y participantes en dos columnas.
@@ -434,5 +441,3 @@ Primera versión de ProveIt Club que conecta la web con cuentas y perfiles persi
 - `3.0.0`: otro cambio de etapa importante decidido para el proyecto.
 
 La numeración identifica entregas del proyecto; no es una certificación de que no existan errores.
-
-
