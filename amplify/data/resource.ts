@@ -98,6 +98,7 @@ const schema = a.schema({
     creationPaymentStatus:a.string(),
     paymentMode:a.string(),
     winnerProfileId: a.id(),
+    runnerUpProfileId:a.id(),thirdPlaceProfileId:a.id(),
     winnerName: a.string(),
     decidedBySub: a.string(),
     decidedByLabel: a.string(),
@@ -132,7 +133,7 @@ const schema = a.schema({
   PrizeUpload:a.customType({path:a.string().required(),url:a.string().required()}),
   prepareClubPrizeUpload:a.mutation().arguments({tournamentId:a.id().required(),uploadContentType:a.string().required(),uploadSize:a.integer().required()}).returns(a.ref('PrizeUpload')).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(respondInvitation)),
   saveClubTournamentPrize:a.mutation().arguments({tournamentId:a.id().required(),prizeTitle:a.string().required(),prizeDescription:a.string(),prizeLinks:a.string(),prizeAttachments:a.string(),prizeRevision:a.integer().required(),prizeHolder:a.string(),prizeFunder:a.string(),prizeFundingStatus:a.string(),prizeType:a.string()}).returns(a.ref('Tournament')).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(respondInvitation)),
-  recordClubDuelResult: a.mutation().arguments({ tournamentId: a.id().required(), winnerProfileId: a.id().required(), resultReason:a.string(),resultKind:a.string() })
+  recordClubDuelResult: a.mutation().arguments({ tournamentId: a.id().required(), winnerProfileId: a.id().required(), runnerUpProfileId:a.id(),thirdPlaceProfileId:a.id(),resultReason:a.string(),resultKind:a.string() })
     .returns(a.ref('Tournament')).authorization(allow => [allow.authenticated()]).handler(a.handler.function(respondInvitation)),
   prepareTournamentDraw: a.mutation().arguments({ tournamentId: a.id().required() })
     .returns(a.ref('Tournament')).authorization(allow => [allow.authenticated()])
@@ -167,6 +168,3 @@ const schema = a.schema({
 export type Schema = ClientSchema<typeof schema>;
 
 export const data = defineData({ schema });
-
-
-

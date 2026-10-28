@@ -1,7 +1,8 @@
 // El resultado 1v1 es definitivo: sólo el árbitro acordado puede registrarlo.
 import { DynamoDBDocumentClient, GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { assertActiveTournament } from '../lifecycle';
-export async function recordDuelResult(db: DynamoDBDocumentClient, sub: string, tournamentId: string, winnerProfileId: string,resultReason='',resultKind='NORMAL') {
+import {validatePodium} from '../../../shared/tournament-room';
+export async function recordDuelResult(db: DynamoDBDocumentClient, sub: string, tournamentId: string, winnerProfileId: string,resultReason='',resultKind='NORMAL',runnerUpProfileId?:string,thirdPlaceProfileId?:string) {
   const TableName=process.env.TOURNAMENT_TABLE_NAME!;
   const read=async()=> (await db.send(new GetCommand({TableName,Key:{id:tournamentId},ConsistentRead:true}))).Item;
   const t=await read();
@@ -11,6 +12,8 @@ export async function recordDuelResult(db: DynamoDBDocumentClient, sub: string, 
   if(!['NORMAL','DISPUTED','SANCTION'].includes(resultKind) || typeof resultReason!=='string' || resultReason.length>500 || (resultKind!=='NORMAL' && resultReason.trim().length<10))throw new Error('Los resultados discutidos y las sanciones necesitan un motivo de 10 a 500 caracteres.');
   if(!t.startsAt || !Number.isFinite(Date.parse(t.startsAt)) || Date.now()<Date.parse(t.startsAt)) throw new Error('Todavía no llegó el horario de inicio.');
   if(!t.participantIds.includes(winnerProfileId)) throw new Error('Elegí uno de los participantes del duelo.');
+  const podium=validatePodium(t.participantIds,winnerProfileId,runnerUpProfileId,thirdPlaceProfileId);
+  const sameResult=(row:any)=>row?.winnerProfileId===winnerProfileId && row.decidedBySub===sub && (row.runnerUpProfileId || null)===podium.runnerUp && (row.thirdPlaceProfileId || null)===podium.thirdPlace;
   let decidedByLabel='Organizador';
   if(t.arbitrationMode==='ORGANIZER') {
     if(t.createdBySub!==sub) throw new Error('En este torneo sólo el organizador puede decidir el resultado.');
@@ -23,22 +26,22 @@ export async function recordDuelResult(db: DynamoDBDocumentClient, sub: string, 
   }
   // Reintentar la misma decisión es seguro; una distinta nunca pisa la anterior.
   if(t.winnerProfileId) {
-    if(t.winnerProfileId===winnerProfileId && t.decidedBySub===sub) return t;
+    if(sameResult(t)) return t;
     throw new Error('Este duelo ya tiene un resultado definitivo.');
   }
   if(t.status!=='READY' || !t.draw || !Array.isArray(t.rosterStatuses) || !t.rosterStatuses.every((state:string)=>state==='ACCEPTED')) throw new Error('Faltan confirmaciones o el sorteo del duelo.');
   const winnerName=t.participantNames[t.participantIds.indexOf(winnerProfileId)],now=new Date().toISOString();
   try {
     const result=await db.send(new UpdateCommand({TableName,Key:{id:tournamentId},
-      UpdateExpression:'SET winnerProfileId = :winner, winnerName = :name, decidedBySub = :sub, decidedByLabel = :label, decidedAt = :now, updatedAt = :now, #status = :completed, resultReason=:reason, resultKind=:kind',
+      UpdateExpression:'SET winnerProfileId = :winner, winnerName = :name, decidedBySub = :sub, decidedByLabel = :label, decidedAt = :now, updatedAt = :now, #status = :completed, resultReason=:reason, resultKind=:kind, runnerUpProfileId=:second, thirdPlaceProfileId=:third',
       ConditionExpression:'attribute_not_exists(deletedAt) AND attribute_not_exists(winnerProfileId) AND #status = :ready AND membershipRevision = :revision AND (attribute_not_exists(creationPaymentStatus) OR creationPaymentStatus=:paid OR creationPaymentStatus=:exempt)',
       ExpressionAttributeNames:{'#status':'status'},
-      ExpressionAttributeValues:{':paid':'APPROVED',':exempt':'EXEMPT',':reason':resultReason.trim(),':kind':resultKind,':winner':winnerProfileId,':name':winnerName,':sub':sub,':label':decidedByLabel,':now':now,':completed':'COMPLETED',':ready':'READY',':revision':t.membershipRevision || 0},ReturnValues:'ALL_NEW'}));
+      ExpressionAttributeValues:{':second':podium.runnerUp,':third':podium.thirdPlace,':paid':'APPROVED',':exempt':'EXEMPT',':reason':resultReason.trim(),':kind':resultKind,':winner':winnerProfileId,':name':winnerName,':sub':sub,':label':decidedByLabel,':now':now,':completed':'COMPLETED',':ready':'READY',':revision':t.membershipRevision || 0},ReturnValues:'ALL_NEW'}));
     return result.Attributes;
   } catch(error) {
     if((error as Error).name!=='ConditionalCheckFailedException') throw error;
     const latest=await read();
-    if(latest?.winnerProfileId===winnerProfileId && latest.decidedBySub===sub) return latest;
+    if(sameResult(latest)) return latest;
     throw new Error('El estado del duelo cambió. Actualizá antes de continuar.');
   }
 }

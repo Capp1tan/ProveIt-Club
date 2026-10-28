@@ -25,7 +25,7 @@ export async function leagueProgress(db:DynamoDBDocumentClient,profileId:string)
   const page=await db.send(new ScanCommand({TableName:process.env.TOURNAMENT_TABLE_NAME!,
    FilterExpression:'(contains(participantIds,:id) OR contains(judgeIds,:id)) AND attribute_not_exists(deletedAt)',
    ExpressionAttributeValues:{':id':profileId},ExclusiveStartKey:key,
-   ProjectionExpression:'id,#name,activity,#status,participantIds,judgeIds,rosterStatuses,winnerProfileId,createdAt,startsAt,decidedAt,creationPaymentStatus,resultKind,coverPath,createdBySub',
+   ProjectionExpression:'id,#name,activity,#status,participantIds,judgeIds,rosterStatuses,winnerProfileId,runnerUpProfileId,thirdPlaceProfileId,createdAt,startsAt,decidedAt,creationPaymentStatus,resultKind,coverPath,createdBySub',
    ExpressionAttributeNames:{'#name':'name','#status':'status'}}));
   events.push(...(page.Items || []));key=page.LastEvaluatedKey;
  }while(key);

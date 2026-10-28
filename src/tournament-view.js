@@ -1,4 +1,4 @@
-import {roomDeadline,roomIsClosed} from '../shared/tournament-room.ts';
+import {roomDeadline,roomIsClosed,validatePodium} from '../shared/tournament-room.ts';
 import { createRealLobby } from './tournament-real-lobby.js';
 import {judgePanel} from './judge-ui.js';
 import { tournamentCoverUrl } from './tournament-cover.js';
@@ -108,6 +108,7 @@ function resultPanel(t) {
   if(t.winnerProfileId) {
     section.append(element('h2','Resultado del torneo'));
     section.append(element('p','🏆 '+t.winnerName,'duel-winner'),element('p','Decidido por '+(t.decidedByLabel || 'el árbitro acordado')+' · '+scheduleLabel(t.decidedAt,t.timeZone)),element('p','Resultado definitivo. No se puede cambiar desde esta pantalla.','field-help'));
+    for(const [id,label] of [[t.runnerUpProfileId,'2.º puesto'],[t.thirdPlaceProfileId,'3.º puesto']])if(id){const index=t.participantIds.indexOf(id);if(index>=0)section.append(element('p',label+' · '+t.participantNames[index]));}
     return section;
   }
   const noJudge=t.arbitrationMode==='ORGANIZER';
@@ -119,17 +120,23 @@ function resultPanel(t) {
   const select=element('select');select.required=true;select.id='duelWinner';label.htmlFor=select.id;
   const empty=element('option','Elegí al ganador');empty.value='';select.append(empty);
   t.participantIds.forEach((id,index)=>{const option=element('option',t.participantNames[index]);option.value=id;select.append(option);});
-  const button=element('button','Confirmar ganador','primary-button');button.id='recordDuelWinner';button.type='submit';
+  const podiumFields=element('div','','duel-podium-fields'),second=element('select'),third=element('select');
+  if(t.participantIds.length>2){
+    for(const [field,text] of [[second,'Segundo puesto (opcional)'],[third,'Tercer puesto (opcional)']]){const fieldLabel=element('label',text),none=element('option','Sin definir');none.value='';field.append(none);t.participantIds.forEach((id,i)=>{const o=element('option',t.participantNames[i]);o.value=id;field.append(o);});fieldLabel.append(field);podiumFields.append(fieldLabel);}
+  }
+  const button=element('button','Confirmar resultado','primary-button');button.id='recordDuelWinner';button.type='submit';
   const message=element('p','','field-help');message.setAttribute('role','status');
   const kind=element('select'),reason=element('textarea'),kindLabel=element('label','Tipo de decisión'),reasonLabel=element('label','Motivo de la decisión');
   for(const [v,n] of [['NORMAL','Resultado normal'],['DISPUTED','Resultado discutido'],['SANCTION','Sanción']]){const o=element('option',n);o.value=v;kind.append(o);}reason.maxLength=500;reason.rows=3;reason.placeholder='Obligatorio si hubo discusión o sanción';kind.addEventListener('change',()=>{reason.required=kind.value!=='NORMAL';reason.minLength=kind.value!=='NORMAL'?10:0;});kindLabel.append(kind);reasonLabel.append(reason);
-  form.append(kindLabel,reasonLabel,label,select,element('p','Podrás confirmar después del horario de inicio. La decisión será definitiva.','field-help'),button,message);
+  form.append(kindLabel,reasonLabel,label,select,podiumFields,element('p','Podrás confirmar después del horario de inicio. La decisión será definitiva.','field-help'),button,message);
   form.addEventListener('submit',async event=>{
     event.preventDefault();if(button.disabled || !select.value)return;
     const name=t.participantNames[t.participantIds.indexOf(select.value)];
-    if(!window.confirm('¿Confirmar a '+name+' como ganador? Esta decisión quedará registrada y no se podrá cambiar desde el sitio.'))return;
+    try{validatePodium(t.participantIds,select.value,second.value,third.value);}catch(error){message.textContent=error.message;return;}
+    const podiumCopy=[[second.value,'2.º'],[third.value,'3.º']].filter(([id])=>id).map(([id,label])=>label+': '+t.participantNames[t.participantIds.indexOf(id)]).join(' · ');
+    if(!window.confirm('¿Confirmar a '+name+' como ganador? '+(podiumCopy?podiumCopy+'. ':'')+'Esta decisión quedará registrada y no se podrá cambiar desde el sitio.'))return;
     button.disabled=true;button.dataset.saving='true';message.textContent='Guardando resultado…';
-    try {const saved=await recordClubDuelResult(t.id,select.value,reason.value,kind.value);if(!saved?.winnerProfileId)throw new Error('AWS no confirmó el resultado. Actualizá para revisar su estado.');currentTournament=saved;renderTournament(saved);lastVersion=saved.updatedAt+String(saved.draw);}
+    try {const saved=await recordClubDuelResult(t.id,select.value,reason.value,kind.value,second.value || null,third.value || null);if(!saved?.winnerProfileId)throw new Error('AWS no confirmó el resultado. Actualizá para revisar su estado.');currentTournament=saved;renderTournament(saved);lastVersion=saved.updatedAt+String(saved.draw);}
     catch(error) {message.textContent=error.message;delete button.dataset.saving;updateClock();}
   });decision.append(form);return decision;
 }

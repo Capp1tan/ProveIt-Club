@@ -1,6 +1,7 @@
 ## 3.15.0 — 2026-10-28
 
 - Historial con portadas, miniaturas de respaldo, fecha y resultado separados; tonos oro, plata y bronce. Sólo se muestran puestos que se pueden determinar con los resultados registrados.
+- Segundo y tercer puesto opcionales para torneos de más de dos participantes, con validación de podio y confirmación definitiva. En duelos el segundo puesto se determina automáticamente.
 - Indicador animado «Partida en curso» después del horario y de todas las confirmaciones, hasta guardar el resultado.
 - Sala y chat cierran cinco minutos después de decidedAt, con cuenta regresiva y aviso de salida segura. AWS rechaza nuevas lecturas de sala y chat tras el límite; el historial y la administración conservan los registros.
 - Sin tareas programadas, eliminación de torneos ni recursos AWS adicionales.
