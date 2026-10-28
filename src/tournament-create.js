@@ -5,7 +5,8 @@ import { Hub } from 'aws-amplify/utils';
 import { avatarUrl, configureAmplify, getCurrentUser } from './auth-client.js';
 import { formats, formatImage } from './tournament-formats.js';
 import { registeredProfiles, createClubTournament, tournamentClient } from './tournaments-api.js';
-import { prepareCover, uploadTournamentCover } from './tournament-cover.js';
+import {editCover} from './cover-editor.js';
+import { uploadTournamentCover } from './tournament-cover.js';
 import { renderTournamentPreview } from './tournament-preview.js';
 
 const $ = id => document.getElementById(id);
@@ -14,6 +15,7 @@ const participants = new Set(), judges = new Set();
 let profiles = [], currentSub = '', selectedFormat = 'DUEL', step = 1, tournamentId = crypto.randomUUID();
 let loading = false, saving = false, coverWorking = false, pricingReady = false, creationIsFree = false, epoch = 0;
 let coverBlob = null, coverObjectUrl = '', coverPath = '', pendingRequest = null;
+let coverSource=null,coverFraming=null,coverEditorAbort=null;
 let pricingMessage = 'Consultando tarifa…', draftTimer, modelTimer;
 const noJudge = () => form.elements.arbitrationMode.value === 'ORGANIZER';
 const capacity = () => Number(form.elements.participantLimit.value);
@@ -222,24 +224,28 @@ form.addEventListener('input', e => {
 });
 
 function clearCover() {
+  coverEditorAbort?.abort();coverEditorAbort=null;coverSource=null;coverFraming=null;$('editCover').hidden=true;
   if (coverObjectUrl) URL.revokeObjectURL(coverObjectUrl);
   coverObjectUrl = ''; coverBlob = null; coverPath = ''; $('coverPreview').removeAttribute('src'); $('coverPreview').hidden = true;
   $('posterEmpty').hidden = false; $('removeCover').hidden = true; $('coverInput').value = ''; $('chooseCover').querySelector('span').textContent = 'Agregar imagen';
-  $('coverStatus').textContent = 'JPG, PNG o WebP · hasta 5 MB. Se optimiza antes de subir.';
+  $('coverStatus').textContent = 'JPG, PNG o WebP · hasta 5 MB. Podés mover y ajustar la imagen antes de usarla.';
 }
 $('chooseCover').addEventListener('click', () => $('coverInput').click());
 $('removeCover').addEventListener('click', () => { clearCover(); saveDraft(); });
-$('coverInput').addEventListener('change', async () => {
-  const file = $('coverInput').files[0]; if (!file) return;
-  const activeEpoch = epoch; coverWorking = true; $('coverStatus').textContent = 'Preparando imagen…';
-  try {
-    const blob = await prepareCover(file); if (activeEpoch !== epoch) return;
-    clearCover(); coverBlob = blob; coverObjectUrl = URL.createObjectURL(blob); $('coverPreview').src = coverObjectUrl;
-    $('coverPreview').hidden = false; $('posterEmpty').hidden = true; $('removeCover').hidden = false;
-    $('chooseCover').querySelector('span').textContent = 'Cambiar imagen'; $('coverStatus').textContent = 'Imagen preparada. Se subirá cuando publiques el torneo.'; saveDraft();
-  } catch (e) { if (activeEpoch === epoch) $('coverStatus').textContent = e.message; }
-  finally { if (activeEpoch === epoch) coverWorking = false; }
-});
+async function adjustCover(file,framing=null){
+  if(coverWorking || saving)return;const activeEpoch=epoch;coverWorking=true;coverEditorAbort=new AbortController();$('coverStatus').textContent='Ajustá el encuadre de la imagen…';
+  try{
+    const edited=await editCover(file,framing || {},coverEditorAbort.signal);if(activeEpoch!==epoch)return;
+    if(!edited){$('coverStatus').textContent=coverBlob || coverPath?'Se conserva la portada anterior.':'No se seleccionó una portada.';return;}
+    clearCover();coverBlob=edited.blob;coverSource=file;coverFraming=edited.framing;coverObjectUrl=URL.createObjectURL(coverBlob);$('coverPreview').src=coverObjectUrl;
+    $('coverPreview').hidden=false;$('posterEmpty').hidden=true;$('removeCover').hidden=false;$('editCover').hidden=false;
+    $('chooseCover').querySelector('span').textContent='Cambiar imagen';$('coverStatus').textContent='Portada 9:16 lista. Se subirá cuando publiques el torneo.';saveDraft();
+  }catch(error){if(activeEpoch===epoch)$('coverStatus').textContent=error.message;}
+  finally{if(activeEpoch===epoch){coverWorking=false;coverEditorAbort=null;$('coverInput').value='';}}
+}
+$('coverInput').addEventListener('change',()=>{const file=$('coverInput').files[0];if(file)void adjustCover(file);});
+$('editCover').addEventListener('click',()=>{if(coverSource)void adjustCover(coverSource,coverFraming);});
+
 
 async function connectAccount() {
   const activeEpoch = ++epoch; pricingReady = false; fields.disabled = true; $('accountGate').hidden = false;

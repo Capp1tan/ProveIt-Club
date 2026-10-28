@@ -1,3 +1,10 @@
+## 3.16.0 — 2026-10-28
+
+- Editor local de portada 9:16: arrastrar con mouse o dedo, mover con teclado, zoom, centrar y reajustar antes de publicar.
+- Modos «Llenar recuadro» y «Mostrar foto completa», con fondo desenfocado para otras proporciones. Cancelar conserva la portada previa.
+- Recomendación visible de 1080 × 1920 px y aviso de nitidez para fotos pequeñas. Exportación WebP hasta 2 MB; selección local hasta 5 MB.
+- La vista previa usa la misma proporción que la imagen exportada en escritorio y móvil. Sin subida hasta publicar ni cambios de backend.
+
 ## 3.15.0 — 2026-10-28
 
 - Historial con portadas, miniaturas de respaldo, fecha y resultado separados; tonos oro, plata y bronce. Sólo se muestran puestos que se pueden determinar con los resultados registrados.

@@ -18,3 +18,7 @@ body.create-page .creation-shell .format-choice{background:#f7f9f4;border-color:
 body.create-page .creation-shell .format-choice[aria-pressed=true]{background:#e8f4d7;border-color:#719f45;color:#223b19}
 body.create-page .creation-shell select{color-scheme:light}
 .creation-demo-link{color:#46682d;font-size:12px;line-height:1.5;text-decoration:underline;text-underline-offset:3px}.creation-heading>.creation-demo-link{max-width:200px;text-align:right}.prepared-request-actions{margin-top:18px;padding:18px;background:#edf2e5;border:1px solid #cedabd;border-radius:5px;font-size:12px;line-height:1.7}.prepared-request-actions p{margin:0 0 12px}.prepared-request-actions>a{display:inline-block;margin-right:20px}.creation-shell button:disabled{cursor:not-allowed}.selected-people button:disabled{opacity:.6}@media(max-width:520px){.creation-heading{align-items:flex-start;flex-direction:column}.creation-heading>.creation-demo-link{max-width:none;text-align:left}}
+
+/* La portada creada y la vista previa comparten siempre el formato de historia. */
+.creation-poster{aspect-ratio:9/16;min-height:0}.poster-tools{flex-wrap:wrap;justify-content:flex-start;gap:12px 20px}.cover-size-guide{line-height:1.7;margin-top:12px}
+@media(max-width:740px){.creation-poster{aspect-ratio:9/16;min-height:0;max-width:380px;margin-inline:auto}}

@@ -1,6 +1,6 @@
 {
   "name": "proveit-club",
-  "version": "3.15.0",
+  "version": "3.16.0",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@10.20.0",
@@ -11,6 +11,7 @@
     "dev": "vite",
     "build": "vite build",
     "test:room": "node scripts/verify-tournament-room.cjs",
+    "test:cover": "node scripts/verify-cover-frame.mjs",
     "preview": "vite preview",
     "sandbox": "ampx sandbox",
     "deploy:backend": "ampx pipeline-deploy"
