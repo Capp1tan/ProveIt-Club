@@ -1,6 +1,6 @@
 {
   "name": "proveit-club",
-  "version": "3.16.0",
+  "version": "3.17.0",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@10.20.0",
@@ -10,6 +10,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "test:entry": "node scripts/verify-entry-payments.cjs",
     "test:room": "node scripts/verify-tournament-room.cjs",
     "test:cover": "node scripts/verify-cover-frame.mjs",
     "preview": "vite preview",

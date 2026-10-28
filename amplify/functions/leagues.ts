@@ -1,6 +1,6 @@
 import {S3Client,GetObjectCommand} from '@aws-sdk/client-s3';
 import {getSignedUrl} from '@aws-sdk/s3-request-presigner';
-import {roomDeadline,roomIsClosed,historyResult} from '../../shared/tournament-room';
+import {roomDeadline,roomIsClosed,historyResult,allEntriesPaid} from '../../shared/tournament-room';
 const covers=new S3Client({});
 import {DynamoDBDocumentClient,ScanCommand} from '@aws-sdk/lib-dynamodb';
 
@@ -25,7 +25,7 @@ export async function leagueProgress(db:DynamoDBDocumentClient,profileId:string)
   const page=await db.send(new ScanCommand({TableName:process.env.TOURNAMENT_TABLE_NAME!,
    FilterExpression:'(contains(participantIds,:id) OR contains(judgeIds,:id)) AND attribute_not_exists(deletedAt)',
    ExpressionAttributeValues:{':id':profileId},ExclusiveStartKey:key,
-   ProjectionExpression:'id,#name,activity,#status,participantIds,judgeIds,rosterStatuses,winnerProfileId,runnerUpProfileId,thirdPlaceProfileId,createdAt,startsAt,decidedAt,creationPaymentStatus,resultKind,coverPath,createdBySub',
+   ProjectionExpression:'id,#name,activity,#status,participantIds,judgeIds,rosterStatuses,winnerProfileId,runnerUpProfileId,thirdPlaceProfileId,createdAt,startsAt,decidedAt,creationPaymentStatus,resultKind,entryFeeCents,entryPaymentStatuses,coverPath,createdBySub',
    ExpressionAttributeNames:{'#name':'name','#status':'status'}}));
   events.push(...(page.Items || []));key=page.LastEvaluatedKey;
  }while(key);
@@ -35,7 +35,7 @@ export async function leagueProgress(db:DynamoDBDocumentClient,profileId:string)
   return ['AWAITING_RESPONSES','READY','COMPLETED'].includes(t.status) && t.creationPaymentStatus!=='REVERSED' &&
    (t.rosterStatuses?.[index]==='ACCEPTED');
  });
- const candidates=accepted.filter(t=>t.status==='COMPLETED' && t.winnerProfileId &&
+ const candidates=accepted.filter(t=>allEntriesPaid(t) && t.status==='COMPLETED' && t.winnerProfileId &&
   t.participantIds?.includes(profileId) && new Set(t.participantIds).size>=2 &&
   t.participantIds.every((_:string,i:number)=>t.rosterStatuses?.[i]==='ACCEPTED') &&
   t.createdAt>=LEAGUE_START && t.decidedAt>=LEAGUE_START && t.resultKind!=='SANCTION')

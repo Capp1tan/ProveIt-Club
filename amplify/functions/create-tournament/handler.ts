@@ -3,7 +3,7 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand, TransactWriteCommand } from '@aws-sdk/lib-dynamodb';
 
-import { read,fee,creationExemption,assertBillingAccess,ensureCheckout,publicCheckout } from '../billing/common';
+import { read,fee,assertBillingAccess,ensureCheckout,publicCheckout } from '../billing/common';
 import { phoneOptional, assertActiveAccount } from '../lifecycle';
 import { validateCover } from '../tournament-cover';
 
@@ -100,7 +100,7 @@ export const handler = async (event: { arguments: Arguments; identity?: { sub?: 
   const coverPath=await validateCover(args.coverPath,sub,args.tournamentId);
   const now = new Date().toISOString();
   const item = {
-    id: args.tournamentId, termsVersion:1,conflicts:declaration,clubRewards:false,name, activity, description, format: args.format,
+    id: args.tournamentId,entryFeeCents:pricing.participantAmountCents,entryPaymentStatuses:participantIds.map(()=> 'PENDING'), termsVersion:1,conflicts:declaration,clubRewards:false,name, activity, description, format: args.format,
     overview,coverPath,participantLimit,prizeExpected:args.prizeExpected ?? false,
     prizeType,prizeTitle,prizeDescription,prizeHolder,prizeFunder,prizeFundingStatus:'PENDING',prizeRevision:0,
     participantIds, participantNames: participantIds.map(id => names.get(id)),
@@ -117,49 +117,20 @@ export const handler = async (event: { arguments: Arguments; identity?: { sub?: 
       tournamentId: args.tournamentId, tournamentName: name,
       recipientSub: owners[index], profileId: profile.id, rosterIndex: index,
       role: index < participantIds.length ? 'PARTICIPANT' : index < participantIds.length + judgeIds.length ? 'JUDGE' : 'TREASURER',
-      status:'PENDING',
+      status:'PENDING',entryFeeCents:index<participantIds.length?pricing.participantAmountCents:0,
       arbitrationMode: args.arbitrationMode, startsAt: args.startsAt, timeZone: args.timeZone,
       rulesSnapshot: description+(args.prizeExpected?'\nPremio propuesto: '+(prizeTitle || 'Por definir')+(prizeDescription?' · '+prizeDescription:'')+' · Tipo: '+prizeType+' · Entrega: '+(prizeHolder || 'Sin declarar')+' · Financia: '+(prizeFunder || 'Sin declarar')+' · Pendiente de confirmación, no disponible.':''), consentVersion: noJudge ? 'NO_JUDGE_V1' : null,
       consentAcceptedAt:null,
       invitedBySub: sub, createdAt: now, updatedAt: now, __typename: 'TournamentInvitation',
     }));
-  const exemption=await creationExemption(sub);
-  if(exemption.enabled){
-    // Sin cobro ni preferencia de Mercado Pago. Se publica todo de forma atómica.
-    // La revisión impide crear gratis con un permiso revocado durante la petición.
-    const claim=exemption.source==='CREATOR'
-      ? {Key:{id:'creator'},ConditionExpression:'accountSub=:sub',ExpressionAttributeValues:{':sub':sub}}
-      : {Key:{id:'creation-exempt:'+sub},ConditionExpression:'#enabled=:yes AND revision=:rev AND accountSub=:sub',ExpressionAttributeNames:{'#enabled':'enabled'},ExpressionAttributeValues:{':yes':true,':rev':exemption.revision,':sub':sub}};
-    const receipt={id:args.tournamentId,createdBySub:sub,tournamentName:name,status:'EXEMPT',amountCents:0,currency:'ARS',paymentMode:pricing.mode,
-      exemptionSource:exemption.source,exemptionRevision:exemption.revision,expiresAt:args.startsAt,createdAt:now,updatedAt:now,__typename:'TournamentPayment'};
-    try{await db.send(new TransactWriteCommand({TransactItems:[
-      {ConditionCheck:{TableName:process.env.CLAIM_TABLE_NAME!,Key:{id:'deleted-account:'+sub},ConditionExpression:'attribute_not_exists(id)'}},
-      {ConditionCheck:{TableName:process.env.CLAIM_TABLE_NAME!,...claim}},
-      {Put:{TableName:process.env.PAYMENT_TABLE_NAME!,Item:receipt,ConditionExpression:'attribute_not_exists(id)'}},
-      {Put:{TableName:tournamentTable,Item:{...item,creationPaymentStatus:'EXEMPT',paymentMode:pricing.mode},ConditionExpression:'attribute_not_exists(id)'}},
-      ...invites.map(invite=>({Put:{TableName:process.env.INVITATION_TABLE_NAME!,Item:invite,ConditionExpression:'attribute_not_exists(id)'}})),
-    ]}));}catch(error){
-      if((error as Error).name!=='TransactionCanceledException')throw error;
-      await assertActiveAccount(sub);
-      const previous=await read('PAYMENT_TABLE_NAME',args.tournamentId);
-      if(previous)return ensureCheckout(previous,sub);
-      throw new Error('El permiso cambió o no pudimos crear el torneo. Actualizá la conexión antes de reintentar.');
-    }
-    return publicCheckout(receipt);
-  }
-  // El borrador es privado. No existen torneo ni invitaciones antes del pago.
-  const request={id:args.tournamentId,createdBySub:sub,tournamentName:name,status:'PENDING',amountCents:pricing.amountCents,currency:'ARS',paymentMode:pricing.mode,
-    payload:JSON.stringify({tournament:item,invites}),expiresAt:new Date(Math.min(Date.now()+30*60*1000,timestamp)).toISOString(),createdAt:now,updatedAt:now,__typename:'TournamentPayment'};
-  try {await db.send(new TransactWriteCommand({TransactItems:[
+  // Recibo interno de publicación gratuita. Ningún checkout se crea para organizar.
+  const receipt={id:args.tournamentId,kind:'CREATION',createdBySub:sub,tournamentName:name,status:'EXEMPT',amountCents:0,currency:'ARS',paymentMode:pricing.mode,
+    exemptionSource:'FREE_CREATION',expiresAt:args.startsAt,createdAt:now,updatedAt:now,__typename:'TournamentPayment'};
+  try{await db.send(new TransactWriteCommand({TransactItems:[
     {ConditionCheck:{TableName:process.env.CLAIM_TABLE_NAME!,Key:{id:'deleted-account:'+sub},ConditionExpression:'attribute_not_exists(id)'}},
-    {Put:{TableName:process.env.PAYMENT_TABLE_NAME!,Item:request,ConditionExpression:'attribute_not_exists(id)'}},
-  ]}));}
-  catch(error){
-    if((error as Error).name!=='TransactionCanceledException')throw error;
-    await assertActiveAccount(sub);
-    const previous=await read('PAYMENT_TABLE_NAME',args.tournamentId);
-    if(!previous)throw new Error('No pudimos preparar la solicitud. Reintentá.');
-    return ensureCheckout(previous,sub);
-  }
-  return ensureCheckout(request,sub);
+    {Put:{TableName:process.env.PAYMENT_TABLE_NAME!,Item:receipt,ConditionExpression:'attribute_not_exists(id)'}},
+    {Put:{TableName:tournamentTable,Item:{...item,creationPaymentStatus:'EXEMPT',paymentMode:pricing.mode},ConditionExpression:'attribute_not_exists(id)'}},
+    ...invites.map(invite=>({Put:{TableName:process.env.INVITATION_TABLE_NAME!,Item:invite,ConditionExpression:'attribute_not_exists(id)'}})),
+  ]}));}catch(error){if((error as Error).name!=='TransactionCanceledException')throw error;await assertActiveAccount(sub);const previous=await read('PAYMENT_TABLE_NAME',args.tournamentId);if(previous)return ensureCheckout(previous,sub);throw new Error('No pudimos crear el torneo. Reintentá con el mismo formulario.');}
+  return publicCheckout(receipt);
 };

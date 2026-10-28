@@ -1,83 +1,42 @@
-# Cobros por creación de torneos
+# Inscripción por participante — 3.17.0
 
-## Exenciones — 3.7.0
+## Regla vigente
+- Crear torneos es gratis para cualquier cuenta completa.
+- En torneos nuevos, cada jugador paga $500 ARS para confirmar su lugar.
+- El organizador y el administrador también pagan si participan.
+- Los jueces sólo pagan si además participan como jugadores.
+- Los torneos anteriores conservan sus reglas y no reciben cobros retroactivos.
+- La inscripción remunera el servicio: no se incorpora automáticamente al premio ni a un fondo común.
+- El precio se configura en el panel de administración; cada torneo conserva la tarifa que tenía al crearse.
 
-El Creador y las cuentas con permiso administrativo activo crean sin pagar.
-AWS guarda un recibo `EXEMPT` de importe cero y publica torneo e invitaciones
-de forma atómica, sin solicitar una preferencia ni un cobro a Mercado Pago.
-La tarifa general, los pagos pendientes y el resto de las validaciones siguen
-vigentes. La pausa general se aplica también a las cuentas exentas.
-La gestión y auditoría se explican en `ADMINISTRACION.md`.
+## Recorrido
+1. El organizador completa y publica el torneo sin pasar por Mercado Pago.
+2. AWS crea las invitaciones pendientes con el precio fijado en el servidor.
+3. El invitado lee las reglas, ve el importe y acepta las condiciones.
+4. El servidor prepara su inscripción privada y un Checkout Pro individual.
+5. La página de pago ofrece el botón de Mercado Pago y un QR con ese enlace HTTPS. No es un QR presencial interoperable de caja.
+6. El webhook verifica la firma HMAC y consulta el pago directamente en Mercado Pago.
+7. AWS comprueba referencia, vendedor, moneda ARS, importe, metadata y entorno LIVE.
+8. Sólo un pago aprobado permite aceptar al jugador. Al confirmarse todos los jugadores y responsables, se sortean las llaves.
 
-## Estado de producción — 2.9.0
+## Protección y compatibilidad
+El recibo usa un identificador determinista por torneo y perfil. Un reintento o una nueva aceptación de condiciones conserva ese recibo; no genera otra inscripción. Un cambio de reglas exige volver a aceptar, pero no volver a pagar una inscripción ya aprobada.
 
-Checkout Pro mediante Preferences API. Las tres funciones usan
-`MERCADOPAGO_MODE: 'live'` y secretos independientes:
-`MERCADOPAGO_PRODUCTION_ACCESS_TOKEN` y `MERCADOPAGO_PRODUCTION_WEBHOOK_SECRET`.
-Las cuentas completas del club pueden iniciar pagos reales por creación de torneos.
-El QR contiene el enlace HTTPS de Checkout Pro; no es un QR presencial de caja.
-No se usan las credenciales de pruebas y los enlaces TEST anteriores se rechazan.
+La URL de regreso del checkout no es comprobante de pago. El cliente no puede decidir precios, aprobar pagos ni editar recibos. El teléfono y el estado activo de la cuenta se comprueban nuevamente antes de confirmar.
 
-## Flujo
+Un reembolso, incluso parcial, o un contracargo marca la inscripción como REVERSED y bloquea el avance del torneo hasta revisión. Se conserva el historial del pago. Eliminar un torneo no devuelve dinero automáticamente.
 
-1. `createClubTournament` valida cuenta, roles, teléfono, fecha y consentimiento.
-2. Guarda `TournamentPayment` privado con el borrador y el precio del servidor.
-3. Crea una preferencia con `external_reference` igual al ID del borrador.
-4. `/pago.html` muestra botón y QR del enlace, generado localmente con `qrcode`.
-5. El webhook comprueba HMAC SHA-256 y consulta `/v1/payments/{id}` con la clave privada.
-6. Revisa referencia, metadata, destinatario, moneda, importe y entorno del pago.
-7. Una transacción de DynamoDB registra el cobro y publica torneo e invitaciones.
-8. Las repeticiones no vuelven a publicar ni a invitar. Se intenta vencer la preferencia.
+Los antiguos enlaces de creación pendientes se rechazan desde ProveIt, porque crear ahora es gratis. Los recibos y cobros históricos se conservan. Los enlaces de Mercado Pago ya emitidos pueden seguir existiendo hasta su vencimiento.
 
-El regreso del checkout nunca se interpreta como aprobación. El estado de la URL
-del navegador tampoco se utiliza para decidir. La consulta autenticada recupera
-pagos aprobados si la notificación tarda; limita búsquedas a una cada 15 segundos
-por solicitud. Los pagos pendientes/rechazados no publican el torneo.
+## Operación
+Se reutilizan la integración productiva, el endpoint HTTPS y los secretos privados de Amplify. No se agregan tablas ni credenciales. La configuración administrada se guarda en BillingSettings, clave participation; el importe mínimo es 50000 centavos ARS.
 
-## Configuración
+Las preferencias duran 30 minutos. Si vencen o si se pagó un torneo cancelado, se indica contactar a administración para revisar el caso; no se emiten nuevos cobros ni devoluciones a ciegas. Si un cambio de condiciones impide confirmar un pago aprobado, se conserva el recibo y se solicita aceptar las condiciones vigentes.
 
-- Amplify, main: `MERCADOPAGO_ACCESS_TOKEN`, sólo en el servidor.
-- Amplify, main: `MERCADOPAGO_WEBHOOK_SECRET`, sólo en el servidor.
-- URL de recepción: `custom.paymentWebhookUrl` de `amplify_outputs.json`.
-- Mercado Pago: aplicación ProveIt Club, Checkout Pro, API de Preferencias.
-- Evento de Webhooks: Pagos (legacy), tópico `payment`, para Preferences API.
-- Precio inicial: 100 centavos ARS. Sólo el Creador lo cambia desde Mi perfil.
-- No se guardan números de tarjeta ni contraseñas de Mercado Pago.
+Mercado Pago no permite pagar al vendedor con su misma cuenta. Para la primera comprobación real debe pagar una persona con otra cuenta. Las pruebas automatizadas usan datos ficticios y no mueven dinero real.
 
-El primer despliegue omite temporalmente el secreto de firma para obtener la URL.
-Durante ese despliegue el endpoint rechaza todas las notificaciones. Después de
-configurar Webhooks se vincula el secreto y se vuelve a desplegar.
+## Comprobaciones
+Ejecutar npm run test:entry: comprueba creación gratuita, autorización, consentimiento, importe, firma, aprobación, reintentos, cambios de términos, jueces gratuitos, compatibilidad histórica y reversiones, con tablas en memoria y Mercado Pago simulado sin red.
 
-## Operación y comprobación del primer cobro
+Los cargos de Mercado Pago y los costos de AWS siguen sujetos al uso y a las tarifas de cada proveedor. El monto cobrado no equivale al ingreso neto.
 
-El cambio de producción requiere token real y Webhooks en modo productivo con el
-endpoint HTTPS del backend y el evento Pagos (legacy). No se realiza una compra
-real desde el agente. El primer cobro debe completarlo una persona distinta del
-vendedor; hasta verificarlo no debe afirmarse que el flujo completo está validado.
-
-Validar el importe admitido y las comisiones de la cuenta. Si Mercado Pago rechaza
-el monto, no se publica el torneo y se muestra el error. No se incrementa la tarifa
-automáticamente. Las solicitudes conservan el importe fijado al crearse.
-
-Para pausar nuevos cobros usar la tarifa del perfil del Creador. Revertir el entorno
-requiere cambiar las tres funciones y sus secretos de forma coordinada: los pagos
-LIVE pendientes deben seguir conciliándose con las credenciales productivas.
-
-Los torneos anteriores a esta función conservan su estado. Un reembolso o contracargo
-del pago utilizado marca el torneo como REVERSED y bloquea nuevas confirmaciones y
-resultados. No se ejecutan devoluciones automáticas ni se borran torneos.
-
-## Costos
-
-Lambda Function URLs evita incorporar API Gateway. Lambda, DynamoDB, almacenamiento,
-AppSync, logs, compilaciones y alojamiento pueden cobrar según uso. Una estimación de
-menos de USD 5/mes para el uso inicial no constituye un tope de facturación. Mercado
-Pago cobra sus comisiones e impuestos por separado. No se activa WAF.
-
-## Límites
-
-El checkout de MP puede permanecer accesible si falla el vencimiento de preferencia;
-no volver a pagar una solicitud que ya figura aprobada. Los cobros duplicados requieren
-revisión del administrador: esta implementación no mueve ni devuelve dinero.
-
-Documentación: https://www.mercadopago.com.ar/developers/es/docs/checkout-pro-preferences/overview

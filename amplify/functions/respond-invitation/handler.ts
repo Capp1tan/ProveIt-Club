@@ -4,9 +4,11 @@ import { DynamoDBDocumentClient, GetCommand, TransactWriteCommand } from '@aws-s
 import { recordDuelResult } from './result';
 import { prizeAction } from './prize';
 import { phoneOptional, assertActiveAccount, assertActiveTournament } from '../lifecycle';
+import {allEntriesPaid} from '../../../shared/tournament-room';
+import {entryAmount,entryCheckoutId,assertEntryPaid} from '../billing/entry-policy';
 import { createDraw } from './draw';
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
-const respond = async (event: { identity?: { sub?: string }; arguments: { prizeType?: string; prizeTitle?: string; prizeDescription?: string; prizeLinks?: string; prizeAttachments?: string; prizeRevision?: number; uploadContentType?: string; uploadSize?: number; invitationId?: string; accept?: boolean; tournamentId?: string; winnerProfileId?: string;runnerUpProfileId?:string;thirdPlaceProfileId?:string;resultReason?:string;resultKind?:string;acceptTerms?:boolean;termsVersion?:number;prizeHolder?:string;prizeFunder?:string;prizeFundingStatus?:string; acceptOrganizerDecision?: boolean } }) => {
+export const respond = async (event: { identity?: { sub?: string }; arguments: { prizeType?: string; prizeTitle?: string; prizeDescription?: string; prizeLinks?: string; prizeAttachments?: string; prizeRevision?: number; uploadContentType?: string; uploadSize?: number; invitationId?: string; accept?: boolean; tournamentId?: string; winnerProfileId?: string;runnerUpProfileId?:string;thirdPlaceProfileId?:string;resultReason?:string;resultKind?:string;acceptTerms?:boolean;termsVersion?:number;prizeHolder?:string;prizeFunder?:string;prizeFundingStatus?:string; acceptOrganizerDecision?: boolean } }) => {
   const sub=event.identity?.sub;
   if(!sub)throw new Error('Iniciá sesión.');
   await assertActiveAccount(sub);
@@ -24,6 +26,7 @@ const respond = async (event: { identity?: { sub?: string }; arguments: { prizeT
     if(!t || t.createdBySub!==sub) throw new Error('Sólo el organizador puede preparar este sorteo.');
     assertActiveTournament(t);
     if(t.creationPaymentStatus==='REVERSED')throw new Error('El pago de creación fue revertido. Contactá al administrador.');
+    if(!allEntriesPaid(t))throw new Error('Faltan pagos de inscripción confirmados.');
     if(t.draw) return t;
     if(!Array.isArray(t.rosterStatuses) || !t.rosterStatuses.length || !t.rosterStatuses.every((s:string)=>s==='ACCEPTED')) throw new Error('Faltan confirmaciones.');
     const draw=createDraw(t),now=new Date().toISOString();
@@ -64,19 +67,24 @@ const respond = async (event: { identity?: { sub?: string }; arguments: { prizeT
     assertActiveTournament(tournament);
     if(!tournament || !Array.isArray(tournament.rosterStatuses) || tournament.rosterStatuses[index]!=='PENDING') throw new Error('El torneo ya no espera esta respuesta.');
     if(tournament.creationPaymentStatus==='REVERSED')throw new Error('El pago de creación fue revertido. Contactá al administrador.');
+    const needsPayment=accept && invitation.role==='PARTICIPANT' && entryAmount(tournament)>0;
+    if(needsPayment){const receipt=(await db.send(new GetCommand({TableName:process.env.PAYMENT_TABLE_NAME!,Key:{id:entryCheckoutId(tournament.id,invitation.profileId)},ConsistentRead:true}))).Item;assertEntryPaid(tournament,invitation,receipt,sub,process.env.MERCADOPAGO_MODE==='live'?'LIVE':'TEST');}
     const noJudge = tournament.arbitrationMode === 'ORGANIZER';
     if(accept && (event.arguments.acceptTerms!==true || event.arguments.termsVersion!==(tournament.termsVersion || 0) || (invitation.termsVersion || 0)!==(tournament.termsVersion || 0)))throw new Error('Leé y aceptá las condiciones vigentes. Actualizá la invitación si cambiaron.');
     if (accept && noJudge && (event.arguments.acceptOrganizerDecision !== true || invitation.consentVersion !== 'NO_JUDGE_V1' || tournament.consentVersion !== 'NO_JUDGE_V1')) throw new Error('Para unirte, aceptá que este torneo no tiene juez y el organizador decide el resultado.');
     const statuses=[...tournament.rosterStatuses]; statuses[index]=status;
-    const allAccepted=statuses.every(value=>value==='ACCEPTED');
+    const nextPayments=[...(tournament.entryPaymentStatuses || tournament.participantIds.map(()=> 'PENDING'))];if(needsPayment)nextPayments[index]='APPROVED';
+    const allAccepted=statuses.every(value=>value==='ACCEPTED') && allEntriesPaid({...tournament,entryPaymentStatuses:nextPayments});
     const draw=tournament.draw || (allAccepted?createDraw(tournament):null);
     const revision=tournament.membershipRevision || 0,now=new Date().toISOString();
     const names:Record<string,string>={'#status':'status'};
     const values:Record<string,any>={':statuses':statuses,':status':allAccepted?'READY':statuses.includes('REJECTED')?'NEEDS_REPLACEMENT':'AWAITING_RESPONSES',':now':now,':next':revision+1,':previous':revision};
     let update='SET rosterStatuses = :statuses, #status = :status, updatedAt = :now, membershipRevision = :next';
+    if(needsPayment){const payments=[...(tournament.entryPaymentStatuses || tournament.participantIds.map(()=> 'PENDING'))];payments[index]='APPROVED';update+=', entryPaymentStatuses=:entryPayments';values[':entryPayments']=payments;}
     if(draw) { update+=', #draw = :draw'; names['#draw']='draw'; values[':draw']=draw; }
     try {
       await db.send(new TransactWriteCommand({TransactItems:[
+        ...(needsPayment?[{ConditionCheck:{TableName:process.env.PAYMENT_TABLE_NAME!,Key:{id:entryCheckoutId(tournament.id,invitation.profileId)},ConditionExpression:'#s=:approved AND attribute_not_exists(deletedAt)',ExpressionAttributeNames:{'#s':'status'},ExpressionAttributeValues:{':approved':'APPROVED'}}}]:[]),
         {Update:{TableName,Key:{id:invitationId},UpdateExpression:accept ? 'SET #status = :status, updatedAt = :now, consentAcceptedAt = :now, termsAcceptedAt=:now' : 'SET #status = :status, updatedAt = :now',
           ConditionExpression:'recipientSub = :sub AND #status = :pending AND (attribute_not_exists(termsVersion) OR termsVersion=:tv)',ExpressionAttributeNames:{'#status':'status'},
           ExpressionAttributeValues:{':status':status,':now':now,':sub':sub,':pending':'PENDING',':tv':invitation.termsVersion || 0}}},

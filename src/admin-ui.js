@@ -42,7 +42,7 @@ async function account(row){
   detail.append(fields);if(p){detail.append(socialLinks({...p,canView:true}),link('Abrir perfil del club','/perfil.html?id='+encodeURIComponent(p.id)));
    if(p.avatarPath){const photo=el('button','Ver foto de la cuenta','social-button');photo.type='button';photo.addEventListener('click',async()=>{photo.disabled=true;try{const r=await request('AVATAR',{targetId:p.id});const img=el('img','','admin-avatar');img.src=r.url;img.alt='Foto de '+p.nickname;photo.replaceWith(img);}catch(e){notice.textContent=e.message;photo.disabled=false;}});detail.append(photo);}
   }
-  mountCreationExemption(detail,data);
+  detail.append(el('p','Crear torneos es gratis para todas las cuentas. La inscripción la paga cada participante.','social-help'));
   detail.append(jsonView(data));notice.textContent='Ficha administrativa consultada. El acceso quedó registrado.';
  }catch(e){if(current===epoch)detail.replaceChildren(el('p',e.message));}finally{if(current===epoch)setBusy(false);}
 }

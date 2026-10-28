@@ -257,8 +257,8 @@ async function connectAccount() {
     if (currentSub !== user.userId) { currentSub = user.userId; profiles = []; loading = false; restoreDraft(); }
     const pricing = await withDeadline(tournamentFee(), 'No pudimos consultar la tarifa. Todavía no se realizó ningún cobro.');
     if (activeEpoch !== epoch) return;
-    pricingReady = Boolean(pricing.enabled && pricing.canPay); creationIsFree = pricing.exempt === true;
-    pricingMessage = creationIsFree ? 'Creación gratuita autorizada para tu cuenta.' : `Tarifa de creación: ${money(pricing.amountCents)}. ${pricing.mode === 'TEST' ? 'Pago de prueba, sin cobro real.' : 'Un único pago del organizador.'}`;
+    pricingReady = Boolean(pricing.enabled); creationIsFree = true;
+    pricingMessage = `Crear el torneo es gratis. Cada participante paga ${money(pricing.participantAmountCents ?? 50000)} al aceptar su invitación. Los jueces no pagan salvo que también compitan.`;
     if (!pricingReady) throw new Error(pricing.enabled ? 'La creación no está habilitada para esta cuenta en este momento.' : 'La creación de torneos está pausada temporalmente.');
     fields.disabled = false; $('accountGate').hidden = true; submit.disabled = false;
     syncArbitration(); syncPoster(); updateSchedule(); selectFormat(selectedFormat); setStep(pendingRequest ? 2 : step, false); lockPreparedRequest();

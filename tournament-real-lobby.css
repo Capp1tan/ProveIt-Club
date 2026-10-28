@@ -42,3 +42,5 @@ html[data-theme=dark] header.topbar>.rl-overview .rl-live-badge{color:#ff629e}
 .rl-closing-notice{padding:17px 20px;margin-bottom:16px;border-radius:10px;border:1px solid var(--site-line);background:var(--site-tint);color:var(--site-text);font-size:14px}.rl-closing-notice strong{font-variant-numeric:tabular-nums;color:var(--site-accent);font-size:20px}.rl-closing-notice p{font-size:12px;line-height:1.65;margin:8px 0 0;color:var(--site-muted)}
 .room-closed{max-width:760px;margin:40px auto;line-height:1.7}.room-closed .primary-button{display:inline-block;margin-top:15px}
 @media(prefers-reduced-motion:reduce){.rl-live-badge:before{animation:none;box-shadow:0 0 0 4px #df237d22}}
+
+.rl-entry-fee{font-size:12px;line-height:1.7;color:var(--site-muted);padding:12px 16px;border:1px solid var(--site-line);border-radius:8px;background:var(--site-panel)}

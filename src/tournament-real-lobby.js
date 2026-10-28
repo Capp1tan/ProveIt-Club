@@ -1,6 +1,7 @@
-import {roomDeadline,tournamentIsLive} from '../shared/tournament-room.ts';
+import {roomDeadline,tournamentIsLive,allEntriesPaid} from '../shared/tournament-room.ts';
 import { pendingInvitations, respondInvitation } from './tournaments-api.js';
 import { noJudgeConsent, countdownLabel, scheduleLabel } from './tournament-schedule.js';
+import {money} from './billing-api.js';
 import { prizeIcon } from './prize-types.js';
 import '../tournament-real-lobby.css';
 const el = (tag,text='',cls='') => { const n=document.createElement(tag);n.textContent=text;n.className=cls;return n; };
@@ -37,7 +38,7 @@ export function createRealLobby({ profilePreview, getUser, getConnection, getNow
       const invitations=(await pendingInvitations()).filter(i=>i.tournamentId===id && (i.termsVersion || 0)===version);
       if(!invitations.length)throw new Error('Tu invitación cambió o ya fue respondida. Actualizá la sala.');
       // Si se tienen dos cargos se aceptan explícitamente en una misma acción; cada uno se valida en AWS.
-      for(const invite of invitations) await respondInvitation(invite.id,accept,accept && t.arbitrationMode==='ORGANIZER',accept,version);
+      for(const invite of invitations){const response=await respondInvitation(invite.id,accept,accept && t.arbitrationMode==='ORGANIZER',accept,version);if(response.paymentRequired){message.textContent='Abriendo el pago de tu inscripción…';return;}}
       if(generation!==actionId)return;
       message.textContent=accept?'Respuesta guardada. Actualizando la sala…':'Invitación rechazada.';
       window.dispatchEvent(new Event('proveit:invitation-updated'));await onChanged();
@@ -47,7 +48,7 @@ export function createRealLobby({ profilePreview, getUser, getConnection, getNow
   function render(value) {
     t=value;root.replaceChildren();headerStats?.remove();
     const statuses=t.rosterStatuses || Array(t.participantIds.length+t.judgeIds.length+(t.treasurerId?1:0)).fill('ACCEPTED');
-    const people=t.participantIds.map((id,i)=>({id,name:t.participantNames[i],status:statuses[i] || 'PENDING'}));
+    const people=t.participantIds.map((id,i)=>({id,name:t.participantNames[i],paymentReversed:t.entryPaymentStatuses?.[i]==='REVERSED',status:t.entryPaymentStatuses?.[i]==='REVERSED'?'PENDING':statuses[i] || 'PENDING'}));
     const accepted=people.filter(p=>p.status==='ACCEPTED').length,total=people.length;
     const top=el('div','','rl-overview');
     const timing=el('section','','rl-card');const caption=el('small','INICIO PREVISTO');caption.dataset.clockCaption='';timing.append(caption);const digits=el('strong');digits.dataset.realClock='';digits.setAttribute('role','timer');digits.setAttribute('aria-live','off');timing.append(digits,el('span',scheduleLabel(t.startsAt,t.timeZone)));top.append(timing);
@@ -72,6 +73,7 @@ export function createRealLobby({ profilePreview, getUser, getConnection, getNow
     ringText.textContent=accepted+' / '+total;ring.setAttribute('role','img');ring.setAttribute('aria-label',accepted+' de '+total+' participantes confirmados');
     if(context!==t.id)previousStatuses.clear();
     animate(total?accepted/total:0,context!==t.id);context=t.id;
+    if(t.entryFeeCents>0){const price=el('p',`Inscripción individual: ${money(t.entryFeeCents)}. Crear es gratis; tu lugar se confirma con el pago aprobado. Los jueces no pagan salvo que también compitan. Si hay una cancelación, contactá al administrador para revisar tu pago.`,'rl-entry-fee');root.append(price);if(t.entryPaymentStatuses?.includes('REVERSED'))root.append(el('p','Hay un pago de inscripción en revisión. El torneo no puede avanzar hasta resolverlo.','tournament-notice'));}
     const toolbar=el('div','','rl-toolbar');
     for(const [key,label] of [['all','Todos'],['ACCEPTED','Listos'],['PENDING','Pendientes'],['REJECTED','No asisten']]){
       const n=key==='all'?total:people.filter(p=>p.status===key).length;
@@ -82,7 +84,7 @@ export function createRealLobby({ profilePreview, getUser, getConnection, getNow
       const row=el('li','','rl-person');row.dataset.state=p.status;
       if(context===t.id && previousStatuses.has(p.id) && previousStatuses.get(p.id)!==p.status)row.classList.add('rl-state-changed');
       row.append(profilePreview.button(p.id,p.name));
-      const state=el('span',p.status==='ACCEPTED'?'✓ Confirmado':p.status==='REJECTED'?'No asiste':'Pendiente','rl-state');state.dataset.state=p.status;row.append(state);list.append(row);
+      const state=el('span',p.status==='ACCEPTED'?'✓ Confirmado':p.status==='REJECTED'?'No asiste':p.paymentReversed?'Pago en revisión':'Pendiente','rl-state');state.dataset.state=p.status;row.append(state);list.append(row);
     }if(!list.childElementCount)list.append(el('li','No hay participantes en este estado.','field-help'));root.append(list);
     const user=getUser(),mine=[];
     [...t.participantIds,...t.judgeIds,...(t.treasurerId?[t.treasurerId]:[])].forEach((id,index)=>{const profile=profilePreview.profiles.get(id);if(profile?.owner?.split('::')[0]===user?.userId)mine.push({index,status:statuses[index] || 'PENDING',judge:index>=total});});
@@ -98,9 +100,9 @@ export function createRealLobby({ profilePreview, getUser, getConnection, getNow
       if(announced)rules.append(el('p','Entrega: '+(t.prizeHolder || 'Sin declarar')+' · Financia: '+(t.prizeFunder || 'Sin declarar')+' · Gestión externa a ProveIt.'));
       form.append(rules);
       const consent=el('label','','rl-consent'),check=el('input');check.type='checkbox';check.checked=consents.has(key);
-      consent.append(check,document.createTextNode((t.arbitrationMode==='ORGANIZER'?noJudgeConsent+' ':'')+'Leí y acepto las reglas y los conflictos declarados'+(announced || t.prizeExpected===true?' y las condiciones del premio.':'.')+(mine.some(r=>r.judge)?' Acepto el cargo de juez y la coordinación del premio según esas condiciones.':'')));form.append(consent);
+      consent.append(check,document.createTextNode((t.arbitrationMode==='ORGANIZER'?noJudgeConsent+' ':'')+'Leí y acepto las reglas y los conflictos declarados'+(announced || t.prizeExpected===true?' y las condiciones del premio.':'.')+(t.entryFeeCents>0 && mine.some(r=>!r.judge)?' Acepto el costo de inscripción de '+money(t.entryFeeCents)+'.':'')+(mine.some(r=>r.judge)?' Acepto el cargo de juez y la coordinación del premio según esas condiciones.':'')));form.append(consent);
       const actions=el('div','','rl-actions'),message=el('p','','field-help');message.setAttribute('role','status');
-      const yes=el('button',mine.some(r=>r.judge)?'Aceptar mis cargos':'Confirmar mi asistencia','primary-button rl-answer');yes.type='button';yes.dataset.accept='true';yes.disabled=busy || !check.checked;
+      const yes=el('button',mine.some(r=>!r.judge) && t.entryFeeCents>0?'Confirmar inscripción · '+money(t.entryFeeCents):mine.some(r=>r.judge)?'Aceptar mis cargos':'Confirmar mi asistencia','primary-button rl-answer');yes.type='button';yes.dataset.accept='true';yes.disabled=busy || !check.checked;
       const no=el('button','No podré asistir','format-choice rl-answer');no.type='button';no.disabled=busy;
       check.addEventListener('change',()=>{check.checked?consents.add(key):consents.delete(key);yes.disabled=busy || !check.checked;});
       yes.addEventListener('click',()=>void answer(true,message));no.addEventListener('click',()=>void answer(false,message));actions.append(yes,no);form.append(actions,message);root.append(form);
@@ -108,7 +110,7 @@ export function createRealLobby({ profilePreview, getUser, getConnection, getNow
     if(t.judgeIds?.length){const judgeDetails=el('details','','rl-judge-details');judgeDetails.append(el('summary','Jurado y responsables'),judge);root.append(judgeDetails);}
     people.forEach(p=>previousStatuses.set(p.id,p.status));
     const next=el('section','','rl-card rl-next');
-    const allAccepted=statuses.every(s=>s==='ACCEPTED');
+    const allAccepted=statuses.every(s=>s==='ACCEPTED') && allEntriesPaid(t);
     next.append(el('p',t.draw && allAccepted?'Las llaves ya están disponibles.':statuses.includes('REJECTED')?'Hay una invitación rechazada. El sorteo permanece detenido.':`Los cruces se sortean cuando todos los participantes y responsables aceptan (${statuses.filter(s=>s==='ACCEPTED').length}/${statuses.length} cargos).`));
     if(t.draw && allAccepted){const link=el('a','Ver llaves →','format-choice');link.href='#tournamentDraw';next.append(link);}root.append(next);clock();return root;
   }

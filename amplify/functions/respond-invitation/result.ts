@@ -1,7 +1,7 @@
 // El resultado 1v1 es definitivo: sólo el árbitro acordado puede registrarlo.
 import { DynamoDBDocumentClient, GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { assertActiveTournament } from '../lifecycle';
-import {validatePodium} from '../../../shared/tournament-room';
+import {validatePodium,allEntriesPaid} from '../../../shared/tournament-room';
 export async function recordDuelResult(db: DynamoDBDocumentClient, sub: string, tournamentId: string, winnerProfileId: string,resultReason='',resultKind='NORMAL',runnerUpProfileId?:string,thirdPlaceProfileId?:string) {
   const TableName=process.env.TOURNAMENT_TABLE_NAME!;
   const read=async()=> (await db.send(new GetCommand({TableName,Key:{id:tournamentId},ConsistentRead:true}))).Item;
@@ -11,6 +11,7 @@ export async function recordDuelResult(db: DynamoDBDocumentClient, sub: string, 
   if(!t || !t.participantIds?.length)throw new Error('Torneo inválido.');
   if(!['NORMAL','DISPUTED','SANCTION'].includes(resultKind) || typeof resultReason!=='string' || resultReason.length>500 || (resultKind!=='NORMAL' && resultReason.trim().length<10))throw new Error('Los resultados discutidos y las sanciones necesitan un motivo de 10 a 500 caracteres.');
   if(!t.startsAt || !Number.isFinite(Date.parse(t.startsAt)) || Date.now()<Date.parse(t.startsAt)) throw new Error('Todavía no llegó el horario de inicio.');
+  if(!allEntriesPaid(t))throw new Error('Hay pagos de inscripción pendientes de revisión.');
   if(!t.participantIds.includes(winnerProfileId)) throw new Error('Elegí uno de los participantes del duelo.');
   const podium=validatePodium(t.participantIds,winnerProfileId,runnerUpProfileId,thirdPlaceProfileId);
   const sameResult=(row:any)=>row?.winnerProfileId===winnerProfileId && row.decidedBySub===sub && (row.runnerUpProfileId || null)===podium.runnerUp && (row.thirdPlaceProfileId || null)===podium.thirdPlace;

@@ -4,10 +4,10 @@ export const money=cents=>new Intl.NumberFormat('es-AR',{style:'currency',curren
 export async function tournamentFee(){return data(await (await tournamentClient()).queries.getTournamentFee());}
 export async function setTournamentFee(amountCents,enabled){return data(await (await tournamentClient()).mutations.setTournamentFee({amountCents,enabled}));}
 export async function checkPayment(checkoutId){return data(await (await tournamentClient()).mutations.checkTournamentPayment({checkoutId}));}
-export async function savedPayment(id){return data(await (await tournamentClient()).models.TournamentPayment.get({id},{selectionSet:['id','tournamentName','status','amountCents','currency','paymentMode','checkoutUrl','expiresAt','createdAt','updatedAt','deletedAt']}));}
+export async function savedPayment(id){return data(await (await tournamentClient()).models.TournamentPayment.get({id},{selectionSet:['id','kind','tournamentId','participantProfileId','entryConfirmed','tournamentName','status','amountCents','currency','paymentMode','checkoutUrl','expiresAt','createdAt','updatedAt','deletedAt']}));}
 export async function myPendingPayments({includeExpired=false}={}){
   const activeMode=(await tournamentFee()).mode;
   const client=await tournamentClient(),rows=[];let nextToken;
-  do{const result=await client.models.TournamentPayment.list({filter:{status:{eq:'PENDING'}},nextToken,limit:100,selectionSet:['id','tournamentName','status','amountCents','expiresAt','paymentMode','createdAt','deletedAt']});rows.push(...(data(result)||[]));nextToken=result.nextToken;}while(nextToken);
-  return rows.filter(row=>row.paymentMode===activeMode && !row.deletedAt && (includeExpired || Date.parse(row.expiresAt)>Date.now())).sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
+  do{const result=await client.models.TournamentPayment.list({filter:{status:{eq:'PENDING'}},nextToken,limit:100,selectionSet:['id','kind','tournamentId','participantProfileId','entryConfirmed','tournamentName','status','amountCents','expiresAt','paymentMode','createdAt','deletedAt']});rows.push(...(data(result)||[]));nextToken=result.nextToken;}while(nextToken);
+  return rows.filter(row=>row.kind==='ENTRY' && row.paymentMode===activeMode && !row.deletedAt && (includeExpired || Date.parse(row.expiresAt)>Date.now())).sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
 }

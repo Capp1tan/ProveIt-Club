@@ -1,4 +1,4 @@
-import {roomDeadline,roomIsClosed,validatePodium} from '../shared/tournament-room.ts';
+import {roomDeadline,roomIsClosed,validatePodium,allEntriesPaid} from '../shared/tournament-room.ts';
 import { createRealLobby } from './tournament-real-lobby.js';
 import {judgePanel} from './judge-ui.js';
 import { tournamentCoverUrl } from './tournament-cover.js';
@@ -114,7 +114,7 @@ function resultPanel(t) {
   const noJudge=t.arbitrationMode==='ORGANIZER';
   const isJudge=(t.judgeIds || []).some(id=>{const owner=profiles.get(id)?.owner;return owner && (owner===currentUser?.username || owner===currentUser?.userId || owner.startsWith(currentUser?.userId+'::'));});
   const canDecide=noJudge ? currentUser?.userId===t.createdBySub : isJudge;
-  if(!canDecide || !t.startsAt || t.status!=='READY' || !t.draw || Date.now()<Date.parse(t.startsAt))return null;
+  if(!allEntriesPaid(t) || !canDecide || !t.startsAt || t.status!=='READY' || !t.draw || Date.now()<Date.parse(t.startsAt))return null;
   const decision=element('details','','tournament-panel tournament-decision');decision.append(element('summary','Registrar decisión'));
   const form=element('form','','duel-result-form'),label=element('label','Quién ganó');
   const select=element('select');select.required=true;select.id='duelWinner';label.htmlFor=select.id;
@@ -174,7 +174,7 @@ function renderTournament(t) {
   if(isClubAdmin || currentUser?.userId===t.createdBySub) {
     const remove=element('button','Eliminar torneo','danger-button');remove.type='button';
     remove.addEventListener('click',async()=>{
-      if(!window.confirm('¿Eliminar «'+t.name+'»? Se ocultará y quedará bloqueado para todos. No se devuelve el pago de creación.'))return;
+      if(!window.confirm('¿Eliminar «'+t.name+'»? Se ocultará y quedará bloqueado para todos. Los pagos existentes requieren revisión del administrador; esta acción no ejecuta devoluciones.'))return;
       remove.disabled=true;
       try{await deleteTournament(t.id);location.href='/torneos.html';}
       catch(error){remove.disabled=false;notice.hidden=false;notice.textContent=error.message;}
@@ -215,7 +215,7 @@ try {
     const tournaments=await listClubTournaments();
     try {for(const payment of await myPendingPayments()) {
       const card=element('a','','tournament-panel tournament-card');card.href='/pago.html?id='+encodeURIComponent(payment.id);
-      card.append(element('small','TU SOLICITUD · PENDIENTE DE PAGO'),element('h2',payment.tournamentName),element('p',money(payment.amountCents)+(payment.paymentMode==='TEST'?' · prueba':'')));list.append(card);
+      card.append(element('small','TU INSCRIPCIÓN · PENDIENTE DE PAGO'),element('h2',payment.tournamentName),element('p',money(payment.amountCents)+(payment.paymentMode==='TEST'?' · prueba':'')));list.append(card);
     }} catch { /* Los torneos publicados siguen visibles si falla la lista privada. */ }
     if(!tournaments.length)list.append(element('p','Todavía no hay torneos. Creá el primer desafío.','tournament-empty'));
     tournaments.forEach(t=>{

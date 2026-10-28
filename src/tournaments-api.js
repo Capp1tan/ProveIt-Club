@@ -50,9 +50,16 @@ export async function pendingInvitations() {
 }
 export async function respondInvitation(invitationId, accept, acceptOrganizerDecision = false,acceptTerms=false,termsVersion=null) {
   const client = await tournamentClient();
-  const result = resultData(await client.mutations.answerTournamentInvitation({ invitationId, accept, acceptOrganizerDecision,acceptTerms,termsVersion }));
-  if (!result?.id) throw new Error('No se pudo confirmar la respuesta. Actualizá para revisar su estado.');
-  return result;
+  const values={invitationId,accept,acceptOrganizerDecision,acceptTerms,termsVersion};
+  let response=await client.mutations.answerTournamentInvitation(values);
+  if(accept && response.errors?.some(error=>error.message.includes('ENTRY_PAYMENT_REQUIRED'))){
+    const payment=resultData(await client.mutations.prepareTournamentEntryPayment({invitationId,acceptOrganizerDecision,acceptTerms,termsVersion}));
+    if(!payment?.id)throw new Error('No pudimos preparar tu inscripción.');
+    if(payment.status==='APPROVED')response=await client.mutations.answerTournamentInvitation(values);
+    else{location.href='/pago.html?id='+encodeURIComponent(payment.id);return {id:invitationId,paymentRequired:true,status:'PENDING'};}
+  }
+  const result=resultData(response);
+  if (!result?.id) throw new Error('No se pudo confirmar la respuesta. Actualizá para revisar su estado.');return result;
 }
 
 export async function ensureClubTournamentDraw(tournamentId) {

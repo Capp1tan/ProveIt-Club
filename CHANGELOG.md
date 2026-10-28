@@ -1,3 +1,10 @@
+## 3.17.0 — 2026-10-28
+
+- Crear torneos nuevos es gratis para todas las cuentas. Inscripción individual inicial de $500 ARS por jugador, con precio congelado por torneo y jueces sin cargo salvo que compitan.
+- Invitaciones y sala muestran el precio antes del consentimiento. Sólo un recibo de MP validado por AWS confirma al participante y permite el sorteo/inicio.
+- Reintentos y nuevas versiones de condiciones reutilizan la inscripción; no se cobra otra vez por aceptar nuevas reglas. Reversiones bloquean el avance y las recompensas.
+- Torneos y recibos anteriores se conservan sin cobros retroactivos. La tarifa es del servicio de inscripción; no constituye un aporte a un fondo común de premios.
+
 ## 3.16.0 — 2026-10-28
 
 - Editor local de portada 9:16: arrastrar con mouse o dedo, mover con teclado, zoom, centrar y reajustar antes de publicar.
@@ -456,3 +463,5 @@ Primera versión de ProveIt Club que conecta la web con cuentas y perfiles persi
 - `3.0.0`: otro cambio de etapa importante decidido para el proyecto.
 
 La numeración identifica entregas del proyecto; no es una certificación de que no existan errores.
+
+

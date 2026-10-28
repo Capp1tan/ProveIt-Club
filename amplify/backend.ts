@@ -182,3 +182,15 @@ const photoBucket=backend.storage.resources.bucket.node.defaultChild as import('
 photoBucket.versioningConfiguration={status:'Enabled'};
 // Amplify administra su ciclo de vida y la limpieza del bucket. No cambiamos
 // su RemovalPolicy mientras AutoDeleteObjects esté habilitado por Amplify.
+
+// Inscripciones: no se agregan tablas ni secretos. El recibo nunca es editable por el cliente.
+backend.respondInvitation.addEnvironment('PAYMENT_TABLE_NAME',backend.data.resources.tables['TournamentPayment'].tableName);
+backend.respondInvitation.addEnvironment('MERCADOPAGO_MODE','live');
+backend.data.resources.tables['TournamentPayment'].grant(backend.respondInvitation.resources.lambda,'dynamodb:GetItem','dynamodb:ConditionCheckItem');
+for(const fn of [backend.billing,backend.paymentWebhook]){
+ backend.data.resources.tables['PrivateAccount'].grant(fn.resources.lambda,'dynamodb:GetItem');
+ fn.addEnvironment('ACCOUNT_TABLE_NAME',backend.data.resources.tables['PrivateAccount'].tableName);
+ backend.data.resources.tables['TournamentPayment'].grant(fn.resources.lambda,'dynamodb:ConditionCheckItem');
+}
+// La reserva de inscripción verifica el torneo en la misma transacción del recibo.
+backend.data.resources.tables['Tournament'].grant(backend.billing.resources.lambda,'dynamodb:ConditionCheckItem');

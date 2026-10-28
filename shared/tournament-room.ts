@@ -7,7 +7,7 @@ export function roomDeadline(t:any):number|null{
 }
 export function roomIsClosed(t:any,now=Date.now()):boolean{const deadline=roomDeadline(t);return deadline!==null && now>=deadline;}
 export function tournamentIsLive(t:any,now=Date.now()):boolean{
- return Boolean(t && !t.winnerProfileId && t.status==='READY' && t.draw && Number.isFinite(Date.parse(t.startsAt)) && now>=Date.parse(t.startsAt) && t.rosterStatuses?.length && t.rosterStatuses.every((s:string)=>s==='ACCEPTED'));
+ return Boolean(t && allEntriesPaid(t) && !t.winnerProfileId && t.status==='READY' && t.draw && Number.isFinite(Date.parse(t.startsAt)) && now>=Date.parse(t.startsAt) && t.rosterStatuses?.length && t.rosterStatuses.every((s:string)=>s==='ACCEPTED'));
 }
 /** No inventamos podios: un duelo de dos personas sí determina el segundo puesto. */
 export function historyResult(t:any,profileId:string){
@@ -28,3 +28,5 @@ export function validatePodium(ids:string[],winner:string,second?:string|null,th
  if(thirdPlace && !runnerUp)throw new Error('Elegí el segundo puesto antes del tercero.');
  return {runnerUp,thirdPlace};
 }
+
+export function allEntriesPaid(t:any):boolean{return !t.entryFeeCents || (Array.isArray(t.entryPaymentStatuses) && t.entryPaymentStatuses.length===t.participantIds?.length && t.entryPaymentStatuses.every((s:string)=>s==='APPROVED'));}

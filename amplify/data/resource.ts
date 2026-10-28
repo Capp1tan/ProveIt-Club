@@ -59,18 +59,20 @@ const schema = a.schema({
     .returns(a.ref('ClubAccess')).authorization(allow => [allow.authenticated()]).handler(a.handler.function(clubAccount)),
   saveClubProfile: a.mutation().arguments({ profileId: a.id(), nickname: a.string().required(), bio: a.string(), avatarPath: a.string(), phoneNumber: a.string().required(), visibility:a.string(), socialLinks:a.string(), judgeEnabled:a.boolean() })
     .returns(a.ref('Profile')).authorization(allow => [allow.authenticated()]).handler(a.handler.function(clubAccount)),
-  // Solicitudes de cobro privadas: sólo el organizador puede consultarlas.
+  // Solicitudes de cobro privadas: sólo la cuenta que paga puede consultarlas.
   TournamentPayment: a.model({
     createdBySub:a.string().required(),tournamentName:a.string().required(),status:a.string().required(),
+    kind:a.string(),tournamentId:a.id(),participantProfileId:a.id(),rosterIndex:a.integer(),entryConfirmed:a.boolean(),
     amountCents:a.integer().required(),currency:a.string().required(),paymentMode:a.string().required(),
     payload:a.string(),checkoutUrl:a.string(),preferenceId:a.string(),collectorId:a.string(),paymentId:a.string(),
     expiresAt:a.datetime().required(),leaseUntil:a.float(),lastCheckedAt:a.float(),deletedAt:a.datetime(),
   }).authorization(allow=>[allow.ownerDefinedIn('createdBySub').identityClaim('sub').to(['read'])]),
   BillingSettings: a.model({amountCents:a.integer().required(),enabled:a.boolean().required()})
     .authorization(allow=>[allow.authenticated().to(['read'])]),
-  TournamentFee: a.customType({amountCents:a.integer().required(),currency:a.string().required(),enabled:a.boolean().required(),mode:a.string().required(),canPay:a.boolean().required(),exempt:a.boolean(),exemptionSource:a.string(),standardAmountCents:a.integer()}),
+  TournamentFee: a.customType({amountCents:a.integer().required(),currency:a.string().required(),enabled:a.boolean().required(),mode:a.string().required(),canPay:a.boolean().required(),exempt:a.boolean(),exemptionSource:a.string(),standardAmountCents:a.integer(),participantAmountCents:a.integer()}),
   getTournamentFee:a.query().returns(a.ref('TournamentFee')).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(billing)),
   setTournamentFee:a.mutation().arguments({amountCents:a.integer().required(),enabled:a.boolean().required()}).returns(a.ref('TournamentFee')).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(billing)),
+  prepareTournamentEntryPayment:a.mutation().arguments({invitationId:a.id().required(),acceptTerms:a.boolean().required(),termsVersion:a.integer().required(),acceptOrganizerDecision:a.boolean()}).returns(a.ref('TournamentPayment')).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(billing)),
   checkTournamentPayment:a.mutation().arguments({checkoutId:a.id().required()}).returns(a.ref('TournamentPayment')).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(billing)),
   // Las cuentas pueden consultar torneos. Sólo la función validada los escribe.
   Tournament: a.model({
@@ -78,7 +80,7 @@ const schema = a.schema({
     activity: a.string().required(),
     format: a.string().required(),
     description: a.string(),
-    overview:a.string(),coverPath:a.string(),participantLimit:a.integer(),prizeExpected:a.boolean(),
+    overview:a.string(),coverPath:a.string(),participantLimit:a.integer(),prizeExpected:a.boolean(),entryFeeCents:a.integer(),entryPaymentStatuses:a.string().array(),
     participantIds: a.string().required().array().required(),
     participantNames: a.string().required().array().required(),
     judgeIds: a.string().required().array().required(),
@@ -119,7 +121,7 @@ const schema = a.schema({
     recipientSub: a.string().required(),
     profileId: a.id().required(),
     role: a.string().required(),
-    rosterIndex: a.integer().required(),
+    rosterIndex: a.integer().required(),entryFeeCents:a.integer(),
     status: a.string().required(),
     invitedBySub: a.string().required(),
     arbitrationMode: a.string(),
@@ -168,3 +170,6 @@ const schema = a.schema({
 export type Schema = ClientSchema<typeof schema>;
 
 export const data = defineData({ schema });
+
+
+
