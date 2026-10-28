@@ -6,8 +6,9 @@ const el = (tag,text='',cls='') => { const n=document.createElement(tag);n.textC
 // Sólo datos recibidos de AWS. La vista no confirma jugadores ni inventa estados.
 export function createRealLobby({ profilePreview, getUser, getConnection, onChanged }) {
   const root=el('section','','real-lobby'), ring=el('div','','rl-ring'), ringText=el('strong');
-  const inner=el('div');inner.append(ringText,el('small','confirmados'));ring.append(inner);
+  const inner=el('div');inner.append(el('small','PARTICIPANTES CONFIRMADOS'),ringText);const track=el('div','','rl-progress-track');track.append(el('span'));ring.append(inner,track);
   const reduced=window.matchMedia('(prefers-reduced-motion: reduce)');
+  let headerStats;
   let t, filter='all', shown=null,target=0,frame=0,context='',busy=false,consents=new Set(),actionId=0;
   const paint=v=>{shown=v;ring.style.setProperty('--progress',`${v*100}%`);};
   function animate(value,reset) {
@@ -16,7 +17,7 @@ export function createRealLobby({ profilePreview, getUser, getConnection, onChan
     const from=shown,start=performance.now();
     const step=now=>{const p=Math.min(1,(now-start)/720),e=p<.5?4*p*p*p:1-Math.pow(-2*p+2,3)/2;paint(from+(value-from)*e);if(p<1)frame=requestAnimationFrame(step);else frame=0;};frame=requestAnimationFrame(step);
   }
-  function clock() { const n=root.querySelector('[data-real-clock]');if(n)n.textContent=t.winnerProfileId?'Finalizado':t.startsAt?countdownLabel(t.startsAt):'Horario sin definir'; }
+  function clock() { const n=headerStats?.querySelector('[data-real-clock]');if(n)n.textContent=t.winnerProfileId?'Finalizado':t.startsAt?countdownLabel(t.startsAt):'Horario sin definir'; }
   async function answer(accept,message) {
     if(busy)return;
     if(!accept && !window.confirm('¿Rechazar tu invitación a «'+t.name+'»? El sorteo quedará detenido.'))return;
@@ -35,7 +36,7 @@ export function createRealLobby({ profilePreview, getUser, getConnection, onChan
     finally { if(generation===actionId){busy=false;const check=root.querySelector('.rl-consent input');root.querySelectorAll('.rl-answer').forEach(n=>n.disabled=n.dataset.accept==='true' && !check?.checked);} }
   }
   function render(value) {
-    t=value;root.replaceChildren();
+    t=value;root.replaceChildren();headerStats?.remove();
     const statuses=t.rosterStatuses || Array(t.participantIds.length+t.judgeIds.length+(t.treasurerId?1:0)).fill('ACCEPTED');
     const people=t.participantIds.map((id,i)=>({id,name:t.participantNames[i],status:statuses[i] || 'PENDING'}));
     const accepted=people.filter(p=>p.status==='ACCEPTED').length,total=people.length;
@@ -51,12 +52,12 @@ export function createRealLobby({ profilePreview, getUser, getConnection, onChan
     const judge=el('section','','rl-card');judge.append(el('small',t.arbitrationMode==='ORGANIZER'?'ARBITRAJE':'JUECES Y RESPONSABLES DEL PREMIO'));
     if(t.arbitrationMode==='ORGANIZER')judge.append(el('strong','Decide el organizador'),el('span','Condición aceptada al confirmar'));
     else t.judgeIds.forEach((id,i)=>{const line=el('div','','rl-judge');line.append(profilePreview.button(id,t.judgeNames[i]),el('small',statuses[total+i]==='ACCEPTED'?'Cargo aceptado':statuses[total+i]==='REJECTED'?'Cargo rechazado':'Aceptación pendiente'));judge.append(line);});
-    top.append(judge);root.append(top);
+    headerStats=top;const nav=document.querySelector('header.topbar .top-actions');if(nav)nav.before(top);else root.append(top);
     const hero=el('section','','rl-card rl-hero'),copy=el('div');
-    copy.append(el('p',t.winnerProfileId?'ENCUENTRO FINALIZADO':'FASE DE CONFIRMACIÓN','rl-kicker'),el('h2',t.winnerProfileId?'Desafío completado':'Sala de espera'),el('p',t.winnerProfileId?'Revisá el resultado y la participación.':'Confirmá tu asistencia para preparar el encuentro.'));
+    copy.append(el('p',(t.winnerProfileId?'ENCUENTRO FINALIZADO':'FASE DE CONFIRMACIÓN')+' · '+t.name+' · '+t.activity,'rl-kicker'),el('h1',t.winnerProfileId?'Desafío completado':'Sala de espera y confirmación de asistencia'),el('p',t.winnerProfileId?'Revisá el resultado y la participación.':'Confirmá tu asistencia para preparar el encuentro.'));
     const connected=Boolean(getConnection?.());const live=el('small',connected?'Confirmaciones en vivo':'Actualización automática · reconectando','lobby-live');live.id='lobbyConnection';live.classList.toggle('lobby-reconnect',!connected);copy.append(live);
     const scheduleNote=el('small','El horario no confirma personas ni inicia automáticamente el torneo.');copy.append(scheduleNote);hero.append(copy,ring);root.append(hero);
-    ringText.textContent=accepted+' de '+total;ring.setAttribute('role','img');ring.setAttribute('aria-label',accepted+' de '+total+' participantes confirmados');
+    ringText.textContent=accepted+' / '+total;ring.setAttribute('role','img');ring.setAttribute('aria-label',accepted+' de '+total+' participantes confirmados');
     animate(total?accepted/total:0,context!==t.id);context=t.id;
     const toolbar=el('div','','rl-toolbar');
     for(const [key,label] of [['all','Todos'],['ACCEPTED','Listos'],['PENDING','Pendientes'],['REJECTED','No asisten']]){
@@ -70,8 +71,10 @@ export function createRealLobby({ profilePreview, getUser, getConnection, onChan
     }if(!list.childElementCount)list.append(el('li','No hay participantes en este estado.','field-help'));root.append(list);
     const user=getUser(),mine=[];
     [...t.participantIds,...t.judgeIds,...(t.treasurerId?[t.treasurerId]:[])].forEach((id,index)=>{const profile=profilePreview.profiles.get(id);if(profile?.owner?.split('::')[0]===user?.userId)mine.push({index,status:statuses[index] || 'PENDING',judge:index>=total});});
+    const primary=el('button',mine.some(role=>role.status==='PENDING')?'Confirmar mi asistencia':mine.length?'Asistencia respondida':'Sólo participantes','primary-button rl-toolbar-action');primary.type='button';primary.disabled=!mine.some(role=>role.status==='PENDING') || Boolean(t.winnerProfileId);toolbar.append(primary);
     if(mine.some(role=>role.status==='PENDING') && !t.winnerProfileId){
       const form=el('section','','rl-card rl-response'),key=t.id+':'+(t.termsVersion || 0);
+      form.id='myTournamentResponse';form.hidden=true;primary.setAttribute('aria-expanded','false');primary.setAttribute('aria-controls',form.id);primary.addEventListener('click',()=>{form.hidden=!form.hidden;primary.setAttribute('aria-expanded',String(!form.hidden));if(!form.hidden){form.scrollIntoView({behavior:reduced.matches?'instant':'smooth',block:'nearest'});check.focus({preventScroll:true});}});
       form.append(el('h3',mine.some(r=>r.judge)?'Aceptar mi participación y cargo':'Confirmar mi asistencia'));
       const rules=el('details');rules.append(el('summary','Leer reglas y condiciones'),el('p',t.description || 'Sin reglas adicionales'));
       if(t.conflicts)rules.append(el('p','Conflictos declarados: '+t.conflicts));
@@ -87,10 +90,11 @@ export function createRealLobby({ profilePreview, getUser, getConnection, onChan
       check.addEventListener('change',()=>{check.checked?consents.add(key):consents.delete(key);yes.disabled=busy || !check.checked;});
       yes.addEventListener('click',()=>void answer(true,message));no.addEventListener('click',()=>void answer(false,message));actions.append(yes,no);form.append(actions,message);root.append(form);
     }else if(mine.length)root.append(el('p',mine.every(r=>r.status==='ACCEPTED')?'Tu asistencia y tus cargos están confirmados.':'Ya respondiste a la invitación.','rl-own-state'));
+    const judgeDetails=el('details','','rl-judge-details');judgeDetails.append(el('summary','Jurado y responsables'),judge);root.append(judgeDetails);
     const next=el('section','','rl-card rl-next');
     const allAccepted=statuses.every(s=>s==='ACCEPTED');
     next.append(el('p',t.draw && allAccepted?'Las llaves ya están disponibles.':statuses.includes('REJECTED')?'Hay una invitación rechazada. El sorteo permanece detenido.':`Los cruces se sortean cuando todos los participantes y responsables aceptan (${statuses.filter(s=>s==='ACCEPTED').length}/${statuses.length} cargos).`));
     if(t.draw && allAccepted){const link=el('a','Ver llaves →','format-choice');link.href='#tournamentDraw';next.append(link);}root.append(next);clock();return root;
   }
-  return {render,clock,destroy(){cancelAnimationFrame(frame);actionId++;root.replaceChildren();}};
+  return {render,clock,destroy(){cancelAnimationFrame(frame);actionId++;root.replaceChildren();headerStats?.remove();}};
 }

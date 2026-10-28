@@ -135,12 +135,11 @@ function renderTournament(t) {
   const status=states(t),format=formats.find(f=>f.id===t.format);
   const label=t.winnerProfileId?'TORNEO FINALIZADO':t.draw && t.status==='READY'?'TODOS CONFIRMADOS · SORTEO GUARDADO':status.includes('REJECTED')?'INVITACIÓN RECHAZADA · SORTEO DETENIDO':t.rosterStatuses?'SALA DE ESPERA':'TORNEO ANTERIOR · EN PREPARACIÓN';
   const hero=element('header','','tournament-cover'),heroContent=element('div','','tournament-cover-content');
-  heroContent.append(element('p',label,'eyebrow'),element('h1',t.name),element('p',t.activity));hero.append(heroContent);detail.append(hero);
+  heroContent.append(element('p',label,'eyebrow'),element('h1',t.name),element('p',t.activity));hero.append(heroContent);
   if(t.coverPath){
    if(!coverRequests.has(t.coverPath) || coverRequests.get(t.coverPath).expires<Date.now())coverRequests.set(t.coverPath,{expires:Date.now()+90000,promise:tournamentCoverUrl(t.id).catch(()=>{coverRequests.delete(t.coverPath);return '';})});
    void coverRequests.get(t.coverPath).promise.then(url=>{if(!url || !hero.isConnected)return;const image=document.createElement('img');image.alt='Portada de '+t.name;image.src=url;hero.prepend(image);});
   }
-  const stages=element('div','','lobby-steps');stages.append(element('span','01 · El desafío ✓'),element('span','02 · Configuración ✓'),element('strong','03 · Sala de espera'));detail.append(stages);
   detail.append(realLobby.render(t));updateLobbyConnection();
   if(t.paymentMode==='TEST')detail.append(element('p','TORNEO DE PRUEBA · no corresponde a un cobro real','tournament-notice'));
   if(t.creationPaymentStatus==='REVERSED')detail.append(element('p','El pago de creación fue revertido. Contactá al administrador.','tournament-notice'));
@@ -152,7 +151,7 @@ function renderTournament(t) {
   detail.append(prizePanel(t,{canEdit:canEditPrize,onSaved:saved=>{renderTournament(saved);lastVersion=saved.updatedAt+String(saved.draw);}}));
   const info=element('details','','tournament-panel');info.append(element('summary','Reglas, formato y condiciones'),element('h2',format?.name || t.format),arbitration);
   if(format && !t.draw){const image=element('div','','format-preview');image.innerHTML=formatImage(format.id);image.append(element('p',format.description));info.append(image);}
-  const rules=element('p',t.description || 'El organizador todavía no agregó reglas.');rules.style.whiteSpace='pre-wrap';info.append(rules);detail.append(info);
+  const rules=element('p',t.description || 'El organizador todavía no agregó reglas.');rules.style.whiteSpace='pre-wrap';info.append(rules);if(t.overview)info.append(element('p',t.overview));if(t.coverPath)info.append(hero);detail.append(info);
   if(t.draw && (t.status==='READY' || t.status==='COMPLETED')) detail.append(drawBoard(t));
   else if(t.rosterStatuses) detail.append(element('p',status.includes('REJECTED')?'Una persona rechazó. El torneo no se sortea: por ahora es necesario crear otro con los integrantes que acepten.':'Esperando que todos los participantes y responsables confirmen. Los cruces se sortearán automáticamente después de la última aceptación.','tournament-notice'));
   else detail.append(element('p','Este torneo se creó antes del sistema de invitaciones; conserva sus integrantes históricos. El sorteo automático se aplica a los nuevos torneos.','tournament-notice'));

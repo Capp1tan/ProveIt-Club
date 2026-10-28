@@ -1,3 +1,9 @@
+## 3.14.2 — 2026-10-28
+
+- Sala real con la estructura aprobada: reloj y premio en cabecera, bloque de confirmación con progreso horizontal, filtros y botón principal en una fila y participantes en dos columnas.
+- La aceptación conserva la lectura de condiciones antes de responder. La portada queda dentro de los detalles y el jurado en un apartado desplegable.
+- Se conservan ambas paletas, fuentes y permisos actuales.
+
 ## 3.14.1 — 2026-10-24
 
 - El indicador de conexión en vivo se conserva al filtrar participantes en la sala real.
