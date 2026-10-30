@@ -1,3 +1,7 @@
+## 3.18.2 — 2026-10-30
+
+- Descripción más compacta y con mayor contraste para conservar la legibilidad sobre las tres escenas del inicio integrado.
+
 ## 3.18.1 — 2026-10-30
 
 - Inicio integrado en la página y la cabecera transparente, con bordes de las tres fotos fundidos mediante máscaras CSS en claro y oscuro.

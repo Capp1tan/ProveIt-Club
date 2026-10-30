@@ -7,7 +7,7 @@ html[data-theme] body.home-integrated .topbar{position:relative;z-index:20;backg
 .home-carousel-copy{position:relative;z-index:3;max-width:1320px;width:calc(100% - 96px);margin:auto;padding:205px 0 160px;pointer-events:none}
 .home-carousel h1{font:700 clamp(39px,4.1vw,62px)/1.1 var(--display);letter-spacing:-2px;margin:0 0 24px;max-width:560px;color:var(--hc-ink)}
 .home-carousel h1 span{color:var(--hc-blue)}
-.home-carousel-copy p{font-size:clamp(16px,1.5vw,20px);line-height:1.6;color:var(--site-muted,#52637e);margin:0 0 28px;max-width:430px}
+.home-carousel-copy p{font-size:clamp(16px,1.5vw,20px);line-height:1.6;color:var(--hc-ink);margin:0 0 28px;max-width:350px}
 .home-carousel-copy .primary-button{pointer-events:auto;font-size:16px;padding:15px 23px;background:var(--hc-blue);color:#fff;border-radius:8px;display:inline-flex;align-items:center;gap:22px}
 .home-carousel-visual{position:absolute;z-index:1;top:0;right:0;width:74%;height:700px;overflow:hidden;touch-action:pan-y;background:transparent;
  -webkit-mask-image:linear-gradient(to right,transparent 0%,#000 31%),linear-gradient(to bottom,transparent 0%,#000 23%,#000 74%,transparent 100%);-webkit-mask-composite:source-in;
