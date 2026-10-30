@@ -80,46 +80,32 @@
   </section>
 
   <main>
-    <!-- Texto fijo del inicio: editá aquí el título y la descripción. -->
-    <section class="hero">
-      <div class="hero-copy">
-        <p class="eyebrow"><span class="live-dot"></span> COMPETÍ A TU MANERA</p>
-        <h1 id="heroTitle">Un desafío.<br><span>Todo por demostrar.</span></h1>
-        <p class="hero-text" id="heroText">La próxima gran historia puede empezar con una partida, un reto o una apuesta entre amigos. Prepará tu mejor versión: hay algo en juego.</p>
-        <div class="hero-actions">
-          <a class="primary-button" href="crear-torneo.html">Crear un torneo <span aria-hidden="true">↗</span></a>
-          <a class="text-link" href="#explore">Explorar desafíos <span aria-hidden="true">↓</span></a>
+    <!-- Carrusel: cambiá el texto aquí y las fotos en public/carousel. Las miniaturas no son filtros. -->
+    <section class="home-carousel" id="explore" data-home-carousel aria-label="Desafíos entre amigos" aria-roledescription="carrusel">
+      <div class="home-carousel-card">
+        <div class="home-carousel-copy">
+          <h1>Decirlo es fácil,<br>demostralo.</h1>
+          <p>Poné las reglas, invitá a tus rivales y armá el desafío.</p>
+          <a class="primary-button" href="crear-torneo.html">Crear torneo <span aria-hidden="true">↗</span></a>
         </div>
-        <div class="hero-note"><span class="note-icon">✳</span><span>De una partida de LoL a cualquier reto entre amigos.</span></div>
-      </div>
-      <!-- Gráfico decorativo hecho en CSS: podés cambiar colores y números desde styles.css. -->
-      <div class="arena-art" aria-label="Ilustración decorativa de una llave de torneo">
-        <div class="art-top"><span>PIQUE DE LA SEMANA</span><span class="art-live"><i></i> EN JUEGO</span></div>
-        <div class="art-score"><div><small>DESAFÍO 01</small><strong>¿Quién se lleva<br>la final?</strong></div><div class="score-badge">1<span>—</span>0</div></div>
-        <div class="bracket-mini">
-          <div class="bracket-col"><div class="player-card"><b>RAYO</b><span>12 pts</span></div><div class="player-card"><b>PIXEL</b><span>08 pts</span></div><div class="player-card"><b>LOBO</b><span>11 pts</span></div><div class="player-card"><b>NEON</b><span>06 pts</span></div></div>
-          <div class="bracket-lines"><i></i><i></i><i></i></div>
-          <div class="bracket-col semi"><div class="player-card winner"><b>RAYO</b><span>VS</span></div><div class="player-card"><b>LOBO</b><span>—</span></div></div>
-          <div class="bracket-lines final-line"><i></i></div>
-          <div class="bracket-col final"><div class="champion"><span>CAMPEÓN</span><b>?</b><small>EL PRÓXIMO PODÉS SER VOS</small></div></div>
+        <div class="home-carousel-visual">
+          <picture class="home-carousel-slide is-active" data-carousel-slide="Pádel" aria-hidden="false"><img src="/carousel/padel-1600.webp" srcset="/carousel/padel-800.webp 800w, /carousel/padel-1600.webp 1600w" sizes="(max-width:760px) calc(100vw - 36px), (max-width:1440px) 55vw, 790px" width="1600" height="900" alt="Cuatro adultos jugando un partido de pádel en una cancha de vidrio bajo techo." fetchpriority="high" loading="eager" decoding="async"></picture>
+          <picture class="home-carousel-slide" data-carousel-slide="Videojuegos" aria-hidden="true"><img src="/carousel/shooter-1600.webp" srcset="/carousel/shooter-800.webp 800w, /carousel/shooter-1600.webp 1600w" sizes="(max-width:760px) calc(100vw - 36px), (max-width:1440px) 55vw, 790px" width="1600" height="900" alt="Un jugador disfrutando un shooter en su computadora desde casa." loading="lazy" decoding="async"></picture>
+          <picture class="home-carousel-slide" data-carousel-slide="Cartas entre amigos" aria-hidden="true"><img src="/carousel/cartas-1600.webp" srcset="/carousel/cartas-800.webp 800w, /carousel/cartas-1600.webp 1600w" sizes="(max-width:760px) calc(100vw - 36px), (max-width:1440px) 55vw, 790px" width="1600" height="900" alt="Cuatro amigos jugando cartas en casa con un mate pequeño sobre la mesa." loading="lazy" decoding="async"></picture>
         </div>
-        <div class="art-footer"><span>ROUND ROBIN · 8 PARTICIPANTES</span><span>01 / 04</span></div>
-        <div class="art-glow"></div>
       </div>
-      <div class="hero-index">01 <span>/</span> 04</div>
-    </section>
-
-    <!-- Atajos de categoría: por ahora llevan a la búsqueda con la categoría escrita. -->
-    <section class="quick-categories" id="explore">
-      <div class="section-kicker">UN CLUB, MIL FORMAS DE COMPETIR</div>
-      <div class="category-row">
-        <button class="category-chip" data-query="Videojuegos"><span>▦</span> Videojuegos <b>↗</b></button>
-        <button class="category-chip" data-query="Deportes"><span>◉</span> Deportes <b>↗</b></button>
-        <button class="category-chip" data-query="Retos"><span>✳</span> Retos y desafíos <b>↗</b></button>
-        <button class="category-chip" data-query="Trivia"><span>◇</span> Trivia y talento <b>↗</b></button>
-        <a class="all-categories" href="mailto:leorivero744@gmail.com?subject=Sugerencia%20para%20ProveIt%20Club">Sugerir cambios <span>＋</span></a>
+      <div class="home-carousel-controls" data-carousel-controls hidden>
+        <div class="home-carousel-arrows"><button type="button" class="home-carousel-control" data-carousel-prev aria-label="Imagen anterior">‹</button><button type="button" class="home-carousel-control" data-carousel-next aria-label="Imagen siguiente">›</button></div>
+        <button type="button" class="home-carousel-control home-carousel-pause" data-carousel-pause aria-label="Pausar cambio automático de imágenes" aria-pressed="false">Pausar</button>
       </div>
+      <div class="home-carousel-thumbs" data-carousel-controls hidden aria-label="Elegir imagen del carrusel">
+        <button class="home-carousel-thumb" type="button" data-carousel-thumb aria-label="Mostrar imagen: Pádel" aria-pressed="true"><img src="/carousel/padel-400.webp" width="400" height="225" alt="" loading="lazy" decoding="async"><span>Pádel</span></button>
+        <button class="home-carousel-thumb" type="button" data-carousel-thumb aria-label="Mostrar imagen: Videojuegos" aria-pressed="false"><img src="/carousel/shooter-400.webp" width="400" height="225" alt="" loading="lazy" decoding="async"><span>Videojuegos</span></button>
+        <button class="home-carousel-thumb" type="button" data-carousel-thumb aria-label="Mostrar imagen: Cartas entre amigos" aria-pressed="false"><img src="/carousel/cartas-400.webp" width="400" height="225" alt="" loading="lazy" decoding="async"><span>Cartas entre amigos</span></button>
+      </div>
+      <p class="home-carousel-status" data-carousel-status role="status" aria-live="polite"></p>
     </section>
+    <div class="home-suggest"><a href="mailto:leorivero744@gmail.com?subject=Sugerencia%20para%20ProveIt%20Club">Sugerir cambios ↗</a></div>
 
     <!-- Patrocinadores: PNG transparentes en public/sponsors; FUEL UP y LEVEL UP son ejemplos. -->
     <section class="sponsors" aria-label="Patrocinadores">
@@ -163,8 +149,7 @@
   </div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script type="module" src="/app.js"></script>
+  <script type="module" src="/src/home-carousel.js"></script>
   <script type="module" src="/src/auth-ui.js"></script>
 </body>
 </html>
-
-

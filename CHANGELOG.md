@@ -1,3 +1,9 @@
+## 3.18.0 — 2026-10-30
+
+- Inicio con carrusel de pádel, videojuegos en casa y cartas con mate. Texto fijo, miniaturas, flechas, pausa, teclado y deslizamiento táctil.
+- Elimina el bloque decorativo anterior, la numeración 01/04 y los botones de categorías. Mantiene el contacto de sugerencias y patrocinadores.
+- Imágenes WebP adaptadas a escritorio y móvil; se respeta movimiento reducido y se pausa fuera de pantalla, al ocultar la pestaña y al usar el teclado.
+
 ## 3.17.0 — 2026-10-28
 
 - Crear torneos nuevos es gratis para todas las cuentas. Inscripción individual inicial de $500 ARS por jugador, con precio congelado por torneo y jueces sin cargo salvo que compitan.
@@ -463,5 +469,3 @@ Primera versión de ProveIt Club que conecta la web con cuentas y perfiles persi
 - `3.0.0`: otro cambio de etapa importante decidido para el proyecto.
 
 La numeración identifica entregas del proyecto; no es una certificación de que no existan errores.
-
-
