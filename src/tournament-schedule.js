@@ -36,8 +36,8 @@ export function scheduleLabel(startsAt, timeZone) {
   try { return new Intl.DateTimeFormat('es-AR',{timeZone:timeZone || 'UTC',weekday:'long',year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit',hourCycle:'h23',timeZoneName:'short'}).format(new Date(startsAt))+' · '+zoneLabel(timeZone || 'UTC'); }
   catch { return 'No pudimos leer la fecha programada.'; }
 }
-export function countdownLabel(startsAt) {
-  const remaining=Math.ceil((new Date(startsAt).getTime()-Date.now())/1000);
+export function countdownLabel(startsAt,now=Date.now()) {
+  const remaining=Math.ceil((new Date(startsAt).getTime()-now)/1000);
   if (!Number.isFinite(remaining)) return '';
   if (remaining<=0) return 'Horario de inicio alcanzado';
   const days=Math.floor(remaining/86400),hours=Math.floor(remaining%86400/3600),minutes=Math.floor(remaining%3600/60),seconds=remaining%60;

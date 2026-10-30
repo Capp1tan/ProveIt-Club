@@ -90,7 +90,9 @@ export const handler = async (event: Event) => {
   const account = await get('ACCOUNT_TABLE_NAME', sub);
   const revision = account?.revision || 0;
   const visibility=args.visibility==='PUBLIC'?'PUBLIC':'PRIVATE';
-  const judgeEnabled=args.judgeEnabled===true;
+  const judgeEnabled=true;
+  const country=String(args.country || account?.country || '');
+  if(!['AR','CL','PY','UY','PE','BR'].includes(country))throw new Error('Elegí tu país para completar el perfil.');
   let links:any;try{links=JSON.parse(args.socialLinks || '{}');}catch{throw new Error('Redes inválidas.');}
   const allowed:Record<string,string[] | null>={instagram:['instagram.com','www.instagram.com'],twitch:['twitch.tv','www.twitch.tv'],discord:['discord.com','discord.gg','www.discord.com'],custom:null};
   const socialLinks:Record<string,string>={};
@@ -121,7 +123,7 @@ export const handler = async (event: Event) => {
     {Put:{TableName:table('CLAIM_TABLE_NAME'),Item:{id:nickClaim,accountSub:sub,createdAt:now,updatedAt:now,__typename:'UniqueClaim'},ConditionExpression:'attribute_not_exists(id) OR accountSub=:sub',ExpressionAttributeValues:{':sub':sub}}},
     { ConditionCheck: { TableName: table('CLAIM_TABLE_NAME'), Key: { id: 'deleted-account:' + sub }, ConditionExpression: 'attribute_not_exists(id)' } },
     ...(newClaim ? [{ Put: { TableName: table('CLAIM_TABLE_NAME'), Item: { id: newClaim, accountSub: sub, createdAt: now, updatedAt: now, __typename: 'UniqueClaim' }, ConditionExpression: 'attribute_not_exists(id) OR accountSub = :sub', ExpressionAttributeValues: { ':sub': sub } } }] : []),
-    { Put: { TableName: table('ACCOUNT_TABLE_NAME'), Item: { id: sub, accountSub: sub, phoneNumber: number, phoneVerified: false, revision: revision + 1, createdAt: account?.createdAt || now, updatedAt: now, __typename: 'PrivateAccount' }, ConditionExpression: account ? 'revision = :revision' : 'attribute_not_exists(id)', ...(account ? { ExpressionAttributeValues: { ':revision': revision } } : {}) } },
+    { Put: { TableName: table('ACCOUNT_TABLE_NAME'), Item: { id: sub, accountSub: sub, country, phoneNumber: number, phoneVerified: false, revision: revision + 1, createdAt: account?.createdAt || now, updatedAt: now, __typename: 'PrivateAccount' }, ConditionExpression: account ? 'revision = :revision' : 'attribute_not_exists(id)', ...(account ? { ExpressionAttributeValues: { ':revision': revision } } : {}) } },
     { Put: { TableName: table('PROFILE_TABLE_NAME'), Item: item, ConditionExpression: existing ? '#owner = :owner' : 'attribute_not_exists(id)', ...(existing ? { ExpressionAttributeNames: { '#owner': 'owner' }, ExpressionAttributeValues: { ':owner': existing.owner } } : {}) } },
   ];
   if (account?.phoneNumber && account.phoneNumber !== number) transactions.push({ Delete: { TableName: table('CLAIM_TABLE_NAME'), Key: { id: phoneKey(account.phoneNumber) }, ConditionExpression: 'accountSub = :sub', ExpressionAttributeValues: { ':sub': sub } } });

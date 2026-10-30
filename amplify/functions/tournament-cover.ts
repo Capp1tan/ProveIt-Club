@@ -31,6 +31,7 @@ export async function coverAction(db: DynamoDBDocumentClient, sub: string, args:
   }
   const t = (await db.send(new GetCommand({ TableName: process.env.TOURNAMENT_TABLE_NAME!, Key: { id: args.tournamentId }, ConsistentRead: true }))).Item;
   assertActiveTournament(t);
-  if (!t?.coverPath || !t.coverPath.startsWith(`tournament-covers/${t.createdBySub}/${t.id}/`)) throw new Error('Este torneo no tiene portada.');
-  return { url: await getSignedUrl(s3, new GetObjectCommand({ Bucket, Key: t.coverPath }), { expiresIn: 120 }) };
+  const imagePath=args.action==='COMMUNITY_PRIZE_IMAGE_URL'?t.prizeImagePath:t.coverPath;
+  if (!imagePath || !imagePath.startsWith(`tournament-covers/${t.createdBySub}/${t.id}/`)) throw new Error('Este torneo no tiene portada.');
+  return { url: await getSignedUrl(s3, new GetObjectCommand({ Bucket, Key: imagePath }), { expiresIn: 120 }) };
 }

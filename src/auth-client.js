@@ -120,7 +120,7 @@ export async function saveProfile(profileId, values) {
     nickname,
     bio: values.bio.trim(),
     avatarPath: values.avatarPath || '',
-    phoneNumber: values.phoneNumber, visibility:values.visibility, socialLinks:values.socialLinks, judgeEnabled:values.judgeEnabled,
+    country:values.country,phoneNumber: values.phoneNumber, visibility:values.visibility, socialLinks:values.socialLinks, judgeEnabled:values.judgeEnabled,
   };
   const result = await dataClient.mutations.saveClubProfile({ profileId, ...payload });
   if (result.errors?.length) throw new Error(result.errors[0].message);

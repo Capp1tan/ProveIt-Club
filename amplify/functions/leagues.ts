@@ -32,7 +32,7 @@ export async function leagueProgress(db:DynamoDBDocumentClient,profileId:string)
  const accepted=events.filter(t=>{
   const pi=(t.participantIds || []).indexOf(profileId),ji=(t.judgeIds || []).indexOf(profileId);
   const index=pi>=0?pi:(t.participantIds || []).length+ji;
-  return ['AWAITING_RESPONSES','READY','COMPLETED'].includes(t.status) && t.creationPaymentStatus!=='REVERSED' &&
+  return ['AWAITING_RESPONSES','CHECK_IN','DRAW_APPROVAL','READY','COMPLETED'].includes(t.status) && t.creationPaymentStatus!=='REVERSED' &&
    (t.rosterStatuses?.[index]==='ACCEPTED');
  });
  const candidates=accepted.filter(t=>allEntriesPaid(t) && t.status==='COMPLETED' && t.winnerProfileId &&

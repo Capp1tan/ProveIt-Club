@@ -81,3 +81,6 @@ export async function watchTournamentLobby(tournamentId,onChange,onError){
  const client=await tournamentClient();
  return client.subscriptions.onTournamentLobby({tournamentId}).subscribe({next:()=>onChange(),error:onError});
 }
+
+// El reloj, la asistencia y la auditoría de posiciones se escriben sólo en AWS.
+export async function tournamentCompetition(tournamentId,action,values={}){const c=await tournamentClient();return resultData(await c.mutations.tournamentCompetition({tournamentId,action,...values}));}

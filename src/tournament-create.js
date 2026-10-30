@@ -6,7 +6,7 @@ import { avatarUrl, configureAmplify, getCurrentUser } from './auth-client.js';
 import { formats, formatImage } from './tournament-formats.js';
 import { registeredProfiles, createClubTournament, tournamentClient } from './tournaments-api.js';
 import {editCover} from './cover-editor.js';
-import { uploadTournamentCover } from './tournament-cover.js';
+import { prepareCover, uploadTournamentCover } from './tournament-cover.js';
 import { renderTournamentPreview } from './tournament-preview.js';
 
 const $ = id => document.getElementById(id);
@@ -28,10 +28,9 @@ async function withDeadline(operation, message, milliseconds = 20000) {
   try { return await Promise.race([operation, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(message)), milliseconds); })]); }
   finally { clearTimeout(timer); }
 }
-for (const value of timeZones) {
-  const option = document.createElement('option'); option.value = value; option.textContent = zoneLabel(value); $('timeZone').append(option);
-}
-$('timeZone').value = 'America/Argentina/Buenos_Aires';
+const detectedZone=Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+$('timeZone').value=detectedZone;
+$('detectedTimezone').textContent='Horario local: '+detectedZone.replaceAll('_',' ')+' · detectado automáticamente, sin ubicación GPS.';
 
 // Borrador por cuenta: conserva elecciones e ID para reintentos, sin teléfonos ni emails.
 function saveDraft() {
@@ -51,7 +50,7 @@ function restoreDraft() {
   form.reset(); participants.clear(); judges.clear(); clearCover(); pendingRequest = null;
   saving = false; coverWorking = false;
   selectedFormat = 'DUEL'; tournamentId = crypto.randomUUID(); step = 1;
-  $('timeZone').value = 'America/Argentina/Buenos_Aires';
+  $('timeZone').value=detectedZone;
   try {
     const d = JSON.parse(sessionStorage.getItem(draftKey()) || 'null');
     if (!d) return;
@@ -59,7 +58,7 @@ function restoreDraft() {
     if (Number.isInteger(d.participantLimit) && d.participantLimit >= 2 && d.participantLimit <= 64) form.elements.participantLimit.value = d.participantLimit;
     if (['JUDGES', 'ORGANIZER'].includes(d.arbitrationMode)) form.elements.arbitrationMode.value = d.arbitrationMode;
     if (['yes', 'no'].includes(d.prizeExpected)) form.elements.prizeExpected.value = d.prizeExpected;
-    if (timeZones.includes(d.timeZone)) $('timeZone').value = d.timeZone;
+    $('timeZone').value=detectedZone;
     if (formats.some(f => f.id === d.format)) selectedFormat = d.format;
     if (/^[a-f0-9-]{36}$/i.test(d.tournamentId)) tournamentId = d.tournamentId;
     for (const id of Array.isArray(d.participants) ? d.participants : []) if (typeof id === 'string') participants.add(id);
@@ -78,7 +77,7 @@ function syncPoster() {
   $('arbitrationWarning').hidden = !noJudge(); $('prizeHint').hidden = form.elements.prizeExpected.value !== 'yes';
   const withPrize=form.elements.prizeExpected.value==='yes';$('creationPrizeSection').hidden=!withPrize;
   $('creationPrizeTitleLabel').textContent=form.elements.prizeType.value==='MONEY'?'Importe y moneda (por ejemplo, 50.000 ARS)':'Nombre del premio';
-  for(const id of ['creationPrizeType','creationPrizeTitle','creationPrizeHolder','creationPrizeFunder'])$(id).required=withPrize;
+  for(const id of ['creationPrizeTitle','creationPrizeHolder'])$(id).required=withPrize;
 }
 function syncArbitration() {
   if (noJudge()) judges.clear();
@@ -152,7 +151,7 @@ function renderPeople() {
   }
   for (const [role, target, chosen] of [['participant', 'participantsList', participants], ['judge', 'judgesList', judges]]) {
     const list = $(target); list.replaceChildren();
-    for (const profile of filtered.filter(p => role !== 'judge' || p.judgeEnabled)) {
+    for (const profile of filtered) {
       const label = document.createElement('label'); label.className = 'person-choice';
       const check = document.createElement('input'); check.type = 'checkbox'; check.checked = chosen.has(profile.id);
       check.disabled = pendingRequest !== null || (!check.checked && chosen.size >= (role === 'participant' ? capacity() : 16)) || profiles.some(other => other.id !== profile.id && chosen.has(other.id) && owner(other) === owner(profile));
@@ -286,14 +285,17 @@ form.addEventListener('submit', async event => {
   try { startsAt = localToUtc($('startsLocal').value, $('timeZone').value); if (Date.parse(startsAt) <= Date.now()) throw new Error('Elegí una fecha y hora futuras.'); }
   catch (e) { return show(e.message, true); }
   }
-  if(!pendingRequest && form.elements.prizeExpected.value==='yes'){for(const id of ['creationPrizeType','creationPrizeTitle','creationPrizeHolder','creationPrizeFunder'])if(!$(id).reportValidity())return;}
+  if(!pendingRequest && form.elements.prizeExpected.value==='yes'){for(const id of ['creationPrizeTitle','creationPrizeHolder'])if(!$(id).reportValidity())return;}
   const activeEpoch = epoch, activeSub = currentSub, activeDraftKey = draftKey();
   saving = true; fields.disabled = true; show(coverBlob && !coverPath ? 'Subiendo la portada…' : 'Preparando publicación…');
   try {
     if (!pendingRequest) {
       if (coverBlob && !coverPath) coverPath = await withDeadline(uploadTournamentCover(tournamentId, coverBlob), 'La subida tardó demasiado. Reintentá; no se inició ningún cobro.', 60000);
       if (activeEpoch !== epoch) return;
-      pendingRequest = { tournamentId, name: form.elements.name.value.trim(), activity: form.elements.activity.value.trim(), overview: form.elements.overview.value.trim(),
+      let prizeImagePath=null;
+      const prizeFile=$('creationPrizeImage').files?.[0];
+      if(prizeFile && form.elements.prizeExpected.value==='yes'){const blob=await prepareCover(prizeFile);prizeImagePath=await uploadTournamentCover(tournamentId,blob);}
+      pendingRequest = { prizeImagePath,tournamentId, name: form.elements.name.value.trim(), activity: form.elements.activity.value.trim(), overview: form.elements.overview.value.trim(),
         description: form.elements.description.value.trim(), conflicts: form.elements.conflicts.value.trim(), format: selectedFormat,
         participantIds: [...participants], judgeIds: [...judges], participantLimit: capacity(), arbitrationMode: form.elements.arbitrationMode.value,
         startsAt, timeZone: $('timeZone').value, acceptOrganizerDecision: noJudge() && $('organizerConsent').checked,

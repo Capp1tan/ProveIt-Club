@@ -1,3 +1,6 @@
+import {usesCompetition,competitionStart} from '../shared/competition.ts';
+import {attendancePanel,drawAudit,animateDraw} from './tournament-competition.js';
+import {tournamentIsLive} from '../shared/tournament-room.ts';
 import {roomDeadline,roomIsClosed,validatePodium,allEntriesPaid} from '../shared/tournament-room.ts';
 import { createRealLobby } from './tournament-real-lobby.js';
 import {judgePanel} from './judge-ui.js';
@@ -99,9 +102,10 @@ function showClosedRoom(t){
 function updateClock() {
   if(currentTournament && roomIsClosed(currentTournament,roomNow())){showClosedRoom(currentTournament);return;}
   realLobby?.clock();
-  if(currentTournament && !currentTournament.winnerProfileId && !detail.querySelector('.tournament-decision') && Date.now()>=Date.parse(currentTournament.startsAt)){const decision=resultPanel(currentTournament);if(decision)detail.append(decision);}
+  if(currentTournament){const action=detail.querySelector('[data-attendance-action]');if(action && !action.closest('[data-competition-busy]'))action.disabled=tournamentIsLive(currentTournament,roomNow()) || (action.dataset.ready!=='true' && roomNow()<Date.parse(action.dataset.scheduledAt));if(tournamentIsLive(currentTournament,roomNow()))detail.querySelectorAll('.competition-actions button,.competition-actions input,.competition-actions select').forEach(n=>n.disabled=true);}
+  if(currentTournament && !currentTournament.winnerProfileId && !detail.querySelector('.tournament-decision') && tournamentIsLive(currentTournament,roomNow())){const decision=resultPanel(currentTournament);if(decision)detail.append(decision);}
   const button=document.getElementById('recordDuelWinner');
-  if(button && !button.dataset.saving) button.disabled=Date.now()<Date.parse(currentTournament.startsAt);
+  if(button && !button.dataset.saving) button.disabled=!tournamentIsLive(currentTournament,roomNow());
 }
 function resultPanel(t) {
   const section=element('section','','tournament-panel');
@@ -114,7 +118,7 @@ function resultPanel(t) {
   const noJudge=t.arbitrationMode==='ORGANIZER';
   const isJudge=(t.judgeIds || []).some(id=>{const owner=profiles.get(id)?.owner;return owner && (owner===currentUser?.username || owner===currentUser?.userId || owner.startsWith(currentUser?.userId+'::'));});
   const canDecide=noJudge ? currentUser?.userId===t.createdBySub : isJudge;
-  if(!allEntriesPaid(t) || !canDecide || !t.startsAt || t.status!=='READY' || !t.draw || Date.now()<Date.parse(t.startsAt))return null;
+  if(!allEntriesPaid(t) || !canDecide || !t.draw || !tournamentIsLive(t,roomNow()))return null;
   const decision=element('details','','tournament-panel tournament-decision');decision.append(element('summary','Registrar decisión'));
   const form=element('form','','duel-result-form'),label=element('label','Quién ganó');
   const select=element('select');select.required=true;select.id='duelWinner';label.htmlFor=select.id;
@@ -155,7 +159,7 @@ function renderTournament(t) {
    if(!coverRequests.has(t.coverPath) || coverRequests.get(t.coverPath).expires<Date.now())coverRequests.set(t.coverPath,{expires:Date.now()+90000,promise:tournamentCoverUrl(t.id).catch(()=>{coverRequests.delete(t.coverPath);return '';})});
    void coverRequests.get(t.coverPath).promise.then(url=>{if(!url || !hero.isConnected)return;const image=document.createElement('img');image.alt='Portada de '+t.name;image.src=url;hero.prepend(image);});
   }
-  detail.append(realLobby.render(t));updateLobbyConnection();
+  detail.append(realLobby.render(t));const attendance=attendancePanel(t,{sub:currentUser?.userId,profiles,onChanged:()=>refreshTournament(true),now:roomNow()});if(attendance)detail.append(attendance);updateLobbyConnection();
   if(t.paymentMode==='TEST')detail.append(element('p','TORNEO DE PRUEBA · no corresponde a un cobro real','tournament-notice'));
   if(t.creationPaymentStatus==='REVERSED')detail.append(element('p','El pago de creación fue revertido. Contactá al administrador.','tournament-notice'));
   const canEditPrize=t.arbitrationMode==='ORGANIZER' ? currentUser?.userId===t.createdBySub : (t.judgeIds || []).some((id,index)=>Boolean(profiles.get(id)?.owner && (profiles.get(id).owner===currentUser?.username || profiles.get(id).owner===currentUser?.userId || profiles.get(id).owner.startsWith(currentUser?.userId+'::'))) && (!t.rosterStatuses || t.rosterStatuses[t.participantIds.length+index]==='ACCEPTED'));
@@ -164,8 +168,8 @@ function renderTournament(t) {
   const info=element('details','','tournament-panel');info.append(element('summary','Reglas, formato y condiciones'),element('h2',format?.name || t.format));
   if(format && !t.draw){const image=element('div','','format-preview');image.innerHTML=formatImage(format.id);image.append(element('p',format.description));info.append(image);}
   const rules=element('p',t.description || 'El organizador todavía no agregó reglas.');rules.style.whiteSpace='pre-wrap';info.append(rules);if(t.overview)info.append(element('p',t.overview));if(t.coverPath)info.append(hero);detail.append(info);
-  if(t.draw && (t.status==='READY' || t.status==='COMPLETED')) detail.append(drawBoard(t));
-  else if(t.rosterStatuses) detail.append(element('p',status.includes('REJECTED')?'Una persona rechazó. El torneo no se sortea: por ahora es necesario crear otro con los integrantes que acepten.':'Esperando que todos los participantes y responsables confirmen. Los cruces se sortearán automáticamente después de la última aceptación.','tournament-notice'));
+  if(t.draw && (usesCompetition(t) || t.status==='READY' || t.status==='COMPLETED')){const board=drawBoard(t);detail.append(board);const audit=drawAudit(t);if(audit)detail.append(audit);animateDraw(t,board);}
+  else if(t.rosterStatuses) detail.append(element('p',status.includes('REJECTED')?'Una persona rechazó. El torneo no se sortea: por ahora es necesario crear otro con los integrantes que acepten.':'Esperando que todos los participantes y responsables confirmen. Después de aceptar y completar los pagos, cada jugador confirma su asistencia para realizar el sorteo.','tournament-notice'));
   else detail.append(element('p','Este torneo se creó antes del sistema de invitaciones; conserva sus integrantes históricos. El sorteo automático se aplica a los nuevos torneos.','tournament-notice'));
   const outcome=resultPanel(t);if(outcome)detail.append(outcome);
   if(t.judgeIds?.length || currentUser?.userId===t.createdBySub){
@@ -189,7 +193,7 @@ async function refreshTournament(force=false) {
     let t=await getClubTournament(id);if(!t){closeTournamentChat();profilePreview?.lock();drawCleanup?.();detail.replaceChildren();currentTournament=null;throw new Error('Este torneo fue eliminado o ya no está disponible.');}
     if(Number.isFinite(t.serverNow))serverOffset=t.serverNow-Date.now();
     if(t.roomClosed || roomIsClosed(t,roomNow())){showClosedRoom(t);return;}
-    if (!t.draw && t.rosterStatuses?.length && t.rosterStatuses.every(state=>state==='ACCEPTED') && (await getCurrentUser()).userId===t.createdBySub) t=await ensureClubTournamentDraw(id) || t;
+    if (!usesCompetition(t) && !t.draw && t.rosterStatuses?.length && t.rosterStatuses.every(state=>state==='ACCEPTED') && (await getCurrentUser()).userId===t.createdBySub) t=await ensureClubTournamentDraw(id) || t;
     const version=t.updatedAt+String(t.draw);
     if((force || version!==lastVersion) && (t.winnerProfileId || (!detail.querySelector('[data-prize-editing="true"]') && !detail.querySelector('.community-form:focus-within,.duel-result-form:focus-within')))){renderTournament(t);lastVersion=version;}
     notice.hidden=true;

@@ -12,7 +12,7 @@ const formats = new Set(['DUEL', 'ROUND_ROBIN', 'SINGLE_ELIMINATION', 'DOUBLE_EL
 type Arguments = {
   tournamentId: string; name: string; activity: string; format: string;
   description?: string | null; conflicts?:string; participantIds: string[]; judgeIds: string[];
-  overview?:string;coverPath?:string;participantLimit?:number;prizeExpected?:boolean;
+  overview?:string;coverPath?:string;prizeImagePath?:string;participantLimit?:number;prizeExpected?:boolean;
   prizeType?:string;prizeTitle?:string;prizeDescription?:string;prizeHolder?:string;prizeFunder?:string;
   treasurerId?: string | null;
   arbitrationMode: string; startsAt: string; timeZone: string; acceptOrganizerDecision?: boolean;
@@ -48,7 +48,7 @@ export const handler = async (event: { arguments: Arguments; identity?: { sub?: 
   const activity = text(args.activity, 2, 80, 'Actividad');
   const description = text(args.description ?? '',10,1000,'Reglas');
   const overview=text(args.overview ?? '',0,500,'Descripción');
-  const conflicts=text(args.conflicts ?? '',0,500,'Conflictos de interés');
+  const conflicts='';
   if (!formats.has(args.format)) throw new Error('Elegí un formato válido.');
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(args.tournamentId)) {
     throw new Error('Identificador de torneo inválido.');
@@ -66,9 +66,10 @@ export const handler = async (event: { arguments: Arguments; identity?: { sub?: 
   const prizeType=args.prizeType || 'OTHER';
   if(!['MONEY','SURPRISE','FOOD','TECH','CLOTHING','EXPERIENCE','OTHER'].includes(prizeType))throw new Error('Elegí un tipo de premio válido.');
   const prizeTitle=text(args.prizeTitle ?? '',0,120,'Premio'),prizeDescription=text(args.prizeDescription ?? '',0,1200,'Detalle del premio');
-  const prizeHolder=text(args.prizeHolder ?? '',0,120,'Responsable del premio'),prizeFunder=text(args.prizeFunder ?? '',0,120,'Aportante');
-  if(!args.prizeExpected && (prizeTitle || prizeDescription || prizeHolder || prizeFunder))throw new Error('El torneo está marcado sin premio. Revisá esa elección.');
-  if(prizeTitle && (!prizeHolder || !prizeFunder))throw new Error('Indicá quién entrega y quién financia el premio.');
+  const prizeHolder=text(args.prizeHolder ?? '',0,120,'Responsable del premio'),prizeFunder='';
+  const prizeImagePath=await validateCover(args.prizeImagePath,sub,args.tournamentId);
+  if(!args.prizeExpected && (prizeTitle || prizeDescription || prizeHolder || prizeFunder || prizeImagePath))throw new Error('El torneo está marcado sin premio. Revisá esa elección.');
+  if(prizeTitle && (!prizeHolder))throw new Error('Indicá quién entrega el premio.');
   if(!prizeTitle && (prizeDescription || prizeHolder || prizeFunder))throw new Error('Agregá el nombre o importe del premio.');
 
   if (args.format === 'DUEL' && participantIds.length !== 2) throw new Error('El Duelo 1v1 requiere exactamente dos participantes.');
@@ -89,7 +90,7 @@ export const handler = async (event: { arguments: Arguments; identity?: { sub?: 
   }));
   const owners = profiles.map(profile => profile.owner.split('::')[0]);
   if(profiles.some((p,i)=>i<participantIds.length && profiles.slice(0,i).some(q=>q.owner.split('::')[0]===p.owner.split('::')[0])) || profiles.some((p,i)=>i>=participantIds.length && profiles.slice(participantIds.length,i).some(q=>q.owner.split('::')[0]===p.owner.split('::')[0])))throw new Error('No se puede repetir una cuenta dentro del mismo rol.');
-  if(profiles.slice(participantIds.length).some(p=>!p.judgeEnabled))throw new Error('Un juez seleccionado no habilitó el rol en su perfil.');
+
   const hasDual=judgeIds.some(id=>participantIds.includes(id));
   const declaration=[hasDual?'Un juez también participa en el torneo.':'',conflicts].filter(Boolean).join(' ');
   for (const accountSub of new Set([sub, ...owners])) {
@@ -100,8 +101,8 @@ export const handler = async (event: { arguments: Arguments; identity?: { sub?: 
   const coverPath=await validateCover(args.coverPath,sub,args.tournamentId);
   const now = new Date().toISOString();
   const item = {
-    id: args.tournamentId,entryFeeCents:pricing.participantAmountCents,entryPaymentStatuses:participantIds.map(()=> 'PENDING'), termsVersion:1,conflicts:declaration,clubRewards:false,name, activity, description, format: args.format,
-    overview,coverPath,participantLimit,prizeExpected:args.prizeExpected ?? false,
+    id: args.tournamentId,competitionVersion:4,competitionState:JSON.stringify({attendance:{},revision:0,changes:[],affected:[],approvals:[],startAt:null}),entryFeeCents:pricing.participantAmountCents,entryPaymentStatuses:participantIds.map(()=> 'PENDING'), termsVersion:1,conflicts:declaration,clubRewards:false,name, activity, description, format: args.format,
+    overview,coverPath,prizeImagePath,participantLimit,prizeExpected:args.prizeExpected ?? false,
     prizeType,prizeTitle,prizeDescription,prizeHolder,prizeFunder,prizeFundingStatus:'PENDING',prizeRevision:0,
     participantIds, participantNames: participantIds.map(id => names.get(id)),
     judgeIds, judgeNames: judgeIds.map(id => names.get(id)),

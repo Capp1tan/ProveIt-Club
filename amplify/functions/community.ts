@@ -1,3 +1,4 @@
+import {resetCompetition,competitionHasBegun} from '../../shared/competition';
 // Lecturas de perfil filtradas en servidor y reputación basada en eventos reales.
 import {DynamoDBDocumentClient,GetCommand,ScanCommand,QueryCommand,PutCommand,UpdateCommand,TransactWriteCommand} from '@aws-sdk/lib-dynamodb';
 import {S3Client,GetObjectCommand,PutObjectCommand} from '@aws-sdk/client-s3';
@@ -10,7 +11,7 @@ const s3=new S3Client({requestChecksumCalculation:'WHEN_REQUIRED'});
 const env=(k:string)=>process.env[k]!;
 export async function community(db:DynamoDBDocumentClient,sub:string,a:any){
  await assertActiveAccount(sub);
- if(['COMMUNITY_COVER_UPLOAD','COMMUNITY_COVER_URL'].includes(a.action))return coverAction(db,sub,a);
+ if(['COMMUNITY_COVER_UPLOAD','COMMUNITY_COVER_URL','COMMUNITY_PRIZE_IMAGE_URL'].includes(a.action))return coverAction(db,sub,a);
  const get=async(t:string,id:string)=>(await db.send(new GetCommand({TableName:env(t),Key:{id},ConsistentRead:true}))).Item;
  if(a.action==='COMMUNITY_ROOM'){
   if(typeof a.tournamentId!=='string' || !/^[a-f0-9-]{36}$/i.test(a.tournamentId))throw new Error('Torneo inválido.');
@@ -40,7 +41,7 @@ export async function community(db:DynamoDBDocumentClient,sub:string,a:any){
  const clean=async(p:any,reputation=true)=>{
   if(!p || await get('CLAIM_TABLE_NAME','deleted-account:'+owner(p)))return null;
   const canView=await visible(p);
-  return {id:p.id,nickname:p.nickname,owner:owner(p)+'::'+owner(p),accountComplete:Boolean(p.accountComplete),visibility:p.visibility==='PUBLIC'?'PUBLIC':'PRIVATE',canView,avatarPath:p.avatarPath || '',judgeEnabled:Boolean(p.judgeEnabled),...(canView?{bio:p.bio || '',socialLinks:p.socialLinks || '{}'}:{}),...(reputation?{reputation:await summary(p.id)}:{})};
+  return {id:p.id,nickname:p.nickname,owner:owner(p)+'::'+owner(p),accountComplete:Boolean(p.accountComplete),visibility:p.visibility==='PUBLIC'?'PUBLIC':'PRIVATE',canView,avatarPath:p.avatarPath || '',judgeEnabled:true,...(canView?{bio:p.bio || '',socialLinks:p.socialLinks || '{}'}:{}),...(reputation?{reputation:await summary(p.id)}:{})};
  };
  if(a.action==='COMMUNITY_BADGES'){
   const badges:any[]=[];let key;
@@ -122,7 +123,8 @@ export async function community(db:DynamoDBDocumentClient,sub:string,a:any){
  }
  if(a.action==='COMMUNITY_TERMS'){
   if(t.createdBySub!==sub || t.status==='COMPLETED' || t.winnerProfileId)throw new Error('Sólo el organizador puede actualizar las condiciones antes del resultado.');
-  const description=String(a.description || '').trim(),conflicts=String(a.conflicts || '').trim();
+  if(competitionHasBegun(t))throw new Error('El torneo ya comenzó; las condiciones están bloqueadas.');
+  const description=String(a.description || '').trim(),conflicts=t.judgeIds.some((id:string)=>t.participantIds.includes(id))?'Un juez también participa.':'';
   if(description.length<10 || description.length>1000 || conflicts.length>500)throw new Error('Reglas entre 10 y 1000 caracteres; conflictos hasta 500.');
   if(t.clubRewards && (conflicts || t.judgeIds.some((id:string)=>t.participantIds.includes(id))))throw new Error('Las recompensas del club requieren jueces independientes.');
   const version=(t.termsVersion || 0)+1,now=new Date().toISOString(),invites:any[]=[];
@@ -130,7 +132,7 @@ export async function community(db:DynamoDBDocumentClient,sub:string,a:any){
    const id=[...t.participantIds,...t.judgeIds][i],p=await get('PROFILE_TABLE_NAME',id);if(!p)throw new Error('Una cuenta ya no está disponible.');
    invites.push({Put:{TableName:env('INVITATION_TABLE_NAME'),Item:{id:t.id+':'+i,tournamentId:t.id,tournamentName:t.name,profileId:id,recipientSub:owner(p),role:i<t.participantIds.length?'PARTICIPANT':'JUDGE',rosterIndex:i,status:'PENDING',entryFeeCents:i<t.participantIds.length?(t.entryFeeCents || 0):0,invitedBySub:sub,arbitrationMode:t.arbitrationMode,consentVersion:t.consentVersion || null,termsVersion:version,startsAt:t.startsAt,timeZone:t.timeZone,rulesSnapshot:description+'\nPremio: '+(t.prizeTitle || 'Sin anunciar')+' · Responsable: '+(t.prizeHolder || 'Sin declarar')+' · Financia: '+(t.prizeFunder || 'Sin declarar')+' · '+(t.prizeFundingStatus==='CONFIRMED'?'Confirmado por el responsable':'Pendiente'),conflictsSnapshot:[t.judgeIds.some((id:string)=>t.participantIds.includes(id))?'Un juez también participa.':'',conflicts].filter(Boolean).join(' '),createdAt:now,updatedAt:now,__typename:'TournamentInvitation'}}});
   }
-  await db.send(new TransactWriteCommand({TransactItems:[...invites,{Update:{TableName:env('TOURNAMENT_TABLE_NAME'),Key:{id:t.id},UpdateExpression:'SET description=:d,conflicts=:c,termsVersion=:v,rosterStatuses=:r,#s=:s,membershipRevision=:rev,updatedAt=:now REMOVE #draw',ConditionExpression:'attribute_not_exists(deletedAt) AND attribute_not_exists(winnerProfileId) AND (attribute_not_exists(termsVersion) OR termsVersion=:old)',ExpressionAttributeNames:{'#s':'status','#draw':'draw'},ExpressionAttributeValues:{':d':description,':c':conflicts,':v':version,':old':t.termsVersion || 0,':r':Array(invites.length).fill('PENDING'),':s':'AWAITING_RESPONSES',':rev':(t.membershipRevision || 0)+1,':now':now}}}]}));return {ok:true};
+  await db.send(new TransactWriteCommand({TransactItems:[...invites,{Update:{TableName:env('TOURNAMENT_TABLE_NAME'),Key:{id:t.id},UpdateExpression:'SET description=:d,conflicts=:c,termsVersion=:v,rosterStatuses=:r,#s=:s,membershipRevision=:rev,updatedAt=:now,competitionState=:cs REMOVE #draw',ConditionExpression:'attribute_not_exists(deletedAt) AND attribute_not_exists(winnerProfileId) AND (attribute_not_exists(termsVersion) OR termsVersion=:old) AND (attribute_not_exists(membershipRevision) OR membershipRevision=:oldMr)',ExpressionAttributeNames:{'#s':'status','#draw':'draw'},ExpressionAttributeValues:{':cs':resetCompetition(t),':d':description,':c':conflicts,':v':version,':oldMr':t.membershipRevision || 0,':old':t.termsVersion || 0,':r':Array(invites.length).fill('PENDING'),':s':'AWAITING_RESPONSES',':rev':(t.membershipRevision || 0)+1,':now':now}}}]}));return {ok:true};
  }
  throw new Error('Operación de comunidad inválida.');
 }

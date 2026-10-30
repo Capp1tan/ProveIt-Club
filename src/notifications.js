@@ -17,7 +17,7 @@ if (nav) {
   const panel = document.createElement('section'); panel.id = 'clubNotificationsPanel'; panel.className = 'notification-panel';
   panel.hidden = true; panel.setAttribute('aria-label','Invitaciones a torneos');
   const title = document.createElement('h2'); title.textContent = 'Tus invitaciones';
-  const description = document.createElement('p'); description.className = 'notification-help'; description.textContent = 'Aceptá o rechazá el rol propuesto. Se actualiza mientras estás en el sitio.';
+  const description = document.createElement('p'); description.className = 'notification-help'; description.textContent = 'Entrá a la sala para responder.';
   const message = document.createElement('p'); message.className = 'notification-message'; message.setAttribute('role','status'); message.setAttribute('aria-live','polite');
   const list = document.createElement('div'); list.className = 'notification-list';
   const refresh = document.createElement('button'); refresh.type = 'button'; refresh.textContent = 'Actualizar'; refresh.className = 'notification-refresh';
@@ -57,49 +57,14 @@ if (nav) {
     bell.setAttribute('aria-label', 'Notificaciones: ' + invitations.length + ' invitaciones pendientes');
     list.replaceChildren();
     if (!invitations.length) { const empty = document.createElement('p'); empty.textContent = 'No tenés invitaciones pendientes.'; list.append(empty); }
-    const roles = { PARTICIPANT:'participante', JUDGE:'juez y responsable del dinero', TREASURER:'tesorero' };
-    for (const invitation of invitations) {
-      const card = document.createElement('article'); card.className = 'notification-card';
-      const link = document.createElement('a'); link.href = '/torneo.html?id=' + encodeURIComponent(invitation.tournamentId); link.textContent = invitation.tournamentName;
-      const role = document.createElement('p'); role.textContent = 'Te invitaron como ' + (roles[invitation.role] || 'integrante') + '.';
-      const noJudge=invitation.arbitrationMode==='ORGANIZER';
-      const schedule=document.createElement('p'); schedule.className='notification-help'; schedule.textContent=scheduleLabel(invitation.startsAt,invitation.timeZone);
-      card.append(link,role,schedule);if(invitation.entryFeeCents>0){const price=document.createElement('p');price.className='notification-help';price.textContent='Inscripción: '+money(invitation.entryFeeCents)+' por participante. Tu lugar se confirma con el pago aprobado.';card.append(price);}
-      if(invitation.rulesSnapshot) { const rules=document.createElement('p'); rules.className='invitation-rules'; rules.textContent='Reglas: '+invitation.rulesSnapshot; card.append(rules); }
-      if(invitation.conflictsSnapshot){const conflicts=document.createElement('p');conflicts.className='arbitration-warning';conflicts.textContent='Conflictos de interés: '+invitation.conflictsSnapshot;card.append(conflicts);}
-      let agreement;
-      {
-        const warning=document.createElement('p'); warning.className='arbitration-warning'; warning.textContent='Sin juez · decide el organizador, incluso si participa.';
-        const label=document.createElement('label'); label.className='invitation-consent'; agreement=document.createElement('input'); agreement.type='checkbox'; agreement.checked=consentChecks.has(invitation.id);
-        const text=document.createElement('span'); text.textContent=(noJudge?noJudgeConsent+' ':'')+(invitation.role==='JUDGE'?'Acepto el cargo de juez, entiendo las reglas y los conflictos declarados, y coordinaré el premio según sus condiciones.':'Leí y acepto las reglas, los conflictos de interés declarados y las condiciones del premio.'); if(invitation.entryFeeCents>0)text.textContent+=' Acepto el costo de inscripción de '+money(invitation.entryFeeCents)+'.';label.append(agreement,text); if(noJudge)card.append(warning);card.append(label);
-      }
-      const actions = document.createElement('div'); actions.className = 'notification-actions';
-      for (const accept of [true,false]) {
-        const button = document.createElement('button'); button.type = 'button'; button.textContent = accept ? (invitation.entryFeeCents>0?'Inscribirme · '+money(invitation.entryFeeCents):'Aceptar') : 'Rechazar';
-        if(accept) {
-          button.disabled=!agreement.checked;
-          agreement.addEventListener('change',()=>{agreement.checked ? consentChecks.add(invitation.id) : consentChecks.delete(invitation.id);button.disabled=!agreement.checked;});
-        }
-        button.className = accept ? 'notification-accept' : 'notification-reject';
-        button.addEventListener('click',async () => {
-          if (answering) return;
-          answering = true; const activeGeneration = generation;
-          panel.querySelectorAll('.notification-actions button').forEach(control => { control.disabled = true; });
-          message.textContent = 'Guardando respuesta…';
-          try {
-            const response=await respondInvitation(invitation.id,accept,noJudge && agreement.checked,agreement.checked,invitation.termsVersion || 0);if(response.paymentRequired)return;
-            consentChecks.delete(invitation.id);
-            if (activeGeneration !== generation) return;
-            invitations = invitations.filter(item => item.id !== invitation.id); render();
-            message.textContent = accept ? 'Aceptaste la invitación.' : 'Rechazaste la invitación.';
-            window.dispatchEvent(new Event('proveit:invitation-updated'));
-          } catch (error) { if (activeGeneration === generation) { render(); message.textContent = error.message || 'No se pudo guardar. Volvé a intentar.'; } }
-          finally { answering = false; }
-        }); actions.append(button);
-      }
-      card.append(actions); list.append(card);
+    const roles={PARTICIPANT:'Te invitaron a competir',JUDGE:'Te invitaron como juez',TREASURER:'Nueva invitación'};
+    for(const invitation of invitations){
+      const card=document.createElement('a');card.className='notification-invitation';card.href='/torneo.html?id='+encodeURIComponent(invitation.tournamentId);
+      const icon=document.createElement('span');icon.className='notification-mini-icon';icon.textContent=invitation.role==='JUDGE'?'⚖':'↗';icon.setAttribute('aria-hidden','true');
+      const copy=document.createElement('span'),name=document.createElement('strong'),role=document.createElement('small');name.textContent=invitation.tournamentName;role.textContent=roles[invitation.role] || 'Nueva invitación';copy.append(name,role);card.append(icon,copy);list.append(card);
     }
   }
+
   function rememberNew(items) {
     const key = 'proveit:seen-invitations:' + userId;
     let seen = [];

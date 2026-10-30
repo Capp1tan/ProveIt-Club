@@ -4,9 +4,9 @@ type Player = { id: string; name: string };
 type Slot = Player | { source: string; outcome: 'winner' | 'loser' } | null;
 type Match = { id: string; left?: Slot; right?: Slot; entrants?: Player[] };
 type Round = { name: string; group: string; matches: Match[] };
-export function createDraw(tournament: any) {
-  const players: Player[] = tournament.participantIds.map((id: string,i: number) => ({ id, name: tournament.participantNames[i] }));
-  for (let i = players.length - 1; i > 0; i--) { const j = randomInt(i + 1); [players[i],players[j]] = [players[j],players[i]]; }
+export function createDraw(tournament: any, fixedOrder?: Player[]) {
+  const players: Player[] = fixedOrder || tournament.participantIds.map((id: string,i: number) => ({ id, name: tournament.participantNames[i] }));
+  for (let i = fixedOrder ? 0 : players.length - 1; i > 0; i--) { const j = randomInt(i + 1); [players[i],players[j]] = [players[j],players[i]]; }
   const rounds: Round[] = [];
   const pair = (slots: Slot[],prefix: string) => {
     const matches: Match[] = [];

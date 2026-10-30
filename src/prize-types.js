@@ -10,6 +10,6 @@ export function prizeIcon(type) {
   };
   const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
   for (const [key,value] of Object.entries({viewBox:'0 0 24 24',fill:'none',stroke:'currentColor','stroke-width':'1.7','stroke-linecap':'round','stroke-linejoin':'round','aria-hidden':'true'})) svg.setAttribute(key,value);
-  for (const d of paths[type] || paths.SURPRISE) { const path = document.createElementNS(svg.namespaceURI,'path'); path.setAttribute('d',d); svg.append(path); }
+  for (const d of ['M8 3h8v6a4 4 0 0 1-8 0V3Z','M8 5H4v2a4 4 0 0 0 4 4m8-6h4v2a4 4 0 0 1-4 4M12 13v6m-4 2h8m-8-2h8']) { const path = document.createElementNS(svg.namespaceURI,'path'); path.setAttribute('d',d); svg.append(path); }
   return svg;
 }

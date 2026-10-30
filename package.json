@@ -1,6 +1,6 @@
 {
   "name": "proveit-club",
-  "version": "3.18.2",
+  "version": "4.0.0",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@10.20.0",
@@ -15,7 +15,8 @@
     "test:cover": "node scripts/verify-cover-frame.mjs",
     "preview": "vite preview",
     "sandbox": "ampx sandbox",
-    "deploy:backend": "ampx pipeline-deploy"
+    "deploy:backend": "ampx pipeline-deploy",
+    "test:competition": "node scripts/verify-competition.cjs"
   },
   "dependencies": {
     "aws-amplify": "6.22.2",

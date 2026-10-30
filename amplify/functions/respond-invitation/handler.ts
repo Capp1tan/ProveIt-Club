@@ -1,3 +1,4 @@
+import {competitionAction} from './competition';
 // Respuesta y sorteo atómicos, con control de revisión para confirmaciones simultáneas.
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand, TransactWriteCommand } from '@aws-sdk/lib-dynamodb';
@@ -8,10 +9,11 @@ import {allEntriesPaid} from '../../../shared/tournament-room';
 import {entryAmount,entryCheckoutId,assertEntryPaid} from '../billing/entry-policy';
 import { createDraw } from './draw';
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
-export const respond = async (event: { identity?: { sub?: string }; arguments: { prizeType?: string; prizeTitle?: string; prizeDescription?: string; prizeLinks?: string; prizeAttachments?: string; prizeRevision?: number; uploadContentType?: string; uploadSize?: number; invitationId?: string; accept?: boolean; tournamentId?: string; winnerProfileId?: string;runnerUpProfileId?:string;thirdPlaceProfileId?:string;resultReason?:string;resultKind?:string;acceptTerms?:boolean;termsVersion?:number;prizeHolder?:string;prizeFunder?:string;prizeFundingStatus?:string; acceptOrganizerDecision?: boolean } }) => {
+export const respond = async (event: { identity?: { sub?: string }; arguments: { action?:string;ready?:boolean;fromProfileId?:string;toProfileId?:string;reason?:string;drawRevision?:number;prizeType?: string; prizeTitle?: string; prizeDescription?: string; prizeLinks?: string; prizeAttachments?: string; prizeRevision?: number; uploadContentType?: string; uploadSize?: number; invitationId?: string; accept?: boolean; tournamentId?: string; winnerProfileId?: string;runnerUpProfileId?:string;thirdPlaceProfileId?:string;resultReason?:string;resultKind?:string;acceptTerms?:boolean;termsVersion?:number;prizeHolder?:string;prizeFunder?:string;prizeFundingStatus?:string; acceptOrganizerDecision?: boolean } }) => {
   const sub=event.identity?.sub;
   if(!sub)throw new Error('Iniciá sesión.');
   await assertActiveAccount(sub);
+  if(event.arguments.action)return competitionAction(db,sub,event.arguments);
   if ('prizeTitle' in event.arguments || 'uploadContentType' in event.arguments) return prizeAction(db,sub,event.arguments);
   if (event.arguments.winnerProfileId) {
     if (!sub || !event.arguments.tournamentId || typeof event.arguments.winnerProfileId !== 'string' || event.arguments.winnerProfileId.length>128) throw new Error('Resultado inválido.');
@@ -27,6 +29,7 @@ export const respond = async (event: { identity?: { sub?: string }; arguments: {
     assertActiveTournament(t);
     if(t.creationPaymentStatus==='REVERSED')throw new Error('El pago de creación fue revertido. Contactá al administrador.');
     if(!allEntriesPaid(t))throw new Error('Faltan pagos de inscripción confirmados.');
+    if(t.competitionVersion===4){if(t.draw)return t;throw new Error('El sorteo se realizará al confirmar la asistencia.');}
     if(t.draw) return t;
     if(!Array.isArray(t.rosterStatuses) || !t.rosterStatuses.length || !t.rosterStatuses.every((s:string)=>s==='ACCEPTED')) throw new Error('Faltan confirmaciones.');
     const draw=createDraw(t),now=new Date().toISOString();
@@ -75,10 +78,10 @@ export const respond = async (event: { identity?: { sub?: string }; arguments: {
     const statuses=[...tournament.rosterStatuses]; statuses[index]=status;
     const nextPayments=[...(tournament.entryPaymentStatuses || tournament.participantIds.map(()=> 'PENDING'))];if(needsPayment)nextPayments[index]='APPROVED';
     const allAccepted=statuses.every(value=>value==='ACCEPTED') && allEntriesPaid({...tournament,entryPaymentStatuses:nextPayments});
-    const draw=tournament.draw || (allAccepted?createDraw(tournament):null);
+    const draw=tournament.draw || (allAccepted && tournament.competitionVersion!==4?createDraw(tournament):null);
     const revision=tournament.membershipRevision || 0,now=new Date().toISOString();
     const names:Record<string,string>={'#status':'status'};
-    const values:Record<string,any>={':statuses':statuses,':status':allAccepted?'READY':statuses.includes('REJECTED')?'NEEDS_REPLACEMENT':'AWAITING_RESPONSES',':now':now,':next':revision+1,':previous':revision};
+    const values:Record<string,any>={':statuses':statuses,':status':allAccepted?(tournament.competitionVersion===4?'CHECK_IN':'READY'):statuses.includes('REJECTED')?'NEEDS_REPLACEMENT':'AWAITING_RESPONSES',':now':now,':next':revision+1,':previous':revision};
     let update='SET rosterStatuses = :statuses, #status = :status, updatedAt = :now, membershipRevision = :next';
     if(needsPayment){const payments=[...(tournament.entryPaymentStatuses || tournament.participantIds.map(()=> 'PENDING'))];payments[index]='APPROVED';update+=', entryPaymentStatuses=:entryPayments';values[':entryPayments']=payments;}
     if(draw) { update+=', #draw = :draw'; names['#draw']='draw'; values[':draw']=draw; }
@@ -104,6 +107,6 @@ export const respond = async (event: { identity?: { sub?: string }; arguments: {
 // Conserva el contrato anterior y publica sólo una señal mínima desde el nuevo flujo.
 export const handler=async(event:Parameters<typeof respond>[0] & {fieldName?:string;info?:{fieldName?:string}})=>{
  const result=await respond(event);
- if((event.fieldName || event.info?.fieldName)==='answerTournamentInvitation')return {id:result.id,tournamentId:result.tournamentId,status:result.status,changedAt:result.updatedAt};
+ if((event.fieldName || event.info?.fieldName)==='answerTournamentInvitation' || (event.fieldName || event.info?.fieldName)==='tournamentCompetition')return {id:result.id,tournamentId:result.tournamentId || event.arguments.tournamentId,status:result.status,changedAt:result.updatedAt};
  return result;
 };

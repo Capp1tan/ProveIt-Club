@@ -1,3 +1,4 @@
+import {resetCompetition,competitionHasBegun} from '../../../shared/competition';
 // Premio provisional: permisos comprobados en servidor y archivos privados en S3.
 import { randomUUID } from 'node:crypto';
 import { GetCommand, UpdateCommand, TransactWriteCommand, DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
@@ -13,7 +14,7 @@ export async function prizeAction(db:DynamoDBDocumentClient,sub:string,args:any)
   const t=(await db.send(new GetCommand({TableName,Key,ConsistentRead:true}))).Item;
   assertActiveTournament(t);
   if(t.creationPaymentStatus==='REVERSED')throw new Error('El pago del torneo fue revertido.');
-  if(t.winnerProfileId || t.status==='COMPLETED')throw new Error('El premio no se modifica después de registrar el ganador.');
+  if(t.winnerProfileId || t.status==='COMPLETED' || competitionHasBegun(t))throw new Error('El premio sólo se modifica antes de comenzar el torneo.');
   if(t.arbitrationMode==='ORGANIZER') {
     if(t.createdBySub!==sub)throw new Error('Sólo el organizador puede definir este premio.');
   } else {
@@ -47,7 +48,7 @@ export async function prizeAction(db:DynamoDBDocumentClient,sub:string,args:any)
   }));
   if(!title && (description || links.length || attachments.length))throw new Error('Dale un título al premio.');
   const holder=String(args.prizeHolder || '').trim(),funder=String(args.prizeFunder || '').trim(),funding=args.prizeFundingStatus;
-  if(title && (!holder || holder.length>120 || !funder || funder.length>120 || !['PENDING','CONFIRMED'].includes(funding)))throw new Error('Indicá quién posee y quién financia el premio, y si está confirmado.');
+  if(title && (!holder || holder.length>120 || funder.length>120 || !['PENDING','CONFIRMED'].includes(funding)))throw new Error('Indicá quién entrega el premio y si está confirmado.');
   const now=new Date().toISOString(),version=(t.termsVersion || 0)+1,invites:any[]=[];
   // Un cambio en el premio es material: todos vuelven a aceptar y el torneo se pausa.
   for(const [i,id] of [...t.participantIds,...t.judgeIds].entries()){
@@ -57,9 +58,9 @@ export async function prizeAction(db:DynamoDBDocumentClient,sub:string,args:any)
   }
   try {
     await db.send(new TransactWriteCommand({TransactItems:[...invites,{Update:{TableName,Key,
-      UpdateExpression:'SET prizeType=:type, prizeTitle=:title, prizeDescription=:description, prizeLinks=:links, prizeAttachments=:attachments, prizeRevision=:next, prizeUpdatedAt=:now, prizeUpdatedBySub=:sub, updatedAt=:now, prizeHolder=:holder, prizeFunder=:funder,prizeFundingStatus=:funding,termsVersion=:tv,rosterStatuses=:rs,#s=:waiting,membershipRevision=:mr',
+      UpdateExpression:'SET prizeType=:type, prizeTitle=:title, prizeDescription=:description, prizeLinks=:links, prizeAttachments=:attachments, prizeRevision=:next, prizeUpdatedAt=:now, prizeUpdatedBySub=:sub, updatedAt=:now, prizeHolder=:holder, prizeFunder=:funder,prizeFundingStatus=:funding,termsVersion=:tv,rosterStatuses=:rs,#s=:waiting,membershipRevision=:mr,competitionState=:cs,prizeImagePath=:empty REMOVE #draw',
       ConditionExpression:'attribute_exists(id) AND attribute_not_exists(deletedAt) AND attribute_not_exists(winnerProfileId) AND #s <> :completed AND (attribute_not_exists(creationPaymentStatus) OR creationPaymentStatus=:paid OR creationPaymentStatus=:exempt) AND (attribute_not_exists(prizeRevision) OR prizeRevision=:previous) AND (attribute_not_exists(membershipRevision) OR membershipRevision=:oldMr)',
-      ExpressionAttributeNames:{'#s':'status'},ExpressionAttributeValues:{':type':prizeType,':holder':holder,':funder':funder,':funding':funding || 'PENDING',':tv':version,':rs':Array(invites.length).fill('PENDING'),':waiting':'AWAITING_RESPONSES',':mr':(t.membershipRevision || 0)+1,':oldMr':t.membershipRevision || 0,':title':title,':description':description,':links':JSON.stringify(links),':attachments':JSON.stringify(attachments),':next':args.prizeRevision+1,':now':now,':sub':sub,':previous':args.prizeRevision,':completed':'COMPLETED',':paid':'APPROVED',':exempt':'EXEMPT'}}}]}));
+      ExpressionAttributeNames:{'#s':'status','#draw':'draw'},ExpressionAttributeValues:{':cs':resetCompetition(t),':empty':attachments.length?'':(t.prizeImagePath || ''),':type':prizeType,':holder':holder,':funder':funder,':funding':funding || 'PENDING',':tv':version,':rs':Array(invites.length).fill('PENDING'),':waiting':'AWAITING_RESPONSES',':mr':(t.membershipRevision || 0)+1,':oldMr':t.membershipRevision || 0,':title':title,':description':description,':links':JSON.stringify(links),':attachments':JSON.stringify(attachments),':next':args.prizeRevision+1,':now':now,':sub':sub,':previous':args.prizeRevision,':completed':'COMPLETED',':paid':'APPROVED',':exempt':'EXEMPT'}}}]}));
     return (await db.send(new GetCommand({TableName,Key,ConsistentRead:true}))).Item;
   }catch(error){if((error as Error).name==='TransactionCanceledException')throw new Error('El premio o el torneo cambió. Cancelá la edición y actualizá antes de guardar.');throw error;}
 }

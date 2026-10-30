@@ -1,3 +1,5 @@
+import './disclosure-motion.js';
+import {countrySelect} from './country-select.js';
 import {mountPhoneCountry} from './phone-country.js';
 // Acceso y estado de cuenta en la navegación.
 import { Hub } from 'aws-amplify/utils';
@@ -33,8 +35,8 @@ const email = form?.elements.email;
 let signupPhone,signupFields;
 if(form){
  signupFields=document.createElement('fieldset');signupFields.className='signup-details';signupFields.hidden=true;
- signupFields.innerHTML='<legend>Tu perfil en el club</legend><label>Nick único<input name="signupNickname" minlength="3" maxlength="24" autocomplete="nickname" placeholder="Entre 3 y 24 caracteres"></label><label>País<select id="phoneCountry"></select></label><label>Teléfono privado <span id="phoneRequirement"></span><div class="phone-number-row"><span id="phonePrefix"></span><input id="phoneNational" type="tel" maxlength="24" autocomplete="tel-national"></div></label><small id="phoneHelp"></small><small>El nick y el teléfono deben estar libres al completar el registro. El teléfono no se verifica por SMS todavía.</small>';
- form.querySelector('[data-password-label]').after(signupFields);signupPhone=mountPhoneCountry(signupFields);
+ signupFields.innerHTML='<legend>Tu perfil en el club</legend><label>Nick único<input name="signupNickname" minlength="3" maxlength="24" autocomplete="nickname" placeholder="Entre 3 y 24 caracteres"></label><label>País de tu cuenta<select name="signupCountry"></select></label><label>País del teléfono<select id="phoneCountry"></select></label><label>Teléfono privado <span id="phoneRequirement"></span><div class="phone-number-row"><span id="phonePrefix"></span><input id="phoneNational" type="tel" maxlength="24" autocomplete="tel-national"></div></label><small id="phoneHelp"></small><small>El nick y el teléfono deben estar libres al completar el registro. El teléfono no se verifica por SMS todavía.</small>';
+ form.querySelector('[data-password-label]').after(signupFields);signupPhone=mountPhoneCountry(signupFields);countrySelect(form.elements.signupCountry);
  const resend=document.createElement('button');resend.type='button';resend.className='auth-text-button';resend.textContent='Reenviar código de verificación';resend.dataset.authResend='';resend.hidden=true;form.append(resend);
  const back=document.createElement('button');back.type='button';back.className='auth-text-button';back.textContent='Volver a ingresar';back.dataset.authBack='';back.hidden=true;back.addEventListener('click',()=>setMode('signin'));form.append(back);
  resend.addEventListener('click',async()=>{resend.disabled=true;try{await resendSignUpCode({username:email.value.trim().toLowerCase()});showMessage('Si el registro está pendiente, te llegará un nuevo código por correo.');}catch(e){showMessage(e.message || 'No pudimos reenviar el código.',true);}finally{resend.disabled=false;}});
@@ -104,7 +106,8 @@ async function syncAccountControl() {
     if(current!==accountEpoch)return;
     if(!profile){
       try{const attrs=await fetchUserAttributes();
-       if(attrs.nickname && attrs.phone_number){profile=await saveProfile(null,{nickname:attrs.nickname,phoneNumber:attrs.phone_number,bio:'',avatarPath:'',visibility:'PRIVATE',socialLinks:'{}',judgeEnabled:false});window.dispatchEvent(new Event('proveit:profile-updated'));}
+       const country=(()=>{try{const v=JSON.parse(sessionStorage.getItem('proveit:signup-country') || '{}');return v.email===attrs.email?.toLowerCase()?v.country:'';}catch{return '';}})();
+       if(attrs.nickname && attrs.phone_number && country){profile=await saveProfile(null,{nickname:attrs.nickname,country,phoneNumber:attrs.phone_number,bio:'',avatarPath:'',visibility:'PRIVATE',socialLinks:'{}',judgeEnabled:false});window.dispatchEvent(new Event('proveit:profile-updated'));}
       }catch{/* Un nick ocupado se resuelve en el formulario inicial, no se inventa otro. */}
     }
     if(current!==accountEpoch)return;
@@ -162,7 +165,7 @@ function setStep(nextStep) {
   form.querySelector('[data-auth-back]').hidden=credentials;
   const registering=credentials && mode==='signup';
   signupFields.hidden=!registering;signupFields.disabled=!registering;
-  form.elements.signupNickname.required=registering;signupPhone.optional(!registering);
+  form.elements.signupNickname.required=registering;form.elements.signupCountry.required=registering;signupPhone.optional(!registering);
   const resend=form.querySelector('[data-auth-resend]');if(resend)resend.hidden=nextStep!=='confirm-signup';
   if(password)password.autocomplete=registering?'new-password':'current-password';
   field('password-label').hidden = !credentials;
@@ -220,6 +223,7 @@ form?.addEventListener('submit', async event => {
   submit.disabled = true;
   try {
     if (step === 'credentials' && mode === 'signup') {
+      try{sessionStorage.setItem('proveit:signup-country',JSON.stringify({email:emailValue,country:form.elements.signupCountry.value}));}catch{}
       const result = await signUp({ username: emailValue, password: passwordValue, options: { userAttributes: { email: emailValue, nickname:form.elements.signupNickname.value.trim(),phone_number:signupPhone.value() } } });
       if (result.nextStep.signUpStep === 'CONFIRM_SIGN_UP') {
         setStep('confirm-signup');

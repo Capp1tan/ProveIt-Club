@@ -20,7 +20,7 @@ export function badgeElements(sub) {
   const wrapper = document.createElement('span'); wrapper.className = 'club-badges';
   if (!sub) return wrapper;
   for (const badge of badges.filter(item => item.accountSub === sub || item.accountUsername === sub)) {
-    const text = badge.code.startsWith('CUSTOM_') ? badge.label : { CREATOR: '★ Creador', BETA_TESTER: '✦ Betatester', VERIFIED:'✓ Verificado' }[badge.code];
+    const text = badge.code.startsWith('CUSTOM_') ? badge.label : { CREATOR: '★ Fundador', BETA_TESTER: '✦ Betatester', VERIFIED:'✓ Verificado' }[badge.code];
     if (!text) continue;
     const node = document.createElement('span'); node.className = 'club-badge'; node.dataset.code = badge.code;
     if (badge.code === 'VERIFIED') {

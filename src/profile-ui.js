@@ -3,6 +3,7 @@ import {profileIdentity,profileProgress} from './profile-leagues.js';
 import {viewClubProfile} from './community-api.js';
 import {reputationPanel} from './profile-components.js';
 import '../community.css';
+import {countrySelect} from './country-select.js';
 import { mountPhoneCountry } from './phone-country.js';
 import { mountAccountActions } from './account-actions.js';
 import { loadBadges, badgeElements, decorateAvatar, initializeAccess } from './badges.js';
@@ -18,7 +19,7 @@ const preview = document.getElementById('avatarPreview');
 const avatarInput = document.getElementById('avatarInput');
 const bio = form.elements.bio;
 const bioCount = document.getElementById('bioCount');
-const phoneField=mountPhoneCountry();
+const phoneField=mountPhoneCountry();countrySelect(form.elements.country);
 let profileId = null;
 let currentAvatarPath = '';
 let selectedAvatar = null;
@@ -84,7 +85,7 @@ form.addEventListener('submit', async event => {
       nickname: form.elements.nickname.value,
       bio: bio.value,
       avatarPath: currentAvatarPath,
-      phoneNumber: phoneField.value(),visibility:form.elements.visibility.value,judgeEnabled:form.elements.judgeEnabled.checked,
+      phoneNumber: phoneField.value(),country:form.elements.country.value,visibility:form.elements.visibility.value,judgeEnabled:true,
       socialLinks:JSON.stringify(Object.fromEntries(['instagram','twitch','discord','custom'].map(k=>[k,form.elements[k].value.trim()]))),
     });
     profileId = saved.id;document.getElementById('ownProfileName').textContent=saved.nickname;
@@ -105,7 +106,7 @@ if (!ready) {
 } else {
   try {
     const { user, profile, account } = await loadProfile({ includePrivate: true });
-    phoneField.load(account?.phoneNumber || '');
+    phoneField.load(account?.phoneNumber || '');form.elements.country.value=account?.country || '';
     if (!account?.phoneNumber) showNotice('Completá tu teléfono para guardar el perfil y participar en nuevos torneos.');
     // Las insignias se cargan aparte: un error no impide editar el perfil.
     void (async () => { try {
@@ -122,7 +123,7 @@ if (!ready) {
       profileId = profile.id;document.getElementById('ownProfileName').textContent=profile.nickname;
       document.getElementById('profileEditDetails').open=!profile.accountComplete || new URLSearchParams(location.search).has('registro');
       void refreshDashboard(profile.id);
-      form.elements.visibility.value=profile.visibility==='PUBLIC'?'PUBLIC':'PRIVATE';form.elements.judgeEnabled.checked=Boolean(profile.judgeEnabled);
+      form.elements.visibility.value=profile.visibility==='PUBLIC'?'PUBLIC':'PRIVATE';
       let links={};try{links=JSON.parse(profile.socialLinks || '{}');}catch{}
       for(const k of ['instagram','twitch','discord','custom'])form.elements[k].value=links[k] || '';
       const ownLink=document.createElement('a');ownLink.href='/perfil.html?id='+encodeURIComponent(profile.id);ownLink.textContent='Tu perfil es '+(profile.visibility==='PUBLIC'?'público':'privado');ownLink.className='field-help';form.prepend(ownLink);

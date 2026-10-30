@@ -1,3 +1,19 @@
+## 4.0.0 — 2026-10-30
+
+- Inicio con recorrido de competencias, ligas, Black Line y Mila Express; footer y carrusel automático sin controles visibles.
+- Campana compacta: invita a abrir la sala; las reglas, el consentimiento y el pago se resuelven allí.
+- Fundador como nombre visible de la insignia interna CREATOR.
+- País privado en el perfil y registro. Horario IANA detectado del navegador sin GPS; no se infiere la zona por nacionalidad.
+- Todos pueden recibir invitaciones como jueces; la aceptación de cada cargo sigue siendo obligatoria.
+- Premio simplificado: nombre, foto opcional, responsable y estado de confirmación. Trofeo común y brillo sólo en premios confirmados.
+- Asistencia separada de inscripción/pago. A la hora programada, cada jugador puede indicar que está listo. Con todos presentes se guarda el sorteo del servidor y empieza una cuenta de 120 segundos.
+- Intercambio de posiciones sólo por el organizador y antes del comienzo: motivo, orden y rivales originales, historial público de cambios, aceptación de afectados y pausa del reloj.
+- Cambiar reglas/premio reinicia aceptación, asistencia y sorteo sin volver a cobrar las inscripciones ya acreditadas.
+- Permisos, hora de inicio y revisión concurrente comprobados en servidor; pruebas aisladas sin cobros ni invitaciones reales.
+
+Los torneos anteriores conservan su flujo. La nueva asistencia se aplica a los creados con competitionVersion 4. No se cambiaron honorarios de jueces, precios, región AWS ni se borraron torneos existentes.
+
+
 ## 3.18.2 — 2026-10-30
 
 - Descripción más compacta y con mayor contraste para conservar la legibilidad sobre las tres escenas del inicio integrado.
@@ -479,3 +495,5 @@ Primera versión de ProveIt Club que conecta la web con cuentas y perfiles persi
 - `3.0.0`: otro cambio de etapa importante decidido para el proyecto.
 
 La numeración identifica entregas del proyecto; no es una certificación de que no existan errores.
+
+

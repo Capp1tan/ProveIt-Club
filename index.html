@@ -93,22 +93,20 @@
           <picture class="home-carousel-slide" data-carousel-slide="Videojuegos" aria-hidden="true"><img src="/carousel/shooter-1600.webp" srcset="/carousel/shooter-800.webp 800w, /carousel/shooter-1600.webp 1600w" sizes="(max-width:760px) 100vw, 74vw" width="1600" height="900" alt="Un jugador disfrutando un shooter en su computadora desde casa." loading="lazy" decoding="async"></picture>
           <picture class="home-carousel-slide" data-carousel-slide="Cartas entre amigos" aria-hidden="true"><img src="/carousel/cartas-1600.webp" srcset="/carousel/cartas-800.webp 800w, /carousel/cartas-1600.webp 1600w" sizes="(max-width:760px) 100vw, 74vw" width="1600" height="900" alt="Cuatro amigos jugando cartas en casa con un mate pequeño sobre la mesa." loading="lazy" decoding="async"></picture>
         </div>
-        <div class="home-carousel-controls" data-carousel-controls hidden>
-          <button type="button" class="home-carousel-control" data-carousel-prev aria-label="Imagen anterior">‹</button>
-          <div class="home-carousel-dots" aria-label="Elegir imagen del carrusel">
-            <button type="button" class="home-carousel-dot" data-carousel-dot aria-label="Mostrar imagen: Pádel" aria-pressed="true"><span></span></button>
-            <button type="button" class="home-carousel-dot" data-carousel-dot aria-label="Mostrar imagen: Videojuegos" aria-pressed="false"><span></span></button>
-            <button type="button" class="home-carousel-dot" data-carousel-dot aria-label="Mostrar imagen: Cartas entre amigos" aria-pressed="false"><span></span></button>
-          </div>
-          <button type="button" class="home-carousel-control home-carousel-pause" data-carousel-pause aria-label="Pausar cambio automático de imágenes" aria-pressed="false"><span aria-hidden="true">Ⅱ</span></button>
-          <button type="button" class="home-carousel-control" data-carousel-next aria-label="Imagen siguiente">›</button>
-        </div>
+
       </div>
       <p class="home-carousel-status" data-carousel-status role="status" aria-live="polite"></p>
     </section>
-    <!-- Espacio inferior vacío por ahora. Las imágenes de patrocinadores se conservan como archivos. -->
+    <!-- Presentación del recorrido. No son premios garantizados ni dinero custodiado. -->
+    <section class="club-reasons" aria-labelledby="reasonsTitle">
+      <div class="reasons-heading"><p class="eyebrow">QUE TU PRÓXIMA VICTORIA CUENTE</p><h2 id="reasonsTitle">Competí por algo.<br><span>Ganate tu lugar.</span></h2><p>Un premio que te motive. Rivales que te exijan. Un recorrido que se vea en tu perfil.</p></div>
+      <div class="reasons-grid"><article><span class="reason-number">01 / EL DESAFÍO</span><h3>Algo está en juego.</h3><p>Una cena, un regalo, dinero o lo que acuerden. Cada torneo muestra su premio confirmado y quién lo entrega.</p><a href="crear-torneo.html">Armá tu desafío ↗</a></article><article><span class="reason-number">02 / TU RECORRIDO</span><h3>No alcanza con decirlo.</h3><p>Empezás sin liga. Completá competencias válidas, sumá experiencia y desbloqueá logros. Los primeros pasos son accesibles; llegar arriba exige constancia.</p><a href="perfil.html">Ver mi progreso ↗</a></article><article><span class="reason-number">03 / EL CLUB</span><h3>Que se reconozca.</h3><p>Tus participaciones, victorias y logros quedan en tu perfil. Las recompensas especiales del club se anunciarán con sus metas y disponibilidad cuando estén confirmadas.</p></article></div>
+      <div class="home-leagues"><div><p class="eyebrow">DE PRINCIPIANTE A LEYENDA</p><h3>Subir cuesta.<br>Llegar se nota.</h3><p>Ocho ligas. Un recorrido que se gana compitiendo.</p></div><div class="league-teasers"><figure><span class="home-league-symbol" style="--x:0%;--y:0%"></span><figcaption>Pañal con caca<small>El primer paso · 25 XP</small></figcaption></figure><figure><span class="home-league-symbol" style="--x:100%;--y:0%"></span><figcaption>Cobre<small>350 XP</small></figcaption></figure><figure><span class="home-league-symbol" style="--x:66.666%;--y:100%"></span><figcaption>Obsidiana<small>6.000 XP</small></figcaption></figure><figure><span class="home-league-symbol" style="--x:100%;--y:100%"></span><figcaption>Leyenda<small>15.000 XP</small></figcaption></figure></div></div>
+    </section>
+    <section class="club-sponsors" aria-labelledby="sponsorsTitle"><p class="eyebrow" id="sponsorsTitle">MARCAS QUE ACOMPAÑAN AL CLUB</p><div class="sponsor-pair"><figure><img src="/sponsors/black-line.png" alt="Black Line" loading="lazy" width="350" height="220"></figure><figure><img src="/sponsors/mila-express.png" alt="Mila Express" loading="lazy" width="350" height="220"></figure></div></section>
   </main>
 
+  <footer class="club-footer"><a class="brand" href="/index.html" aria-label="ProveIt Club, inicio">prove<span class="brand-dot">.</span>it <small>CLUB</small></a><p>Decirlo es fácil, demostralo.</p><div><a href="mailto:leorivero744@gmail.com">Contacto ↗</a><a href="mailto:leorivero744@gmail.com?subject=Sugerencia%20para%20ProveIt">Sugerir un cambio ↗</a><span>Redes del club · próximamente</span></div><small>ProveIt Club · Competencias entre personas. Los premios y sus responsables se informan en cada torneo.</small></footer>
   <!-- Modal de acceso. Los controles de auth-ui.js se conectan con Cognito cuando Amplify está configurado. -->
   <div class="modal-backdrop" id="loginModal" hidden>
     <section class="login-modal" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
@@ -138,3 +136,5 @@
   <script type="module" src="/src/auth-ui.js"></script>
 </body>
 </html>
+
+

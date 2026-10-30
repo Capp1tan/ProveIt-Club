@@ -17,7 +17,8 @@ const schema = a.schema({
   TournamentLobbySignal:a.customType({id:a.id().required(),tournamentId:a.id().required(),status:a.string().required(),changedAt:a.datetime().required()}),
   answerTournamentInvitation:a.mutation().arguments({invitationId:a.id().required(),accept:a.boolean().required(),acceptOrganizerDecision:a.boolean(),acceptTerms:a.boolean(),termsVersion:a.integer()})
     .returns(a.ref('TournamentLobbySignal')).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(respondInvitation)),
-  onTournamentLobby:a.subscription().for(a.ref('answerTournamentInvitation')).arguments({tournamentId:a.id().required()})
+  tournamentCompetition:a.mutation().arguments({tournamentId:a.id().required(),action:a.string().required(),ready:a.boolean(),fromProfileId:a.id(),toProfileId:a.id(),reason:a.string(),drawRevision:a.integer()}).returns(a.ref('TournamentLobbySignal')).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(respondInvitation)),
+  onTournamentLobby:a.subscription().for([a.ref('answerTournamentInvitation'),a.ref('tournamentCompetition')]).arguments({tournamentId:a.id().required()})
     .authorization(allow=>[allow.authenticated()]).handler(a.handler.custom({entry:'./lobby-signal.js'})),
   // Avisos mínimos: no transmiten mensajes ni perfiles. El receptor se filtra
   // por el sub real del token, sin aceptar destinatarios desde el navegador.
@@ -44,7 +45,7 @@ const schema = a.schema({
       allow.owner().to(['read']),
     ]),
   // El teléfono nunca se publica en Profile. Sólo su dueño puede leerlo.
-  PrivateAccount: a.model({ accountSub: a.string().required(), phoneNumber: a.string().required(), phoneVerified: a.boolean().required(), revision: a.integer().required() })
+  PrivateAccount: a.model({ accountSub: a.string().required(), country:a.string(), phoneNumber: a.string().required(), phoneVerified: a.boolean().required(), revision: a.integer().required() })
     .authorization(allow => [allow.ownerDefinedIn('accountSub').identityClaim('sub').to(['read'])]),
   UniqueClaim: a.model({ accountSub: a.string().required() })
     .authorization(allow => [allow.ownerDefinedIn('accountSub').identityClaim('sub').to(['read'])]),
@@ -57,7 +58,7 @@ const schema = a.schema({
   setClubPhoneOptional:a.mutation().arguments({profileId:a.id().required(),phoneOptional:a.boolean().required()}).returns(a.ref('ClubAccess')).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(clubAccount)),
   manageClubBadge: a.mutation().arguments({ profileId: a.id().required(), code: a.string().required(), enabled: a.boolean().required(), label:a.string(),color:a.string(),effect:a.string() })
     .returns(a.ref('ClubAccess')).authorization(allow => [allow.authenticated()]).handler(a.handler.function(clubAccount)),
-  saveClubProfile: a.mutation().arguments({ profileId: a.id(), nickname: a.string().required(), bio: a.string(), avatarPath: a.string(), phoneNumber: a.string().required(), visibility:a.string(), socialLinks:a.string(), judgeEnabled:a.boolean() })
+  saveClubProfile: a.mutation().arguments({ profileId: a.id(), nickname: a.string().required(), bio: a.string(), avatarPath: a.string(), phoneNumber: a.string().required(), country:a.string(), visibility:a.string(), socialLinks:a.string(), judgeEnabled:a.boolean() })
     .returns(a.ref('Profile')).authorization(allow => [allow.authenticated()]).handler(a.handler.function(clubAccount)),
   // Solicitudes de cobro privadas: sólo la cuenta que paga puede consultarlas.
   TournamentPayment: a.model({
@@ -80,7 +81,7 @@ const schema = a.schema({
     activity: a.string().required(),
     format: a.string().required(),
     description: a.string(),
-    overview:a.string(),coverPath:a.string(),participantLimit:a.integer(),prizeExpected:a.boolean(),entryFeeCents:a.integer(),entryPaymentStatuses:a.string().array(),
+    overview:a.string(),coverPath:a.string(),prizeImagePath:a.string(),participantLimit:a.integer(),prizeExpected:a.boolean(),entryFeeCents:a.integer(),entryPaymentStatuses:a.string().array(),
     participantIds: a.string().required().array().required(),
     participantNames: a.string().required().array().required(),
     judgeIds: a.string().required().array().required(),
@@ -108,7 +109,7 @@ const schema = a.schema({
     // Estados alineados con participantes, jueces y tesorero. Ausente en torneos anteriores.
     rosterStatuses: a.string().required().array(),
     membershipRevision: a.integer(),
-    draw: a.string(),
+    draw: a.string(),competitionVersion:a.integer(),competitionState:a.string(),
     termsVersion:a.integer(), conflicts:a.string(), clubRewards:a.boolean(), resultReason:a.string(), resultKind:a.string(),
     prizeHolder:a.string(), prizeFunder:a.string(), prizeFundingStatus:a.string(), prizeType:a.string(),
     // Premio provisional, editable sólo a través de la función que comprueba al juez.
@@ -157,7 +158,7 @@ const schema = a.schema({
     activity: a.string().required(),
     format: a.string().required(),
     description: a.string(), conflicts:a.string(),
-    overview:a.string(),coverPath:a.string(),participantLimit:a.integer(),prizeExpected:a.boolean(),
+    overview:a.string(),coverPath:a.string(),prizeImagePath:a.string(),participantLimit:a.integer(),prizeExpected:a.boolean(),
     prizeType:a.string(),prizeTitle:a.string(),prizeDescription:a.string(),prizeHolder:a.string(),prizeFunder:a.string(),
     participantIds: a.string().required().array().required(),
     judgeIds: a.string().required().array().required(),

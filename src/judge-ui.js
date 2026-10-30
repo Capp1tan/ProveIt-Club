@@ -1,17 +1,18 @@
+import {competitionHasBegun} from '../shared/competition.ts';
 import {communityAction} from './community-api.js';
 import '../community.css';
 const el=(tag,text,cls)=>{const n=document.createElement(tag);n.textContent=text;if(cls)n.className=cls;return n;};
 export function judgePanel(t,{isOrganizer,onChanged}){
  const root=el('section','','tournament-panel');root.append(el('h2',t.judgeIds?.length?'Condiciones y reputación de jueces':'Condiciones del torneo'));
  if(t.judgeIds?.length)root.append(el('p','Condiciones versión '+(t.termsVersion || 0)+'. Cada juez acepta el cargo y confirma que entiende las reglas. Los cambios materiales requieren una nueva aceptación de todos.'));
- if(t.conflicts)root.append(el('p','Conflictos de interés declarados: '+t.conflicts,'arbitration-warning'));
+
  if(t.judgeIds?.some(id=>t.participantIds.includes(id)))root.append(el('p','Un juez también compite. Su interés se declara a todos los integrantes.','arbitration-warning'));
- if(t.judgeIds?.length)root.append(el('small','Los vínculos personales se declaran por los integrantes; el sitio no puede descubrirlos automáticamente. Las recompensas del club requieren un juez independiente.'));
- if(isOrganizer && !t.winnerProfileId){
-  const form=el('form','','community-form'),rules=el('textarea'),conflicts=el('textarea'),submit=el('button','Actualizar y pedir nueva aceptación','social-button'),message=el('p','','community-notice');
-  rules.value=t.description || '';rules.required=true;rules.minLength=10;rules.maxLength=1000;rules.rows=3;conflicts.value=t.conflicts || '';conflicts.maxLength=500;conflicts.rows=2;
-  const r=el('label','Reglas vigentes'),c=el('label','Conflictos de interés');r.append(rules);c.append(conflicts);submit.type='submit';message.setAttribute('role','status');
-  form.append(r,c,submit,message);form.addEventListener('submit',async e=>{e.preventDefault();if(submit.disabled)return;if(!confirm('Los cruces se pausarán y todos deberán aceptar nuevamente. ¿Actualizar las condiciones?'))return;submit.disabled=true;try{await communityAction('TERMS',{tournamentId:t.id,description:rules.value,conflicts:conflicts.value});await onChanged();}catch(e){message.textContent=e.message;submit.disabled=false;}});root.append(form);
+
+ if(isOrganizer && !t.winnerProfileId && !competitionHasBegun(t)){
+  const form=el('form','','community-form'),rules=el('textarea'),submit=el('button','Actualizar y pedir nueva aceptación','social-button'),message=el('p','','community-notice');
+  rules.value=t.description || '';rules.required=true;rules.minLength=10;rules.maxLength=1000;rules.rows=3;
+  const r=el('label','Reglas vigentes');r.append(rules);submit.type='submit';message.setAttribute('role','status');
+  form.append(r,submit,message);form.addEventListener('submit',async e=>{e.preventDefault();if(submit.disabled)return;if(!confirm('Los cruces se pausarán y todos deberán aceptar nuevamente. ¿Actualizar las condiciones?'))return;submit.disabled=true;try{await communityAction('TERMS',{tournamentId:t.id,description:rules.value});await onChanged();}catch(e){message.textContent=e.message;submit.disabled=false;}});root.append(form);
  }
  t.judgeIds?.forEach((id,index)=>{
   const card=el('article','','judge-feedback'),link=el('a',t.judgeNames[index]);link.href='/perfil.html?id='+encodeURIComponent(id);card.append(link);
