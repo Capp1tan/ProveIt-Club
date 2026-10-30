@@ -56,7 +56,7 @@
   </script>
   <link rel="stylesheet" href="site-theme.css">
 </head>
-<body class="proveit-theme">
+<body class="proveit-theme home-integrated">
   <div id="siteLoader" role="status" aria-live="polite" aria-label="Cargando Prove.it Club"><div class="loader-content"><div class="loader-brand" aria-hidden="true">prove<span>.</span>it<small>CLUB</small></div><div class="loader-track" aria-hidden="true"></div><div class="loader-copy" id="loaderCopy">Preparando el desafío…</div><button class="loader-skip" id="loaderSkip" type="button" hidden>Entrar ahora</button></div></div>
   <!-- Barra superior: logo vuelve al inicio; lupa abre el buscador; el botón muestra el acceso de demostración. -->
   <header class="topbar">
@@ -80,49 +80,34 @@
   </section>
 
   <main>
-    <!-- Carrusel: cambiá el texto aquí y las fotos en public/carousel. Las miniaturas no son filtros. -->
+    <!-- Inicio integrado: texto aquí, fotos en public/carousel; difuminado adaptable al tema en home-carousel.css. -->
     <section class="home-carousel" id="explore" data-home-carousel aria-label="Desafíos entre amigos" aria-roledescription="carrusel">
-      <div class="home-carousel-card">
+      <div class="home-carousel-stage">
         <div class="home-carousel-copy">
-          <h1>Decirlo es fácil,<br>demostralo.</h1>
+          <h1>Decirlo es fácil,<br><span>demostralo.</span></h1>
           <p>Poné las reglas, invitá a tus rivales y armá el desafío.</p>
           <a class="primary-button" href="crear-torneo.html">Crear torneo <span aria-hidden="true">↗</span></a>
         </div>
         <div class="home-carousel-visual">
-          <picture class="home-carousel-slide is-active" data-carousel-slide="Pádel" aria-hidden="false"><img src="/carousel/padel-1600.webp" srcset="/carousel/padel-800.webp 800w, /carousel/padel-1600.webp 1600w" sizes="(max-width:760px) calc(100vw - 36px), (max-width:1440px) 55vw, 790px" width="1600" height="900" alt="Cuatro adultos jugando un partido de pádel en una cancha de vidrio bajo techo." fetchpriority="high" loading="eager" decoding="async"></picture>
-          <picture class="home-carousel-slide" data-carousel-slide="Videojuegos" aria-hidden="true"><img src="/carousel/shooter-1600.webp" srcset="/carousel/shooter-800.webp 800w, /carousel/shooter-1600.webp 1600w" sizes="(max-width:760px) calc(100vw - 36px), (max-width:1440px) 55vw, 790px" width="1600" height="900" alt="Un jugador disfrutando un shooter en su computadora desde casa." loading="lazy" decoding="async"></picture>
-          <picture class="home-carousel-slide" data-carousel-slide="Cartas entre amigos" aria-hidden="true"><img src="/carousel/cartas-1600.webp" srcset="/carousel/cartas-800.webp 800w, /carousel/cartas-1600.webp 1600w" sizes="(max-width:760px) calc(100vw - 36px), (max-width:1440px) 55vw, 790px" width="1600" height="900" alt="Cuatro amigos jugando cartas en casa con un mate pequeño sobre la mesa." loading="lazy" decoding="async"></picture>
+          <picture class="home-carousel-slide is-active" data-carousel-slide="Pádel" aria-hidden="false"><img src="/carousel/padel-1600.webp" srcset="/carousel/padel-800.webp 800w, /carousel/padel-1600.webp 1600w" sizes="(max-width:760px) 100vw, 74vw" width="1600" height="900" alt="Cuatro adultos jugando un partido de pádel en una cancha de vidrio bajo techo." fetchpriority="high" loading="eager" decoding="async"></picture>
+          <picture class="home-carousel-slide" data-carousel-slide="Videojuegos" aria-hidden="true"><img src="/carousel/shooter-1600.webp" srcset="/carousel/shooter-800.webp 800w, /carousel/shooter-1600.webp 1600w" sizes="(max-width:760px) 100vw, 74vw" width="1600" height="900" alt="Un jugador disfrutando un shooter en su computadora desde casa." loading="lazy" decoding="async"></picture>
+          <picture class="home-carousel-slide" data-carousel-slide="Cartas entre amigos" aria-hidden="true"><img src="/carousel/cartas-1600.webp" srcset="/carousel/cartas-800.webp 800w, /carousel/cartas-1600.webp 1600w" sizes="(max-width:760px) 100vw, 74vw" width="1600" height="900" alt="Cuatro amigos jugando cartas en casa con un mate pequeño sobre la mesa." loading="lazy" decoding="async"></picture>
         </div>
-      </div>
-      <div class="home-carousel-controls" data-carousel-controls hidden>
-        <div class="home-carousel-arrows"><button type="button" class="home-carousel-control" data-carousel-prev aria-label="Imagen anterior">‹</button><button type="button" class="home-carousel-control" data-carousel-next aria-label="Imagen siguiente">›</button></div>
-        <button type="button" class="home-carousel-control home-carousel-pause" data-carousel-pause aria-label="Pausar cambio automático de imágenes" aria-pressed="false">Pausar</button>
-      </div>
-      <div class="home-carousel-thumbs" data-carousel-controls hidden aria-label="Elegir imagen del carrusel">
-        <button class="home-carousel-thumb" type="button" data-carousel-thumb aria-label="Mostrar imagen: Pádel" aria-pressed="true"><img src="/carousel/padel-400.webp" width="400" height="225" alt="" loading="lazy" decoding="async"><span>Pádel</span></button>
-        <button class="home-carousel-thumb" type="button" data-carousel-thumb aria-label="Mostrar imagen: Videojuegos" aria-pressed="false"><img src="/carousel/shooter-400.webp" width="400" height="225" alt="" loading="lazy" decoding="async"><span>Videojuegos</span></button>
-        <button class="home-carousel-thumb" type="button" data-carousel-thumb aria-label="Mostrar imagen: Cartas entre amigos" aria-pressed="false"><img src="/carousel/cartas-400.webp" width="400" height="225" alt="" loading="lazy" decoding="async"><span>Cartas entre amigos</span></button>
+        <div class="home-carousel-controls" data-carousel-controls hidden>
+          <button type="button" class="home-carousel-control" data-carousel-prev aria-label="Imagen anterior">‹</button>
+          <div class="home-carousel-dots" aria-label="Elegir imagen del carrusel">
+            <button type="button" class="home-carousel-dot" data-carousel-dot aria-label="Mostrar imagen: Pádel" aria-pressed="true"><span></span></button>
+            <button type="button" class="home-carousel-dot" data-carousel-dot aria-label="Mostrar imagen: Videojuegos" aria-pressed="false"><span></span></button>
+            <button type="button" class="home-carousel-dot" data-carousel-dot aria-label="Mostrar imagen: Cartas entre amigos" aria-pressed="false"><span></span></button>
+          </div>
+          <button type="button" class="home-carousel-control home-carousel-pause" data-carousel-pause aria-label="Pausar cambio automático de imágenes" aria-pressed="false"><span aria-hidden="true">Ⅱ</span></button>
+          <button type="button" class="home-carousel-control" data-carousel-next aria-label="Imagen siguiente">›</button>
+        </div>
       </div>
       <p class="home-carousel-status" data-carousel-status role="status" aria-live="polite"></p>
     </section>
-    <div class="home-suggest"><a href="mailto:leorivero744@gmail.com?subject=Sugerencia%20para%20ProveIt%20Club">Sugerir cambios ↗</a></div>
-
-    <!-- Patrocinadores: PNG transparentes en public/sponsors; FUEL UP y LEVEL UP son ejemplos. -->
-    <section class="sponsors" aria-label="Patrocinadores">
-      <div class="sponsor-intro"><span>LOS QUE HACEN<br>POSIBLE EL PIQUE</span><small>ESPACIO PARA PATROCINADORES</small></div>
-      <!-- Los PNG ya tienen fondo transparente: contain muestra el logo completo. -->
-      <figure class="sponsor-partner sponsor-mila" aria-label="Mila Express, patrocinador">
-        <img src="/sponsors/mila-express.png" alt="Mila Express" width="1536" height="1024" loading="lazy" decoding="async">
-      </figure>
-      <div class="sponsor-logo sponsor-two">FUEL<span>UP</span><b>®</b></div>
-      <figure class="sponsor-partner sponsor-black-line" aria-label="Black Line, patrocinador">
-        <img src="/sponsors/black-line.png" alt="Black Line" width="1536" height="1024" loading="lazy" decoding="async">
-      </figure>
-      <div class="sponsor-logo sponsor-four">LEVEL<span>UP</span><b>®</b></div>
-    </section>
+    <!-- Espacio inferior vacío por ahora. Las imágenes de patrocinadores se conservan como archivos. -->
   </main>
-
-  <footer class="site-footer"><a class="footer-brand" href="index.html">prove.it <span>CLUB</span></a><span>COMPETÍ · DISFRUTÁ · VOLVÉ A INTENTARLO</span><span>© 2026 PROVE.IT CLUB</span></footer>
 
   <!-- Modal de acceso. Los controles de auth-ui.js se conectan con Cognito cuando Amplify está configurado. -->
   <div class="modal-backdrop" id="loginModal" hidden>

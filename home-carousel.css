@@ -1,23 +1,35 @@
-/* Inicio: texto estable, tres escenas y miniaturas que cambian la imagen. */
-.home-carousel{--hc-panel:var(--site-panel,#e9edf2);--hc-ink:var(--site-text,#192743);--hc-line:var(--site-line,#bcc7d7);--hc-blue:var(--site-accent,#4355ff);max-width:1440px;margin:20px auto 42px;padding:0 32px;color:var(--hc-ink)}
-.home-carousel-card{display:grid;grid-template-columns:.85fr 1.15fr;min-height:400px;overflow:hidden;border:1px solid var(--hc-line);border-radius:20px;background:var(--hc-panel)}
-.home-carousel-copy{padding:48px 34px 44px 42px;align-self:center;position:relative;z-index:1}
-.home-carousel h1{font:700 clamp(32px,3.8vw,57px)/1.08 var(--display);letter-spacing:-2px;margin:0 0 24px;color:var(--hc-ink)}
-.home-carousel-copy p{font-size:clamp(15px,1.4vw,19px);line-height:1.6;color:var(--site-muted,#52637e);margin:0 0 28px;max-width:390px}
-.home-carousel-copy .primary-button{font-size:15px;padding:15px 22px;background:var(--hc-blue);color:#fff;border-radius:10px;display:inline-flex;align-items:center;gap:22px}
-.home-carousel-visual{position:relative;min-width:0;overflow:hidden;touch-action:pan-y;background:var(--hc-panel)}
-.home-carousel-slide{position:absolute;inset:0;display:block;opacity:0;transition:opacity .65s ease;pointer-events:none}
-.home-carousel-slide.is-active{opacity:1;z-index:1}.home-carousel-slide img{display:block;width:100%;height:100%;object-fit:cover;object-position:center}
-.home-carousel-controls{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:12px 0;color:var(--site-muted,#52637e)}
-.home-carousel-controls[hidden],.home-carousel-thumbs[hidden]{display:none}
-.home-carousel-arrows{display:flex;gap:8px}.home-carousel-control{display:inline-grid;place-items:center;min-width:40px;min-height:40px;border:1px solid var(--hc-line);border-radius:50%;background:var(--hc-panel);color:var(--hc-ink);cursor:pointer;font-size:19px}
-.home-carousel-control:hover{border-color:var(--hc-blue);color:var(--hc-blue)}.home-carousel-pause{border-radius:22px;font-size:12px;padding:0 16px}
-.home-carousel-thumbs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
-.home-carousel-thumb{position:relative;border:2px solid transparent;background:var(--hc-panel);border-radius:12px;padding:3px;overflow:hidden;cursor:pointer;text-align:left;color:var(--hc-ink);transition:border-color .2s}
-.home-carousel-thumb img{display:block;width:100%;height:auto;aspect-ratio:3.4;object-fit:cover;border-radius:7px}
-.home-carousel-thumb span{display:block;font-size:13px;font-weight:600;padding:10px 9px 7px}
-.home-carousel-thumb[aria-pressed=true]{border-color:var(--hc-blue)}.home-carousel-thumb:hover{border-color:var(--hc-blue)}
-.home-carousel :focus-visible{outline:3px solid var(--hc-blue);outline-offset:4px}.home-carousel-status{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
-.home-suggest{display:flex;justify-content:flex-end;max-width:1440px;margin:0 auto 24px;padding:0 32px;font-size:12px;color:var(--site-muted,#52637e)}.home-suggest a:hover{color:var(--site-accent,#4355ff)}
-@media(max-width:760px){.home-carousel{padding:0 18px;margin:10px auto 28px}.home-carousel-card{grid-template-columns:1fr;min-height:0;border-radius:16px}.home-carousel-copy{padding:28px 25px}.home-carousel h1{font-size:39px;letter-spacing:-1.5px;margin-bottom:16px}.home-carousel-copy p{font-size:16px;margin-bottom:20px;max-width:500px}.home-carousel-visual{aspect-ratio:16/9;min-height:0}.home-carousel-thumbs{gap:7px}.home-carousel-thumb img{aspect-ratio:1.6}.home-carousel-thumb span{font-size:11px;padding:8px 3px 5px}.home-suggest{padding:0 18px}.home-carousel-copy .primary-button{padding:13px 18px}}
-@media(prefers-reduced-motion:reduce){.home-carousel-slide,.home-carousel-thumb{transition:none}}
+/* Inicio sin tarjeta. Las máscaras transparentan las fotos sobre el fondo real,
+   por eso el difuminado sirve tanto en claro como en oscuro, sin editar imágenes. */
+.home-integrated main{display:flow-root;min-height:calc(100svh - 96px)}
+html[data-theme] body.home-integrated .topbar{position:relative;z-index:20;background:transparent;border:0;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none}
+.home-carousel{--hc-ink:var(--site-text,#192743);--hc-blue:var(--site-accent,#4355ff);position:relative;margin:-96px 0 0;padding:0;color:var(--hc-ink)}
+.home-carousel-stage{position:relative;min-height:700px;isolation:isolate}
+.home-carousel-copy{position:relative;z-index:3;max-width:1320px;width:calc(100% - 96px);margin:auto;padding:205px 0 160px;pointer-events:none}
+.home-carousel h1{font:700 clamp(39px,4.1vw,62px)/1.1 var(--display);letter-spacing:-2px;margin:0 0 24px;max-width:560px;color:var(--hc-ink)}
+.home-carousel h1 span{color:var(--hc-blue)}
+.home-carousel-copy p{font-size:clamp(16px,1.5vw,20px);line-height:1.6;color:var(--site-muted,#52637e);margin:0 0 28px;max-width:430px}
+.home-carousel-copy .primary-button{pointer-events:auto;font-size:16px;padding:15px 23px;background:var(--hc-blue);color:#fff;border-radius:8px;display:inline-flex;align-items:center;gap:22px}
+.home-carousel-visual{position:absolute;z-index:1;top:0;right:0;width:74%;height:700px;overflow:hidden;touch-action:pan-y;background:transparent;
+ -webkit-mask-image:linear-gradient(to right,transparent 0%,#000 31%),linear-gradient(to bottom,transparent 0%,#000 23%,#000 74%,transparent 100%);-webkit-mask-composite:source-in;
+ mask-image:linear-gradient(to right,transparent 0%,#000 31%),linear-gradient(to bottom,transparent 0%,#000 23%,#000 74%,transparent 100%);mask-composite:intersect}
+.home-carousel-slide{position:absolute;inset:0;display:block;opacity:0;transition:opacity .3s ease;pointer-events:none}
+.home-carousel-slide.is-active{opacity:1;z-index:1}.home-carousel-slide img{display:block;width:100%;height:100%;object-fit:cover;object-position:58% center}
+.home-carousel-controls{position:absolute;right:max(36px,4vw);bottom:100px;z-index:4;display:flex;align-items:center;gap:6px}
+.home-carousel-controls[hidden]{display:none}
+.home-carousel-control{display:inline-grid;place-items:center;min-width:38px;height:38px;border:1px solid #ffffff30;border-radius:50%;background:#14213bc9;color:#fff;cursor:pointer;font-size:24px;line-height:1;padding:0}
+.home-carousel-control:hover{background:#14213b;border-color:#fff}.home-carousel-pause{font-size:17px}
+.home-carousel-dots{display:flex;align-items:center;gap:0}.home-carousel-dot{display:grid;place-items:center;width:28px;height:38px;border:0;background:transparent;cursor:pointer;padding:0}
+.home-carousel-dot span{width:7px;height:7px;border-radius:50%;background:#354761;border:1px solid #fff;opacity:.65}.home-carousel-dot[aria-pressed=true] span{background:#fff;opacity:1;box-shadow:0 0 0 2px #28364e55}
+.home-carousel :focus-visible{outline:3px solid var(--hc-blue);outline-offset:4px}.home-carousel-controls :focus-visible{outline-color:#fff;box-shadow:0 0 0 6px #14213b}
+.home-carousel-status{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+@media(min-width:1600px){.home-carousel-copy{padding-top:210px}.home-carousel-visual,.home-carousel-stage{height:760px}.home-carousel-controls{bottom:120px}}
+@media(max-width:1000px) and (min-width:761px){.home-carousel-copy{width:calc(100% - 64px)}.home-carousel h1{font-size:43px;max-width:420px}.home-carousel-copy p{max-width:330px}.home-carousel-visual{width:76%;height:670px}.home-carousel-stage{min-height:670px}}
+@media(max-width:760px){
+ .home-carousel{margin-top:-90px}.home-carousel-stage{min-height:0;padding-bottom:45px}
+ .home-carousel-copy{width:100%;padding:130px 24px 0}.home-carousel h1{font-size:clamp(34px,7.8vw,47px);letter-spacing:-1.4px;margin-bottom:18px;max-width:560px}
+ .home-carousel-copy p{font-size:16px;max-width:420px;margin-bottom:22px}.home-carousel-copy .primary-button{font-size:15px;padding:13px 18px}
+ .home-carousel-visual{position:relative;top:auto;width:100%;height:auto;aspect-ratio:16/11;margin-top:-12px;
+ -webkit-mask-image:linear-gradient(to bottom,transparent 0%,#000 22%,#000 76%,transparent 100%);mask-image:linear-gradient(to bottom,transparent 0%,#000 22%,#000 76%,transparent 100%)}
+ .home-carousel-slide img{object-position:center}.home-carousel-controls{right:22px;bottom:52px;gap:3px}
+}
+@media(prefers-reduced-motion:reduce){.home-carousel-slide{transition:none}}

@@ -1,3 +1,9 @@
+## 3.18.1 — 2026-10-30
+
+- Inicio integrado en la página y la cabecera transparente, con bordes de las tres fotos fundidos mediante máscaras CSS en claro y oscuro.
+- Retira miniaturas y la franja inferior del inicio, dejando el espacio vacío. Conserva los archivos originales de patrocinadores.
+- Carrusel cada 4 segundos y transición de 0,3 segundos, con flechas, indicadores y pausa discretos sobre la imagen.
+
 ## 3.18.0 — 2026-10-30
 
 - Inicio con carrusel de pádel, videojuegos en casa y cartas con mate. Texto fijo, miniaturas, flechas, pausa, teclado y deslizamiento táctil.

@@ -3,25 +3,25 @@ import '../home-carousel.css';
 // Editá las fotos y sus textos alternativos en index.html. Este módulo sólo navega.
 const root=document.querySelector('[data-home-carousel]');
 if(root){
- const slides=[...root.querySelectorAll('[data-carousel-slide]')],thumbs=[...root.querySelectorAll('[data-carousel-thumb]')];
+ const slides=[...root.querySelectorAll('[data-carousel-slide]')],dots=[...root.querySelectorAll('[data-carousel-dot]')];
  const pause=root.querySelector('[data-carousel-pause]'),status=root.querySelector('[data-carousel-status]');
  const reduced=matchMedia('(prefers-reduced-motion: reduce)');
  let current=0,timer,request=0,paused=false,hover=false,visible=true,touchX;
  root.querySelectorAll('[data-carousel-controls]').forEach(n=>n.hidden=false);
- function schedule(){clearTimeout(timer);if(!paused&&!hover&&visible&&!document.hidden&&!reduced.matches)timer=setTimeout(()=>void go(current+1),7000);}
- function stop(){paused=true;pause.textContent='Reanudar';pause.setAttribute('aria-pressed','true');pause.setAttribute('aria-label','Reanudar cambio automático de imágenes');schedule();}
+ function schedule(){clearTimeout(timer);if(!paused&&!hover&&visible&&!document.hidden&&!reduced.matches)timer=setTimeout(()=>void go(current+1),4000);}
+ function stop(){paused=true;pause.firstElementChild.textContent='▷';pause.setAttribute('aria-pressed','true');pause.setAttribute('aria-label','Reanudar cambio automático de imágenes');schedule();}
  async function go(index,manual=false){
   if(manual)stop();const next=(index+slides.length)%slides.length,token=++request;
   try{await slides[next].querySelector('img').decode();}catch{schedule();return;}
   if(token!==request)return;
   slides.forEach((slide,i)=>{slide.classList.toggle('is-active',i===next);slide.setAttribute('aria-hidden',String(i!==next));});
-  thumbs.forEach((button,i)=>button.setAttribute('aria-pressed',String(i===next)));
+  dots.forEach((button,i)=>button.setAttribute('aria-pressed',String(i===next)));
   current=next;if(manual)status.textContent=slides[next].dataset.carouselSlide;schedule();
  }
- thumbs.forEach((button,i)=>button.addEventListener('click',()=>void go(i,true)));
+ dots.forEach((button,i)=>button.addEventListener('click',()=>void go(i,true)));
  root.querySelector('[data-carousel-prev]').addEventListener('click',()=>void go(current-1,true));
  root.querySelector('[data-carousel-next]').addEventListener('click',()=>void go(current+1,true));
- pause.addEventListener('click',()=>{if(!paused){stop();return;}paused=false;pause.textContent='Pausar';pause.setAttribute('aria-pressed','false');pause.setAttribute('aria-label','Pausar cambio automático de imágenes');schedule();});
+ pause.addEventListener('click',()=>{if(!paused){stop();return;}paused=false;pause.firstElementChild.textContent='Ⅱ';pause.setAttribute('aria-pressed','false');pause.setAttribute('aria-label','Pausar cambio automático de imágenes');schedule();});
  root.addEventListener('mouseenter',()=>{hover=true;schedule();});root.addEventListener('mouseleave',()=>{hover=false;schedule();});
  // El teclado nunca persigue controles que cambian solos. Se reanuda explícitamente.
  root.addEventListener('focusin',event=>{if(event.target!==pause)stop();});
