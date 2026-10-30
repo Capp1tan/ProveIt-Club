@@ -33,3 +33,11 @@ html[data-theme] body.home-integrated .topbar{position:relative;z-index:20;backg
  .home-carousel-slide img{object-position:center}.home-carousel-controls{right:22px;bottom:52px;gap:3px}
 }
 @media(prefers-reduced-motion:reduce){.home-carousel-slide{transition:none}}
+
+/* El encabezado y el texto comparten un margen fluido en monitores amplios.
+   No limitar el bloque a 1320 px: en una pantalla de 2560 px dejaba 620 px vacíos. */
+@media(min-width:1001px){
+ body.home-integrated{--home-gutter:clamp(32px,5vw,144px)}
+ html[data-theme] body.proveit-theme.home-integrated .topbar{width:calc(100% - 2 * var(--home-gutter));padding-inline:0}
+ .home-integrated .home-carousel-copy{max-width:none;width:calc(100% - 2 * var(--home-gutter));margin-inline:auto}
+}

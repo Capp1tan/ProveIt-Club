@@ -1,109 +1,59 @@
-import { notificationSoundEnabled, watchNotificationSound } from './notification-preferences.js';
-import {money} from './billing-api.js';
-import { noJudgeConsent, scheduleLabel } from './tournament-schedule.js';
-// Campana de invitaciones. Consulta cada 20 s con la página visible; no envía emails ni push.
+import {notificationSoundEnabled,watchNotificationSound} from './notification-preferences.js';
+import {notificationItems} from './notification-items.js';
+import {communityAction} from './community-api.js';
+import {pendingInvitations} from './tournaments-api.js';
+import {configureAmplify,getCurrentUser,avatarUrl} from './auth-client.js';
+import {Hub} from 'aws-amplify/utils';
 import '../notifications.css';
-import { Hub } from 'aws-amplify/utils';
-import { configureAmplify, getCurrentUser } from './auth-client.js';
-import { pendingInvitations, respondInvitation } from './tournaments-api.js';
-const nav = document.querySelector('header nav');
-if (nav) {
-  const root = document.createElement('div'); root.className = 'club-notifications'; root.hidden = true;
-  const bell = document.createElement('button'); bell.type = 'button'; bell.className = 'notification-bell';
-  bell.setAttribute('aria-label','Notificaciones'); bell.setAttribute('aria-expanded','false');
-  bell.setAttribute('aria-controls','clubNotificationsPanel');
-  bell.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 17h14l-2-3V9a5 5 0 0 0-10 0v5zM10 20h4"/></svg>';
-  const badge = document.createElement('span'); badge.className = 'notification-count'; badge.hidden = true; badge.setAttribute('aria-hidden','true'); bell.append(badge);
-  const panel = document.createElement('section'); panel.id = 'clubNotificationsPanel'; panel.className = 'notification-panel';
-  panel.hidden = true; panel.setAttribute('aria-label','Invitaciones a torneos');
-  const title = document.createElement('h2'); title.textContent = 'Tus invitaciones';
-  const description = document.createElement('p'); description.className = 'notification-help'; description.textContent = 'Entrá a la sala para responder.';
-  const message = document.createElement('p'); message.className = 'notification-message'; message.setAttribute('role','status'); message.setAttribute('aria-live','polite');
-  const list = document.createElement('div'); list.className = 'notification-list';
-  const refresh = document.createElement('button'); refresh.type = 'button'; refresh.textContent = 'Actualizar'; refresh.className = 'notification-refresh';
-  panel.append(title,description,message,list,refresh); root.append(bell,panel); nav.prepend(root);
-  let userId = '', invitations = [], busy = false, answering = false, generation = 0;
-  const consentChecks = new Set();
-  let audio, queuedSound = false, soundEnabled = true;
-  soundEnabled = notificationSoundEnabled();
-  watchNotificationSound(()=>{soundEnabled=notificationSoundEnabled();if(!soundEnabled)queuedSound=false;});
-  // Audio sintetizado: no requiere archivos externos. Se habilita mediante un gesto del usuario.
-  function chime() {
-    if (!soundEnabled) { queuedSound = false; return; }
-    if (!audio || audio.state !== 'running') { queuedSound = true; return; }
-    queuedSound = false;
-    for (const [offset,frequency] of [[0,660],[0.16,880]]) {
-      const oscillator = audio.createOscillator(), gain = audio.createGain();
-      const start = audio.currentTime + offset;
-      oscillator.frequency.value = frequency; gain.gain.setValueAtTime(0,start);
-      gain.gain.linearRampToValueAtTime(0.09,start+0.015); gain.gain.exponentialRampToValueAtTime(0.001,start+0.2);
-      oscillator.connect(gain); gain.connect(audio.destination); oscillator.start(start); oscillator.stop(start+0.22);
-    }
+const nav=document.querySelector('header nav');
+if(nav){
+ const el=(tag,text='',cls='')=>{const n=document.createElement(tag);n.textContent=text;n.className=cls;return n;};
+ const root=el('div','','club-notifications');root.hidden=true;
+ const bell=el('button','','notification-bell');bell.type='button';bell.setAttribute('aria-label','Notificaciones');bell.setAttribute('aria-expanded','false');bell.setAttribute('aria-controls','clubNotificationsPanel');
+ bell.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 17h14l-2-3V9a5 5 0 0 0-10 0v5zM10 20h4"/></svg>';
+ const badge=el('span','','notification-count');badge.hidden=true;badge.setAttribute('aria-hidden','true');bell.append(badge);
+ const panel=el('section','','notification-panel');panel.id='clubNotificationsPanel';panel.hidden=true;panel.setAttribute('aria-label','Notificaciones');
+ const title=el('h2','Notificaciones'),list=el('div','','notification-list'),announcement=el('span','','notification-sr');announcement.setAttribute('role','status');announcement.setAttribute('aria-live','polite');
+ panel.append(title,list,announcement);root.append(bell,panel);nav.prepend(root);
+ let userId='',generation=0,busy=false,items=[],invitations=[],feed={},fingerprint='',failure=false,readIds=new Set();
+ const photos=new Map();let audio,queuedSound=false,soundEnabled=notificationSoundEnabled();
+ watchNotificationSound(()=>{soundEnabled=notificationSoundEnabled();if(!soundEnabled)queuedSound=false;});
+ function chime(){
+  if(!soundEnabled){queuedSound=false;return;}if(!audio || audio.state!=='running'){queuedSound=true;return;}queuedSound=false;
+  for(const [offset,frequency] of [[0,660],[.16,880]]){const o=audio.createOscillator(),g=audio.createGain(),start=audio.currentTime+offset;o.frequency.value=frequency;g.gain.setValueAtTime(0,start);g.gain.linearRampToValueAtTime(.09,start+.015);g.gain.exponentialRampToValueAtTime(.001,start+.2);o.connect(g);g.connect(audio.destination);o.start(start);o.stop(start+.22);}
+ }
+ async function unlockAudio(){if(!soundEnabled || !userId)return;try{const Audio=window.AudioContext || window.webkitAudioContext;if(!Audio)return;audio ||= new Audio();await audio.resume();if(queuedSound)chime();}catch{}}
+ document.addEventListener('pointerdown',unlockAudio);document.addEventListener('keydown',unlockAudio);
+ function readSaved(key){try{const a=JSON.parse(localStorage.getItem(key) || '[]');return Array.isArray(a)?a.filter(x=>typeof x==='string'):[];}catch{return [];}}
+ function save(key,value){try{localStorage.setItem(key,JSON.stringify(value.slice(-300)));}catch{}}
+ function updateCount(){const n=items.filter(i=>!readIds.has(i.id)).length;badge.hidden=!n;badge.textContent=n>99?'99+':String(n);bell.setAttribute('aria-label',n?'Notificaciones: '+n+' sin leer':'Notificaciones');}
+ function markRead(){if(panel.hidden || !userId)return;items.forEach(i=>readIds.add(i.id));save('proveit:read-notifications:'+userId,[...readIds]);updateCount();}
+ function rememberNew(){const key='proveit:seen-notifications:'+userId,seen=new Set(readSaved(key)),added=items.filter(i=>!seen.has(i.id)).length;items.forEach(i=>seen.add(i.id));save(key,[...seen]);return added;}
+ function render(force=false){
+  updateCount();const version=JSON.stringify(items)+failure;if(!force && version===fingerprint)return;fingerprint=version;list.replaceChildren();
+  if(!items.length){list.append(el('p',failure?'No pudimos cargar las notificaciones.':'No tenés notificaciones.','notification-empty'));return;}
+  for(const item of items){
+   const row=el(item.href?'a':'div','','notification-item');if(item.href)row.href=item.href;
+   const icon=el('span',({friend:'＋',judge:'⚖',tournament:'↗',site:'·'})[item.icon] || '·','notification-mini-icon');icon.setAttribute('aria-hidden','true');
+   row.append(icon,el('span',item.text,'notification-copy'));list.append(row);
+   if(!panel.hidden && item.avatarPath){const key=item.profileId+':'+item.avatarPath;if(!photos.has(key) || photos.get(key).expires<Date.now())photos.set(key,{expires:Date.now()+50000,promise:avatarUrl(item.avatarPath,{profileId:item.profileId}).catch(()=>null)});const epoch=generation;
+    void photos.get(key).promise.then(url=>{if(!url || epoch!==generation || !row.isConnected)return;const img=el('img');img.width=32;img.height=32;img.alt='';img.loading='lazy';img.src=url;img.onerror=()=>{icon.textContent='＋';};icon.replaceChildren(img);});
+   }
   }
-  async function unlockAudio() {
-    if (!soundEnabled || !userId) return;
-    try {
-      const Audio = window.AudioContext || window.webkitAudioContext;
-      if (!Audio) return;
-      audio ||= new Audio();
-      await audio.resume();
-      if (queuedSound) chime();
-    } catch { /* La campana funciona aunque el navegador bloquee el audio. */ }
-  }
-  document.addEventListener('pointerdown',unlockAudio);
-  document.addEventListener('keydown',unlockAudio);
-  function render() {
-    badge.hidden = !invitations.length; badge.textContent = invitations.length > 99 ? '99+' : String(invitations.length);
-    bell.setAttribute('aria-label', 'Notificaciones: ' + invitations.length + ' invitaciones pendientes');
-    list.replaceChildren();
-    if (!invitations.length) { const empty = document.createElement('p'); empty.textContent = 'No tenés invitaciones pendientes.'; list.append(empty); }
-    const roles={PARTICIPANT:'Te invitaron a competir',JUDGE:'Te invitaron como juez',TREASURER:'Nueva invitación'};
-    for(const invitation of invitations){
-      const card=document.createElement('a');card.className='notification-invitation';card.href='/torneo.html?id='+encodeURIComponent(invitation.tournamentId);
-      const icon=document.createElement('span');icon.className='notification-mini-icon';icon.textContent=invitation.role==='JUDGE'?'⚖':'↗';icon.setAttribute('aria-hidden','true');
-      const copy=document.createElement('span'),name=document.createElement('strong'),role=document.createElement('small');name.textContent=invitation.tournamentName;role.textContent=roles[invitation.role] || 'Nueva invitación';copy.append(name,role);card.append(icon,copy);list.append(card);
-    }
-  }
-
-  function rememberNew(items) {
-    const key = 'proveit:seen-invitations:' + userId;
-    let seen = [];
-    try { const saved = JSON.parse(localStorage.getItem(key) || '[]'); if (Array.isArray(saved)) seen = saved.filter(id => typeof id === 'string'); } catch {}
-    const added = items.filter(item => !seen.includes(item.id));
-    try { localStorage.setItem(key,JSON.stringify([...new Set([...items.map(item => item.id),...seen])].slice(0,300))); } catch {}
-    return added.length;
-  }
-  async function refreshInvitations() {
-    if (!userId || busy || answering || document.hidden) return;
-    busy = true; refresh.disabled = true;
-    const activeGeneration = generation;
-    try {
-      const result = await pendingInvitations();
-      if (activeGeneration !== generation) return;
-      const added = rememberNew(result);
-      invitations = result; render();
-      if (added) { message.textContent = 'Tenés ' + added + ' invitaciones nuevas.'; chime(); }
-    } catch { if (activeGeneration === generation) message.textContent = 'No pudimos actualizar. Tocá Actualizar para reintentar.'; }
-    finally { busy = false; refresh.disabled = false; }
-  }
-  function close() { panel.hidden = true; bell.setAttribute('aria-expanded','false'); }
-  bell.addEventListener('click',() => { panel.hidden = !panel.hidden; bell.setAttribute('aria-expanded',String(!panel.hidden)); if (!panel.hidden) void refreshInvitations(); });
-  refresh.addEventListener('click',refreshInvitations);
-  window.addEventListener('proveit:tournament-deleted',()=>void refreshInvitations());
-  document.addEventListener('click',event => { if (!root.contains(event.target)) close(); });
-  root.addEventListener('keydown',event => { if (event.key === 'Escape') { close(); bell.focus(); } });
-  async function connect() {
-    generation++; consentChecks.clear(); userId = ''; invitations = []; queuedSound = false; root.hidden = true; close(); render();
-    const activeGeneration = generation;
-    try {
-      if (!await configureAmplify()) return;
-      const user = await getCurrentUser();
-      if (activeGeneration !== generation) return;
-      userId = user.userId; root.hidden = false; await refreshInvitations();
-    } catch { /* Sin sesión no se consultan invitaciones. */ }
-  }
-  Hub.listen('auth',({payload}) => { if (['signedIn','signedOut'].includes(payload.event)) void connect(); });
-  document.addEventListener('visibilitychange',() => { if (!document.hidden) void refreshInvitations(); });
-  setInterval(refreshInvitations,20000);
-  void connect();
+ }
+ async function refresh(){
+  if(!userId || busy || document.hidden)return;busy=true;const epoch=generation;
+  try{const [invites,other]=await Promise.allSettled([pendingInvitations(),communityAction('NOTIFICATIONS')]);if(epoch!==generation)return;
+   if(invites.status==='fulfilled')invitations=invites.value;if(other.status==='fulfilled')feed=other.value;
+   failure=invites.status==='rejected' || other.status==='rejected';items=notificationItems(invitations,feed);const added=rememberNew();render();markRead();if(added){announcement.textContent=added===1?'Nueva notificación.':'Nuevas notificaciones.';chime();}
+  }finally{if(epoch===generation)busy=false;}
+ }
+ function close(){panel.hidden=true;bell.setAttribute('aria-expanded','false');}
+ bell.addEventListener('click',()=>{panel.hidden=!panel.hidden;bell.setAttribute('aria-expanded',String(!panel.hidden));if(!panel.hidden){render(true);markRead();void refresh();}});
+ document.addEventListener('click',e=>{if(!root.contains(e.target))close();});root.addEventListener('keydown',e=>{if(e.key==='Escape'){close();bell.focus();}});
+ async function connect(){const epoch=++generation;userId='';busy=false;items=[];invitations=[];feed={};readIds=new Set();photos.clear();queuedSound=false;root.hidden=true;close();render(true);
+  try{if(!await configureAmplify())return;const user=await getCurrentUser();if(epoch!==generation)return;userId=user.userId;readIds=new Set(readSaved('proveit:read-notifications:'+userId));root.hidden=false;await refresh();}catch{}}
+ Hub.listen('auth',({payload})=>{if(['signedIn','signedOut'].includes(payload.event))void connect();});
+ for(const event of ['proveit:tournament-deleted','proveit:invitation-updated','proveit:social-updated'])window.addEventListener(event,()=>void refresh());
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)void refresh();});setInterval(()=>void refresh(),20000);void connect();
 }

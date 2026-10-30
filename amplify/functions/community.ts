@@ -20,6 +20,17 @@ export async function community(db:DynamoDBDocumentClient,sub:string,a:any){
   return roomIsClosed(t,serverNow)?{id:t.id,name:t.name,roomClosed:true,roomClosesAt:roomDeadline(t),serverNow}:{...t,roomClosesAt:roomDeadline(t),serverNow};
  }
  const social=async(pk:string,sk='STATE')=>(await db.send(new GetCommand({TableName:env('SOCIAL_TABLE_NAME'),Key:{pk,sk},ConsistentRead:true}))).Item;
+ if(a.action==='COMMUNITY_NOTIFICATIONS'){
+  const [state,announcements]=await Promise.all([social('USER#'+sub),db.send(new QueryCommand({TableName:env('SOCIAL_TABLE_NAME'),KeyConditionExpression:'pk=:pk AND begins_with(sk,:prefix)',ExpressionAttributeValues:{':pk':'CLUB_NOTICES',':prefix':'NOTICE#'},Limit:20,ScanIndexForward:false,ConsistentRead:true}))]);
+  const requests=await Promise.all((state?.incoming || []).slice(-20).reverse().map(async(ref:any)=>{
+   const p=await get('PROFILE_TABLE_NAME',ref.profileId);
+   if(!p || p.owner?.split('::')[0]!==ref.sub || await get('CLAIM_TABLE_NAME','deleted-account:'+ref.sub))return null;
+   // La foto y el nick son públicos; jamás adjuntar el perfil completo o datos privados.
+   return {profileId:p.id,nickname:p.nickname,avatarPath:p.avatarPath || ''};
+  }));
+  const now=Date.now();
+  return {friendRequests:requests.filter(Boolean),announcements:(announcements.Items || []).filter(n=>n.published===true && Number.isFinite(Date.parse(n.publishedAt)) && Date.parse(n.publishedAt)<=now && (!n.expiresAt || Date.parse(n.expiresAt)>now)).map(n=>({id:n.sk,title:String(n.title || '').slice(0,100),message:String(n.message || '').slice(0,250),href:typeof n.href==='string'?n.href:null}))};
+ }
  const state=await social('USER#'+sub);
  const admin=(await get('CLAIM_TABLE_NAME','creator'))?.accountSub===sub;
  const owner=(p:any)=>p?.owner?.split('::')[0];

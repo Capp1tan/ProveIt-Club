@@ -1,3 +1,11 @@
+## 4.0.1 — 2026-10-30
+
+- Inicio de escritorio con margen fluido: logo y texto alineados sin el gran espacio vacío de los monitores anchos. Se mantiene el difuminado y la adaptación móvil.
+- Campana con un único título «Notificaciones» y mensajes breves. Sin subtítulo, controles de respuesta, actualización manual o avisos de cantidad dentro del panel.
+- Solicitudes de amistad en la misma bandeja; invitaciones de varios roles al mismo torneo agrupadas en un mensaje. El contador refleja avisos sin leer y se limpia al abrir.
+- Lectura de avisos reales publicados por el sitio, sin inventar mensajes. Los avisos futuros, vencidos o no publicados no se muestran; los enlaces se limitan al propio sitio.
+- Fotos y nombres de solicitudes mediante respuesta mínima del servidor. No se devuelve biografía, correo, teléfono ni solicitudes de otra cuenta.
+
 ## 4.0.0 — 2026-10-30
 
 - Inicio con recorrido de competencias, ligas, Black Line y Mila Express; footer y carrusel automático sin controles visibles.
