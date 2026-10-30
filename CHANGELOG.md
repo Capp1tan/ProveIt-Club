@@ -1,3 +1,10 @@
+## 4.0.2 — 2026-10-30
+
+- SEO del inicio: título descriptivo con la marca ProveIt Club, descripción, URL canónica, datos estructurados WebSite y metadatos al compartir.
+- robots.txt y sitemap.xml con la única portada pública canónica. Las páginas de cuentas, administración, pagos, simulaciones y salas se marcan noindex y quedan fuera del sitemap.
+- La portada pública ya no se oculta esperando la sesión de Cognito; las páginas internas mantienen su carga y autorización.
+- La verificación y solicitud de indexación en Google Search Console requieren acceso del propietario. No se solicitaron aún ni se promete aparición o posición en Google.
+
 ## 4.0.1 — 2026-10-30
 
 - Inicio de escritorio con margen fluido: logo y texto alineados sin el gran espacio vacío de los monitores anchos. Se mantiene el difuminado y la adaptación móvil.

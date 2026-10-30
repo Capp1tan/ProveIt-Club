@@ -5,8 +5,22 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#101310">
-  <meta name="description" content="Prove.it Club: desafíos, torneos y competencias entre amigos.">
-  <title>Prove.it Club — Que empiece el desafío</title>
+  <meta name="description" content="Organizá torneos de videojuegos, deportes y juegos de mesa. Invitá a tus rivales, armá desafíos y seguí tus ligas y logros en ProveIt Club.">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <link rel="canonical" href="https://proveitclub.win/">
+  <meta property="og:site_name" content="ProveIt Club">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="es_AR">
+  <meta property="og:url" content="https://proveitclub.win/">
+  <meta property="og:title" content="ProveIt Club | Torneos y desafíos entre amigos">
+  <meta property="og:description" content="Poné las reglas, invitá a tus rivales y armá el desafío. Torneos de videojuegos, deportes y juegos de mesa.">
+  <meta property="og:image" content="https://proveitclub.win/carousel/padel-1600.webp">
+  <meta property="og:image:alt" content="Un partido de pádel entre amigos en una cancha bajo techo">
+  <meta name="twitter:card" content="summary_large_image">
+  <script type="application/ld+json">
+    {"@context":"https://schema.org","@type":"WebSite","@id":"https://proveitclub.win/#website","url":"https://proveitclub.win/","name":"ProveIt Club","alternateName":["ProveIt","Prove.it Club","prove.it"],"description":"Torneos y desafíos de videojuegos, deportes y juegos de mesa entre amigos.","inLanguage":"es-AR"}
+  </script>
+  <title>ProveIt Club | Torneos y desafíos entre amigos</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <!-- Las fuentes no bloquean el primer dibujo; el texto aparece con la fuente de respaldo. -->
@@ -30,6 +44,8 @@
     // Se oculta al terminar sesión + contenido; 10 s es el límite de seguridad.
     (()=>{
       const root=document.documentElement;
+      // El inicio es público: no ocultar su contenido esperando Cognito.
+      if(['/','/index.html'].includes(location.pathname)){window.proveitLoadingDone=()=>{};return;}
       const pending=new Set(['account']);
       if(!['/','/index.html'].includes(location.pathname))pending.add('page');
       root.setAttribute('data-site-loading','');
@@ -66,7 +82,7 @@
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 5 5"></path></svg>
       </button>
       <a class="profile-avatar-link" data-profile-link href="/perfil.html" aria-label="Ir a mi perfil" title="Mi perfil" hidden></a>
-      <button class="login-button" data-login>Ingresar <span aria-hidden="true">↗</span></button>
+      <button class="login-button" data-login hidden>Ingresar <span aria-hidden="true">↗</span></button>
     </nav>
   </header>
 
