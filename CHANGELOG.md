@@ -1,3 +1,11 @@
+## 4.2.0 — 2026-11-03
+
+- Amigos junto a Torneos en la navegación compartida.
+- Página de Amigos renovada con pestañas, contadores, tarjetas, estados vacíos y selector de personas animado, adaptada a ambos temas y móviles.
+- Se conservan las amistades, solicitudes, límites, privacidad y chat minimizado existentes. Desafiar prepara la selección del rival sin enviar invitaciones ni modificar publicaciones en curso.
+- Se retiran los accesos y textos del simulador desde la creación real de torneos.
+- La franja de novedades conserva desplazamiento táctil y de teclado sin mostrar la barra de desplazamiento.
+
 ## 4.1.0 — 2026-11-03
 
 - Acceso a Torneos junto al logo, buscador con texto sin atajo Ctrl+K y ventana central con fondo difuminado y apertura/cierre suaves.

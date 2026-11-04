@@ -16,10 +16,13 @@ if (header) {
     if (new URL(link.href).pathname === '/torneos.html') link.remove();
   });
   if (brand && !header.querySelector('.club-primary-nav')) {
-    const nav = document.createElement('div'); nav.className = 'club-primary-nav'; nav.setAttribute('role', 'navigation'); nav.setAttribute('aria-label', 'Torneos');
-    const link = document.createElement('a'); link.href = '/torneos.html'; link.textContent = 'Torneos';
-    if (['/torneos.html', '/torneo.html', '/crear-torneo.html'].includes(location.pathname)) link.setAttribute('aria-current', 'page');
-    nav.append(link); brand.after(nav);
+    const nav = document.createElement('div'); nav.className = 'club-primary-nav'; nav.setAttribute('role', 'navigation'); nav.setAttribute('aria-label', 'Principal');
+    for (const [label,href,paths] of [['Torneos','/torneos.html',['/torneos.html','/torneo.html','/crear-torneo.html']],['Amigos','/amigos.html',['/amigos.html']]]) {
+      const link = document.createElement('a'); link.href = href; link.textContent = label;
+      if (paths.includes(location.pathname)) link.setAttribute('aria-current', 'page');
+      nav.append(link);
+    }
+    brand.after(nav);
   }
 }
 

@@ -9,6 +9,8 @@ import {editCover} from './cover-editor.js';
 import { prepareCover, uploadTournamentCover } from './tournament-cover.js';
 import { renderTournamentPreview } from './tournament-preview.js';
 
+let requestedRival = new URLSearchParams(location.search).get('rival');
+
 const $ = id => document.getElementById(id);
 const form = $('tournamentForm'), fields = $('tournamentFields'), submit = $('createTournament');
 const participants = new Set(), judges = new Set();
@@ -100,7 +102,6 @@ function updateSummary() {
   submit.textContent = pendingRequest ? 'Retomar publicación ↗' : creationIsFree ? 'Crear y enviar invitaciones ↗' : 'Continuar al pago ↗';
   $('preparedRequestActions').hidden = !pendingRequest;
   $('originalRequestLink').href = '/pago.html?id=' + encodeURIComponent(tournamentId);
-  for (const link of document.querySelectorAll('[data-demo-link]')) link.href = `/simular-torneo.html?format=${encodeURIComponent(selectedFormat)}&total=${Math.max(2, Math.min(64, capacity() || 2))}`;
 }
 function lockPreparedRequest() {
   // Una solicitud de pago preparada es inmutable: el reintento no puede cobrar otra configuración.
@@ -174,7 +175,22 @@ async function refreshPeople() {
     if (activeEpoch !== epoch) return;
     profiles = found.filter(p => p.accountComplete);
     for (const chosen of [participants, judges]) for (const id of chosen) if (!profiles.some(p => p.id === id)) chosen.delete(id);
-    renderPeople(); $('peopleStatus').textContent = `${profiles.length} cuentas disponibles. Cada invitado debe tener su perfil completo.`;
+    let challengeHint = '';
+    if (requestedRival && !pendingRequest) {
+      const rival = profiles.find(p => p.id === requestedRival && owner(p) !== currentSub);
+      if (rival) {
+        if (!participants.size && capacity() === 2) {
+          const self = profiles.find(p => owner(p) === currentSub);
+          if (self) participants.add(self.id);
+          participants.add(rival.id); selectFormat('DUEL');
+        } else if (participants.size < capacity()) participants.add(rival.id);
+        challengeHint = participants.has(rival.id) ? ` ${rival.nickname} está seleccionado. La invitación se enviará al publicar.` : ` El borrador conserva sus participantes; podés seleccionar a ${rival.nickname} manualmente.`;
+        saveDraft();
+      }
+      requestedRival = null;
+      const url = new URL(location.href); url.searchParams.delete('rival'); history.replaceState(null, '', url);
+    }
+    renderPeople(); $('peopleStatus').textContent = `${profiles.length} cuentas disponibles. Cada invitado debe tener su perfil completo.${challengeHint}`;
     void loadBadges().then(() => { if (activeEpoch === epoch) renderPeople(); }).catch(() => {});
   } catch (e) { $('peopleStatus').textContent = e.message; }
   finally { if (activeEpoch === epoch) { loading = false; $('reloadPeople').disabled = false; } }
