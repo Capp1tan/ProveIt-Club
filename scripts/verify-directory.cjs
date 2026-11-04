@@ -1,0 +1,31 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),ts=require('typescript');
+const previous=require.extensions['.ts'];
+require.extensions['.ts']=(module,file)=>module._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,file);
+try{
+ const {directoryStatus,directoryRelation,directoryBase,directorySort}=require('../shared/tournament-directory.ts');
+ const now=Date.parse('2026-11-03T18:00:00Z'),t={id:'a',name:'Copa de fútbol',activity:'Fútbol',createdBySub:'creator',createdAt:'2026-11-03T14:00:00Z',status:'AWAITING_RESPONSES',participantIds:['p','q'],judgeIds:['j'],rosterStatuses:['ACCEPTED','PENDING','ACCEPTED']};
+ assert.equal(directoryStatus(t,now),'soon');
+ const live={...t,id:'live',status:'READY',draw:'{}',startsAt:new Date(now-1000).toISOString(),rosterStatuses:['ACCEPTED','ACCEPTED','ACCEPTED']};
+ assert.equal(directoryStatus(live,now),'live');
+ assert.equal(directoryStatus({...live,entryFeeCents:50000,entryPaymentStatuses:['APPROVED','PENDING']},now),'soon');
+ assert.equal(directoryStatus({...live,startsAt:new Date(now+1000).toISOString()},now),'soon');
+ const done={...t,id:'done',status:'COMPLETED',winnerProfileId:'p',decidedAt:new Date(now-30000).toISOString()};assert.equal(directoryStatus(done,now),'done');
+ assert.equal(directoryRelation(t,'creator','x').organizer,true);
+ assert.equal(directoryRelation(t,'other','p').playing,true);
+ assert.equal(directoryRelation(t,'other','q').invited,true);
+ assert.equal(directoryRelation(t,'other','j').judging,true);
+ assert.equal(directoryRelation(t,'other','x').mine,false);
+ assert.equal(directoryRelation({...t,rosterStatuses:['REJECTED','PENDING','ACCEPTED']},'other','p').mine,false);
+ assert.equal(directoryRelation({...t,rosterStatuses:[]},'other','p').mine,false);
+ assert.equal(directoryBase([t], 'futbol').length,1);
+ assert.equal(directoryBase([t], 'ajedrez').length,0);
+ assert.equal(directoryBase([t], '',true,'other','p').length,1);
+ assert.equal(directoryBase([t], '',true,'other','x').length,0);
+ assert.equal(directoryBase([{...t,deletedAt:'today'},{...t,status:'DELETED'},{...t,status:'CANCELLED'}]).length,0);
+ assert.deepEqual(directorySort([done,t,live],'smart',now).map(t=>t.id),['live','a','done']);
+ const recent={...t,id:'new',name:'Ajedrez',createdAt:'2026-11-03T16:00:00Z'};
+ assert.equal(directorySort([t,recent],'recent',now)[0].id,'new');
+ assert.equal(directorySort([t,recent],'name',now)[0].id,'new');
+ assert.equal(directorySort([t,recent],'name',now).length,2);assert.deepEqual(directoryBase([]),[]);
+ console.log('22 comprobaciones correctas: estados, inscripciones pendientes, búsqueda, filtros propios, roles, rechazos y orden. Sin consultas a AWS.');
+}finally{if(previous)require.extensions['.ts']=previous;else delete require.extensions['.ts'];}

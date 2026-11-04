@@ -1,3 +1,11 @@
+## 4.3.0 — 2026-11-04
+
+- Página de Torneos adaptada al diseño alternativo: buscador, filtros de estado con contadores, Donde participo, orden, tarjetas y filas compactas de resultados.
+- Sin categorías por juego. Búsqueda por nombre o actividad, filtros conservados en la URL y navegación con teclado.
+- Avatares públicos, estados reales de confirmación/pago/inicio y transiciones suaves respetando movimiento reducido.
+- Se mantienen las inscripciones pendientes de pago; no bloquean la carga del catálogo. Los torneos finalizados muestran su resultado sin reabrir salas cerradas.
+- Actualización periódica pausada en pestañas ocultas y sin reconstruir las tarjetas cuando los datos no cambiaron.
+
 ## 4.2.0 — 2026-11-03
 
 - Amigos junto a Torneos en la navegación compartida.
