@@ -100,6 +100,7 @@ function showClosedRoom(t){
  const link=element('a','Ir a mi historial','primary-button');link.href='/perfil.html';card.append(link);detail.replaceChildren(card);notice.hidden=true;
 }
 function updateClock() {
+  if(lobbyStopped)return;
   if(currentTournament && roomIsClosed(currentTournament,roomNow())){showClosedRoom(currentTournament);return;}
   realLobby?.clock();
   if(currentTournament)updateDrawCountdown(currentTournament,{sub:currentUser?.userId,profiles,onChanged:()=>refreshTournament(true),now:roomNow()});
