@@ -11,7 +11,7 @@ const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text)n.textCont
 // No se descarta un envío fallido: conserva su ID para reintentar sin duplicarlo.
 export function mountChat(root,room){
  let stopped=false,fetching=false,queued=false,sending=false,cursor=null,after=null,me='',first=true,latestReceived=0,lastMarked=0,marking=false,historyReady=false,authorized=false,lastFull=0,failures=0,deltaIncoming=0,catchingUp=false;
- const messages=new Map(),nodes=new Map(),dirty=new Set();root.classList.add('club-chat');
+ const messages=new Map(),nodes=new Map(),dirty=new Set(),arrivals=new Set();root.classList.add('club-chat');
  const heading=el('h2',room.title || 'Chat del torneo'),help=el('p',room.roomType==='DIRECT'?'Conversación privada entre amigos.':'Sólo el organizador y los integrantes confirmados pueden leer y escribir.','social-help');
  const older=el('button','Ver mensajes anteriores','social-button');older.type='button';older.hidden=true;
  const list=el('div','','chat-messages');list.setAttribute('role','log');list.setAttribute('aria-label','Mensajes');list.setAttribute('aria-live','polite');list.setAttribute('aria-relevant','additions');
@@ -24,7 +24,7 @@ export function mountChat(root,room){
  const args={roomType:room.roomType,...(room.roomId?{roomId:room.roomId}:{}),...(room.targetProfileId?{targetProfileId:room.targetProfileId}:{})};
  const active=()=>!stopped && !document.hidden && (!room.isActive || room.isActive());
  const networkError=e=>/network|fetch|timeout|offline|connection|socket/i.test(e.message || '');
- function upsert(message){const old=messages.get(message.id);if(old && JSON.stringify(old)===JSON.stringify(message))return;messages.set(message.id,message);dirty.add(message.id);}
+ function upsert(message,animate=false){const old=messages.get(message.id);if(old && JSON.stringify(old)===JSON.stringify(message))return;messages.set(message.id,message);dirty.add(message.id);if(!old && animate)arrivals.add(message.id);}
  function render(){
   const bottom=list.scrollHeight-list.scrollTop-list.clientHeight<70;
   for(const m of [...dirty].map(id=>messages.get(id)).sort((a,b)=>(a.createdAt+'#'+a.id).localeCompare(b.createdAt+'#'+b.id))){
@@ -36,7 +36,8 @@ export function mountChat(root,room){
    if(m.delivery==='failed'){const retry=el('button','No enviado · Reintentar','chat-retry');retry.type='button';retry.disabled=sending;retry.addEventListener('click',()=>void deliver(m));card.append(retry);}
    const key=m.createdAt+'#'+m.id;if(card.dataset.sortKey!==key || !card.isConnected){card.dataset.sortKey=key;card.remove();const last=list.lastElementChild;if(!last || last.dataset.sortKey<=key)list.append(card);else{const next=[...list.children].find(n=>n.dataset.sortKey>key);list.insertBefore(card,next || null);}}
   }
-  dirty.clear();if(bottom)list.scrollTop=list.scrollHeight;
+  if(!matchMedia('(prefers-reduced-motion: reduce)').matches && active())for(const id of arrivals){const card=nodes.get(id);if(card?.isConnected)card.animate([{opacity:0,transform:'translateY(7px)'},{opacity:1,transform:'none'}],{duration:200,easing:'cubic-bezier(.23,1,.32,1)'});}
+  arrivals.clear();dirty.clear();if(bottom)list.scrollTop=list.scrollHeight;
  }
  async function markRead(){
   if(room.roomType!=='DIRECT' || !active() || !document.hasFocus() || marking || latestReceived<=lastMarked || list.scrollHeight-list.scrollTop-list.clientHeight>70)return;
@@ -52,7 +53,7 @@ export function mountChat(root,room){
    const incoming=page.messages.filter(m=>m.senderSub!==me && !messages.has(m.id)).length;
    if(!previous){if(full)deltaIncoming=0;else deltaIncoming+=incoming;}
    if(room.roomType==='TOURNAMENT' && historyReady && !previous && page.messages.some(m=>m.senderSub!==me && !messages.has(m.id)))playMessageSound();
-   for(const m of page.messages)upsert(m);historyReady=true;authorized=true;failures=0;
+   for(const m of page.messages)upsert(m,!previous && historyReady);historyReady=true;authorized=true;failures=0;
    // Si un envío terminó de guardarse fuera del orden temporal, el contador
    // fuerza una reconciliación antes de marcar mensajes que aún no mostramos.
    const needsFull=!previous && !full && !page.hasMore && (page.receivedCount || 0)>latestReceived+deltaIncoming;
@@ -63,7 +64,7 @@ export function mountChat(root,room){
   finally{fetching=false;if(queued && !stopped){queued=false;setTimeout(()=>void refresh(),failures?Math.min(1000*2**failures,15000):0);}}
  }
  async function deliver(message){
-  if(sending || !authorized || stopped)return;sending=true;send.disabled=true;upsert({...message,delivery:'pending'});render();notice.textContent='';
+  if(sending || !authorized || stopped)return;sending=true;send.disabled=true;upsert({...message,delivery:'pending'},true);render();notice.textContent='';
   try{const result=await socialAction('SEND',{...args,body:message.body,messageId:message.id});if(stopped)return;upsert(result.message || {...message,delivery:'sent'});render();window.dispatchEvent(new Event('proveit:chat-sent'));void refresh();}
   catch(error){if(!stopped){const known=messages.get(message.id);if(!known || known.delivery==='pending' || known.delivery==='failed'){upsert({...message,delivery:'failed'});render();notice.textContent=error.message;}}}
   finally{sending=false;if(!stopped){send.disabled=!authorized;list.querySelectorAll('.chat-retry').forEach(b=>b.disabled=false);}}

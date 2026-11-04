@@ -2,7 +2,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),ts=require('typ
 const previous=require.extensions['.ts'];
 require.extensions['.ts']=(module,file)=>module._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,file);
 try{
- const {directoryStatus,directoryRelation,directoryBase,directorySort}=require('../shared/tournament-directory.ts');
+ const {directoryStatus,directoryTone,directoryRelation,directoryBase,directorySort}=require('../shared/tournament-directory.ts');
  const now=Date.parse('2026-11-03T18:00:00Z'),t={id:'a',name:'Copa de fútbol',activity:'Fútbol',createdBySub:'creator',createdAt:'2026-11-03T14:00:00Z',status:'AWAITING_RESPONSES',participantIds:['p','q'],judgeIds:['j'],rosterStatuses:['ACCEPTED','PENDING','ACCEPTED']};
  assert.equal(directoryStatus(t,now),'soon');
  const live={...t,id:'live',status:'READY',draw:'{}',startsAt:new Date(now-1000).toISOString(),rosterStatuses:['ACCEPTED','ACCEPTED','ACCEPTED']};
@@ -27,5 +27,6 @@ try{
  assert.equal(directorySort([t,recent],'recent',now)[0].id,'new');
  assert.equal(directorySort([t,recent],'name',now)[0].id,'new');
  assert.equal(directorySort([t,recent],'name',now).length,2);assert.deepEqual(directoryBase([]),[]);
- console.log('22 comprobaciones correctas: estados, inscripciones pendientes, búsqueda, filtros propios, roles, rechazos y orden. Sin consultas a AWS.');
+ assert.equal(directoryTone(t,now),'pending');assert.equal(directoryTone({...t,rosterStatuses:Array(3).fill('ACCEPTED')},now),'waiting');assert.equal(directoryTone(live,now),'live');assert.equal(directoryBase([t,done],'',true,'other','p').length,1);
+ console.log('26 comprobaciones correctas: estados, inscripciones pendientes, búsqueda, filtros propios, roles, rechazos y orden. Sin consultas a AWS.');
 }finally{if(previous)require.extensions['.ts']=previous;else delete require.extensions['.ts'];}

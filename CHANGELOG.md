@@ -1,5 +1,11 @@
 ## 4.3.0 — 2026-11-04
 
+## 4.4.0 — 2026-11-04
+- Torneos: estados naranja, celeste y verde con pulso en vivo; portadas reales y filtro de participaciones activas.
+- Sorteo público: el organizador inicia una cuenta regresiva de un minuto tras completar asistencias y pagos; el servidor guarda una única llave aleatoria. Cancelar asistencia detiene el sorteo.
+- Revelación progresiva de cruces y animaciones suaves de apertura, cierre y mensajes del chat, con movimiento reducido respetado.
+
+
 - Página de Torneos adaptada al diseño alternativo: buscador, filtros de estado con contadores, Donde participo, orden, tarjetas y filas compactas de resultados.
 - Sin categorías por juego. Búsqueda por nombre o actividad, filtros conservados en la URL y navegación con teclado.
 - Avatares públicos, estados reales de confirmación/pago/inicio y transiciones suaves respetando movimiento reducido.

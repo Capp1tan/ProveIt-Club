@@ -1,4 +1,4 @@
-import {usesCompetition,competitionState,competitionStart} from '../shared/competition.ts';
+import {usesCompetition,competitionState,competitionStart,scheduledDraw} from '../shared/competition.ts';
 import {roomDeadline,tournamentIsLive,allEntriesPaid} from '../shared/tournament-room.ts';
 import { pendingInvitations, respondInvitation } from './tournaments-api.js';
 import { noJudgeConsent, countdownLabel, scheduleLabel } from './tournament-schedule.js';
@@ -22,9 +22,10 @@ export function createRealLobby({ profilePreview, getUser, getConnection, getNow
   }
   function clock() {
     if(!t)return;const n=headerStats?.querySelector('[data-real-clock]'),live=tournamentIsLive(t,getNow()),deadline=roomDeadline(t),done=Boolean(t.winnerProfileId || t.status==='COMPLETED');
-    if(n){n.classList.toggle('rl-live-badge',live);n.setAttribute('role',live?'status':'timer');n.textContent=live?'PARTIDA EN CURSO':done?'Finalizado':usesCompetition(t)?(Number.isFinite(competitionStart(t))?countdownLabel(new Date(competitionStart(t)).toISOString(),getNow()):'Esperando asistencia'):t.startsAt?(getNow()>=Date.parse(t.startsAt)?'Esperando confirmaciones':countdownLabel(t.startsAt,getNow())):'Horario sin definir';}
-    const caption=headerStats?.querySelector('[data-clock-caption]');if(caption)caption.textContent=live?'EN VIVO':done?'TORNEO FINALIZADO':usesCompetition(t)?'INICIO DEL ENCUENTRO':'INICIO PREVISTO';
-    const phase=root.querySelector('.rl-kicker');if(phase)phase.textContent=(done?'ENCUENTRO FINALIZADO':live?'EN CURSO':'FASE DE CONFIRMACIÓN')+' · '+t.name+' · '+t.activity;
+    const drawDue=scheduledDraw(t);
+    if(n){n.classList.toggle('rl-live-badge',live);n.setAttribute('role',live?'status':'timer');n.textContent=live?'PARTIDA EN CURSO':done?'Finalizado':Number.isFinite(drawDue)?countdownLabel(new Date(drawDue).toISOString(),getNow()):usesCompetition(t)?(Number.isFinite(competitionStart(t))?countdownLabel(new Date(competitionStart(t)).toISOString(),getNow()):'Esperando asistencia'):t.startsAt?(getNow()>=Date.parse(t.startsAt)?'Esperando confirmaciones':countdownLabel(t.startsAt,getNow())):'Horario sin definir';}
+    const caption=headerStats?.querySelector('[data-clock-caption]');if(caption)caption.textContent=live?'EN VIVO':done?'TORNEO FINALIZADO':Number.isFinite(drawDue)?'SORTEO EN':usesCompetition(t)?'INICIO DEL ENCUENTRO':'INICIO PREVISTO';
+    const phase=root.querySelector('.rl-kicker');if(phase)phase.textContent=(done?'ENCUENTRO FINALIZADO':live?'EN CURSO':Number.isFinite(drawDue)?'SORTEO PROGRAMADO':'FASE DE CONFIRMACIÓN')+' · '+t.name+' · '+t.activity;
     const heading=root.querySelector('.rl-hero h1');if(heading)heading.textContent=done?'Desafío completado':live?'El torneo está en curso':'Sala de espera y confirmación de asistencia';
     const intro=root.querySelector('[data-lobby-intro]');if(intro)intro.textContent=done?'Revisá el resultado y la participación.':live?'La competencia ya comenzó.':'Confirmá tu asistencia para preparar el encuentro.';
     const remaining=root.querySelector('[data-room-closing]');if(remaining && deadline!==null){const seconds=Math.max(0,Math.ceil((deadline-getNow())/1000));remaining.textContent=Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0');}
