@@ -113,6 +113,13 @@
       </div>
       <p class="home-carousel-status" data-carousel-status role="status" aria-live="polite"></p>
     </section>
+    <section class="home-community" data-home-community aria-label="Actividad y campeones del club">
+      <section class="community-ticker" data-activity-ticker aria-label="Últimas novedades" hidden></section>
+      <section aria-labelledby="hallTitle">
+        <h2 class="hall-heading" id="hallTitle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M8 3h8v7a4 4 0 0 1-8 0ZM8 5H4v3a4 4 0 0 0 4 4m8-7h4v3a4 4 0 0 1-4 4M12 14v6m-5 1h10"/></svg>Salón de la fama</h2>
+        <div class="hall-champion hall-empty" data-hall-card><p>Cargando al último campeón…</p></div>
+      </section>
+    </section>
     <!-- Presentación del recorrido. No son premios garantizados ni dinero custodiado. -->
     <section class="club-reasons" aria-labelledby="reasonsTitle">
       <div class="reasons-heading"><p class="eyebrow">QUE TU PRÓXIMA VICTORIA CUENTE</p><h2 id="reasonsTitle">Competí por algo.<br><span>Ganate tu lugar.</span></h2><p>Un premio que te motive. Rivales que te exijan. Un recorrido que se vea en tu perfil.</p></div>
@@ -149,6 +156,7 @@
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script type="module" src="/app.js"></script>
   <script type="module" src="/src/home-carousel.js"></script>
+  <script type="module" src="/src/home-activity.js"></script>
   <script type="module" src="/src/auth-ui.js"></script>
 </body>
 </html>

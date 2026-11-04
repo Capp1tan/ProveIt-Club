@@ -1,0 +1,23 @@
+html[data-theme] body.proveit-theme .club-primary-nav{display:flex;align-items:center;flex-shrink:0;margin-left:4px}
+.club-primary-nav a{position:relative;display:inline-flex;align-items:center;min-height:40px;padding:8px 12px;border-radius:7px;font-size:14px;font-weight:600;color:var(--site-muted)}
+.club-primary-nav a[aria-current=page]{color:var(--site-text)}
+.club-primary-nav a[aria-current=page]::after{content:'';position:absolute;left:12px;right:12px;bottom:0;height:2px;background:var(--site-accent);border-radius:2px}
+html[data-theme] body.proveit-theme .top-actions{margin-left:auto}
+.top-actions .club-search-toggle{order:10}.top-actions .theme-toggle{order:20}.top-actions .club-notifications{order:30}.top-actions .account-menu,.top-actions [data-login]{order:40}
+html[data-theme] body.proveit-theme .admin-shortcut{margin-right:0;font-size:10px}
+.account-menu{position:relative;flex:0 0 auto;display:flex;align-items:center}
+.account-menu:has([data-profile-link][hidden]){display:none}
+.account-menu-panel{position:absolute;z-index:70;top:calc(100% + 9px);right:0;width:216px;max-width:calc(100vw - 24px);padding:5px;background:var(--site-panel);color:var(--site-text);border:1px solid var(--site-line);border-radius:9px;box-shadow:0 16px 42px #0003;transform-origin:top right}
+.account-menu-panel[hidden]{display:none}
+.account-menu-name{margin:0 0 4px;padding:8px 9px 10px;border-bottom:1px solid var(--site-line);font-size:12px;color:var(--site-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.account-menu-panel [role=menuitem]{display:flex;align-items:center;gap:9px;width:100%;padding:9px;border:0;border-radius:5px;background:transparent;color:var(--site-text);font:500 13px var(--font);text-align:left;cursor:pointer;transition:background-color 120ms,color 120ms}
+.account-menu-panel svg{width:17px;height:17px;flex-shrink:0}
+.account-menu-panel .account-menu-exit{border-top:1px solid var(--site-line);border-radius:0 0 5px 5px;margin-top:4px;padding-top:12px}
+.account-menu-panel [role=menuitem]:focus-visible{background:var(--site-tint);outline:2px solid var(--site-accent);outline-offset:-2px}
+.account-menu-panel button:disabled{opacity:.55;cursor:wait}
+.account-menu-error{font-size:12px;color:var(--site-danger);margin:8px}
+.theme-toggle svg{transition:transform 180ms cubic-bezier(.23,1,.32,1),opacity 120ms}
+@media(hover:hover) and (pointer:fine){.club-primary-nav a:hover,.account-menu-panel [role=menuitem]:hover{background:var(--site-tint);color:var(--site-text)}.theme-toggle:hover svg{transform:rotate(-12deg)}}
+@media(max-width:740px){.club-primary-nav a{font-size:12px;padding:7px 8px}.club-primary-nav a[aria-current=page]::after{left:8px;right:8px}html[data-theme] body.proveit-theme .topbar{column-gap:8px}}
+@media(max-width:450px){html[data-theme] body.proveit-theme .admin-shortcut{order:3;margin-left:0;padding:4px 7px}.club-primary-nav{margin-left:0!important}.club-primary-nav a{font-size:11px;padding:6px}.account-menu-panel{width:205px}}
+@media(prefers-reduced-motion:reduce){.theme-toggle svg{transition:none}}

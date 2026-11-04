@@ -1,3 +1,11 @@
+## 4.1.0 — 2026-11-03
+
+- Acceso a Torneos junto al logo, buscador con texto sin atajo Ctrl+K y ventana central con fondo difuminado y apertura/cierre suaves.
+- Menú del avatar con nombre, Mi perfil, Amigos y Cerrar sesión conectado a Cognito; navegación con teclado, Escape y cierre exterior.
+- Novedades del inicio con torneos reales en juego, confirmaciones pendientes, sala de espera y campeones. Se detienen al interactuar o con movimiento reducido, y las consultas periódicas se pausan fuera de pantalla.
+- Salón de la fama con el último campeón, foto y reconocimiento dorado; sin ranking de Más títulos. Los resultados antiguos no enlazan a salas cerradas.
+- Se conserva el perfil actual, las demás secciones, pagos, permisos y el tema global. Los datos del club se consultan con la sesión existente; no se inventan torneos ni campeones para visitantes sin sesión.
+
 ## 4.0.2 — 2026-10-30
 
 - SEO del inicio: título descriptivo con la marca ProveIt Club, descripción, URL canónica, datos estructurados WebSite y metadatos al compartir.

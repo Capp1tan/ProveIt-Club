@@ -1,6 +1,7 @@
 import './disclosure-motion.js';
 import {countrySelect} from './country-select.js';
 import {mountPhoneCountry} from './phone-country.js';
+import {mountAccountMenu} from './header-ui.js';
 // Acceso y estado de cuenta en la navegación.
 import { Hub } from 'aws-amplify/utils';
 import { loadBadges, decorateAvatar } from './badges.js';
@@ -24,6 +25,7 @@ import {
 const modal = document.getElementById('loginModal');
 const loginControl = document.querySelector('[data-login]');
 const profileLink = document.querySelector('[data-profile-link]');
+const accountMenu = mountAccountMenu(profileLink, signOut);
 const form = modal?.querySelector('[data-auth-form]');
 const emailButton = modal?.querySelector('[data-auth-email]');
 const googleButton = modal?.querySelector('[data-auth-google]');
@@ -70,6 +72,7 @@ function displayAccount(user, profile = null) {
   profileLink.replaceChildren(fallback);
   profileLink.setAttribute('aria-label', `Ir al perfil de ${name}`);
   profileLink.title = `Mi perfil: ${name}`;
+  accountMenu.update(name);
   profileLink.hidden = false;
   if (loginControl) loginControl.hidden = true;
 
@@ -129,6 +132,7 @@ async function syncAccountControl() {
       return;
     }
     document.documentElement.dataset.accountState='signed-out';
+    accountMenu.reset();
     if(loginControl)loginControl.innerHTML='Ingresar <span>↗</span>';
     if (profileLink) { profileLink.hidden = true; delete profileLink.dataset.accountSub; decorateAvatar(profileLink, null); }
     if (loginControl) loginControl.hidden = false;
@@ -139,6 +143,7 @@ async function syncAccountControl() {
 // Hub actualiza el encabezado apenas Amplify termina de iniciar o cerrar sesión.
 Hub.listen('auth', ({ payload }) => {
   if(payload.event==='signedOut'){
+    accountMenu.reset();
     ++accountEpoch;document.documentElement.dataset.accountState='signed-out';
     if(profileLink){profileLink.hidden=true;delete profileLink.dataset.accountSub;decorateAvatar(profileLink,null);}
     if(loginControl){loginControl.hidden=false;loginControl.innerHTML='Ingresar <span>↗</span>';}
