@@ -1,3 +1,4 @@
+import {deleteTournament} from './maintenance-api.js';
 import {mountBadgeAdmin} from './badges.js';
 import {mountBillingAdmin} from './billing-admin.js';
 import {mountJudgeReportAdmin} from './judge-ui.js';
@@ -76,6 +77,10 @@ function roomView(row){
  };
  form.addEventListener('submit',e=>{e.preventDefault();void load(true);});older.addEventListener('click',()=>void load(false));
 }
+function tournamentDeleteButton(row){
+ const button=el('button','Eliminar torneo','admin-delete-tournament');button.type='button';button.setAttribute('aria-label','Eliminar torneo '+(row.name || row.id));
+ button.addEventListener('click',async()=>{if(busy)return;const current=epoch;setBusy(true);button.disabled=true;try{const deleted=await deleteTournament(row.id,{name:row.name});if(current!==epoch)return;if(deleted){setBusy(false);await load();notice.textContent='Torneo eliminado del catálogo y del historial. Los registros de pagos se conservan para revisión.';}}catch(e){if(current===epoch)notice.textContent=e.message;}finally{if(current===epoch){setBusy(false);button.disabled=false;}}});return button;
+}
 async function record(row){
  if(busy)return;
  if(section==='PAYMENTS'){setBusy(true);try{row=(await request('RECORD',{collection:section,targetId:row.id})).row;if(!row)throw new Error('El registro ya no existe.');}catch(e){notice.textContent=e.message;return;}finally{setBusy(false);}}
@@ -83,17 +88,17 @@ async function record(row){
  const labels={id:'Identificador',name:'Nombre',nickname:'Nick',status:'Estado',activity:'Actividad',format:'Formato',createdAt:'Creado',updatedAt:'Actualizado',startsAt:'Inicio',timeZone:'Zona horaria',createdBySub:'Cuenta organizadora',accountSub:'Cuenta',phoneNumber:'Teléfono',phoneVerified:'Teléfono verificado por SMS',code:'Insignia',reason:'Motivo',reviewReason:'Motivo de revisión',prizeTitle:'Premio',prizeHolder:'Responsable del premio',prizeFunder:'Financia el premio',prizeFundingStatus:'Confirmación del premio',deletedAt:'Eliminado',visibility:'Privacidad',judgeEnabled:'Disponible como juez',currency:'Moneda',paymentMode:'Modo de pago',amountCents:'Importe en centavos',tournamentName:'Torneo',role:'Rol',consentAcceptedAt:'Aceptación',requestedAt:'Consulta solicitada',actorSub:'Administrador',action:'Acción',target:'Registro consultado'};
  if(Number.isInteger(row.amountCents))addField(fields,'Importe',new Intl.NumberFormat('es-AR',{style:'currency',currency:row.currency || 'ARS'}).format(row.amountCents/100));
  for(const [key,value] of Object.entries(row))if(key in labels && value!==null && typeof value!=='object')addField(fields,labels[key],typeof value==='boolean'?(value?'Sí':'No'):value);
- detail.append(fields,jsonView(row));const tournament=row.tournamentId || (section==='TOURNAMENTS'?row.id:null);if(tournament)detail.prepend(link('Abrir torneo','/torneo.html?id='+encodeURIComponent(tournament)));
+ detail.append(fields,jsonView(row));if(section==='TOURNAMENTS' && !row.deletedAt && row.status!=='DELETED')detail.prepend(tournamentDeleteButton(row));const tournament=row.tournamentId || (section==='TOURNAMENTS'?row.id:null);if(tournament)detail.prepend(link('Abrir torneo','/torneo.html?id='+encodeURIComponent(tournament)));
  const target=section==='PROFILES'?row.owner?.split('::')[0]:row.accountSub || row.createdBySub;
  if(target){const b=el('button','Consultar ficha de la cuenta','social-button');b.type='button';b.addEventListener('click',()=>void account({id:target}));detail.prepend(b);}
 }
 function renderRows(rows){
  list.replaceChildren();if(!rows.length){list.append(el('p','No hay coincidencias en esta página. Si hay más páginas, podés continuar con «Página siguiente».'));return;}
  const table=el('table','','admin-table'),head=el('thead'),hr=el('tr');
- const labels=section==='USERS'?['Cuenta','Correo','Estado','Acción']:section==='ROOMS'?['Sala','Identificador','Tipo','Acción']:['Registro','Descripción','Estado o fecha','Acción'];
+ const labels=section==='TOURNAMENTS'?['Torneo','Actividad','Estado','Acciones']:section==='USERS'?['Cuenta','Correo','Estado','Acción']:section==='ROOMS'?['Sala','Identificador','Tipo','Acción']:['Registro','Descripción','Estado o fecha','Acción'];
  for(const title of labels)hr.append(el('th',title));head.append(hr);table.append(head);const body=el('tbody');
- for(const row of rows){const tr=el('tr'),values=section==='USERS'?[row.nickname,row.email || 'Sin correo',(row.enabled?'Habilitada':'Deshabilitada')+' · '+row.status]:section==='ROOMS'?[row.name || 'Sala',row.roomKey,row.roomKey?.startsWith('DM#')?'Privada':'Torneo']:[row.id || row.sk || row.pk || 'Registro',row.name || row.tournamentName || row.nickname || row.peerName || row.reason || row.action || row.code || row.target || row.pk || 'Datos del club',row.status || row.createdAt || row.updatedAt || row.requestedAt || ''];
-  values.forEach(v=>tr.append(el('td',String(v || ''))));const td=el('td'),b=el('button',section==='USERS'?'Ver cuenta':section==='ROOMS'?'Consultar sala':'Ver detalle','social-button');b.type='button';b.addEventListener('click',()=>{if(section==='USERS')void account(row);else if(section==='ROOMS')roomView(row);else record(row);});td.append(b);tr.append(td);body.append(tr);
+ for(const row of rows){const tr=el('tr'),values=section==='TOURNAMENTS'?[row.name || row.id,row.activity || 'Sin actividad',row.deletedAt || row.status==='DELETED'?'Eliminado':row.status==='COMPLETED'?'Finalizado':row.status || 'En preparación']:section==='USERS'?[row.nickname,row.email || 'Sin correo',(row.enabled?'Habilitada':'Deshabilitada')+' · '+row.status]:section==='ROOMS'?[row.name || 'Sala',row.roomKey,row.roomKey?.startsWith('DM#')?'Privada':'Torneo']:[row.id || row.sk || row.pk || 'Registro',row.name || row.tournamentName || row.nickname || row.peerName || row.reason || row.action || row.code || row.target || row.pk || 'Datos del club',row.status || row.createdAt || row.updatedAt || row.requestedAt || ''];
+  values.forEach(v=>tr.append(el('td',String(v || ''))));const td=el('td'),b=el('button',section==='USERS'?'Ver cuenta':section==='ROOMS'?'Consultar sala':'Ver detalle','social-button');b.type='button';b.addEventListener('click',()=>{if(section==='USERS')void account(row);else if(section==='ROOMS')roomView(row);else record(row);});td.append(b);if(section==='TOURNAMENTS' && !row.deletedAt && row.status!=='DELETED')td.append(tournamentDeleteButton(row));tr.append(td);body.append(tr);
  }table.append(body);const scroll=el('div','','admin-table-scroll');scroll.append(table);list.append(scroll);
 }
 async function load(){
@@ -101,7 +106,7 @@ async function load(){
  const management={BADGES:mountBadgeAdmin,SETTINGS:mountBillingAdmin,REPORTS:mountJudgeReportAdmin};
  searchForm.hidden=Boolean(management[section]);paging.hidden=Boolean(management[section]);
  if(management[section]){list.replaceChildren();try{await management[section](list);notice.textContent='Herramientas de administración. Cada cambio vuelve a validar tu permiso en el servidor.';}catch(e){notice.textContent=e.message;}finally{setBusy(false);}return;}
- try{const r=await request(section==='USERS'?'USERS':'RECORDS',{collection:section,search:query,cursor});if(current!==epoch)return;next=r.cursor;renderRows(r.rows);if(section==='TOURNAMENTS')list.prepend(el('p','Podés abrir cualquier torneo del club sin invitación y eliminarlo desde su ficha, con confirmación individual. No hay eliminación masiva.','social-help'));pageNotice.textContent='Página '+(history.length+1)+' · '+r.rows.length+' registros'+(next?' · hay más':'');notice.textContent='Consulta administrativa registrada. Usá Emblemas, Tarifas y Reclamos para administrar el club; cada torneo se gestiona desde su ficha.';}
+ try{const r=await request(section==='USERS'?'USERS':'RECORDS',{collection:section,search:query,cursor});if(current!==epoch)return;next=r.cursor;renderRows(r.rows);if(section==='TOURNAMENTS')list.prepend(el('p','El botón «Eliminar torneo» permite retirar cada torneo, incluso si ya terminó y su sala cerró. Deberás escribir ELIMINAR para confirmar. No hay eliminación masiva.','social-help'));pageNotice.textContent='Página '+(history.length+1)+' · '+r.rows.length+' registros'+(next?' · hay más':'');notice.textContent='Consulta administrativa registrada. Usá Emblemas, Tarifas y Reclamos para administrar el club; cada torneo se gestiona desde su ficha.';}
  catch(e){if(current===epoch){list.replaceChildren();notice.textContent=e.message;next=null;}}finally{if(current===epoch)setBusy(false);}
 }
 for(const [key,name] of sections){const b=el('button',name,'social-button');b.type='button';b.setAttribute('aria-pressed',String(key===section));b.addEventListener('click',()=>{section=key;query='';search.value='';cursor=next=null;history=[];heading.textContent=name;nav.querySelectorAll('button').forEach(n=>n.setAttribute('aria-pressed',String(n===b)));void load();});nav.append(b);}

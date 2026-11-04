@@ -2,7 +2,7 @@ import { tournamentClient } from './tournaments-api.js';
 const data=result=>{if(result.errors?.length)throw new Error(result.errors.map(e=>e.message).join(' '));return result.data;};
 export const money=cents=>new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS'}).format(cents/100)+' ARS';
 export async function tournamentFee(){return data(await (await tournamentClient()).queries.getTournamentFee());}
-export async function setTournamentFee(amountCents,enabled){return data(await (await tournamentClient()).mutations.setTournamentFee({amountCents,enabled}));}
+export async function setTournamentFee(amountCents,enabled,freeEntries){return data(await (await tournamentClient()).mutations.setTournamentFee({amountCents,enabled,freeEntries}));}
 export async function checkPayment(checkoutId){return data(await (await tournamentClient()).mutations.checkTournamentPayment({checkoutId}));}
 export async function savedPayment(id){return data(await (await tournamentClient()).models.TournamentPayment.get({id},{selectionSet:['id','kind','tournamentId','participantProfileId','entryConfirmed','tournamentName','status','amountCents','currency','paymentMode','checkoutUrl','expiresAt','createdAt','updatedAt','deletedAt']}));}
 export async function myPendingPayments({includeExpired=false}={}){

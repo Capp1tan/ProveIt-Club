@@ -273,7 +273,7 @@ async function connectAccount() {
     const pricing = await withDeadline(tournamentFee(), 'No pudimos consultar la tarifa. Todavía no se realizó ningún cobro.');
     if (activeEpoch !== epoch) return;
     pricingReady = Boolean(pricing.enabled); creationIsFree = true;
-    pricingMessage = `Crear el torneo es gratis. Cada participante paga ${money(pricing.participantAmountCents ?? 50000)} al aceptar su invitación. Los jueces no pagan salvo que también compitan.`;
+    pricingMessage = pricing.participantAmountCents===0?'Crear y participar en este torneo es gratis para todos.':`Crear el torneo es gratis. Cada participante paga ${money(pricing.participantAmountCents ?? 50000)} al aceptar su invitación. Los jueces no pagan salvo que también compitan.`;
     if (!pricingReady) throw new Error(pricing.enabled ? 'La creación no está habilitada para esta cuenta en este momento.' : 'La creación de torneos está pausada temporalmente.');
     fields.disabled = false; $('accountGate').hidden = true; submit.disabled = false;
     syncArbitration(); syncPoster(); updateSchedule(); selectFormat(selectedFormat); setStep(pendingRequest ? 2 : step, false); lockPreparedRequest();

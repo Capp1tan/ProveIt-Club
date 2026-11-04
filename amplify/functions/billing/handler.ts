@@ -8,13 +8,15 @@ export const handler=async(event:Event)=>{
   await assertActiveAccount(sub);
   const args=event.arguments || {},operation=event.fieldName || event.info?.fieldName || ('amountCents' in args?'setTournamentFee':args.checkoutId?'checkTournamentPayment':'getTournamentFee');
   if(operation==='getTournamentFee'){
-    const pricing=await fee();return {...pricing,standardAmountCents:pricing.participantAmountCents,exempt:true,exemptionSource:'FREE_CREATION',canPay:true};
+    const pricing=await fee();return {...pricing,exempt:true,exemptionSource:'FREE_CREATION',canPay:true};
   }
   if(operation==='setTournamentFee') {
     if(!await isCreator(sub))throw new Error('Sólo el Creador puede cambiar la tarifa.');
     if(!Number.isSafeInteger(args.amountCents) || args.amountCents<50000 || args.amountCents>100000000 || typeof args.enabled!=='boolean')throw new Error('Revisá el precio. La inscripción mínima es de $500 ARS.');
-    await db.send(new UpdateCommand({TableName:table('BILLING_SETTINGS_TABLE_NAME'),Key:{id:'participation'},UpdateExpression:'SET amountCents=:a, enabled=:e, updatedAt=:now, createdAt=if_not_exists(createdAt,:now), #t=:t',ExpressionAttributeNames:{'#t':'__typename'},ExpressionAttributeValues:{':a':args.amountCents,':e':args.enabled,':now':new Date().toISOString(),':t':'BillingSettings'}}));
-    const pricing=await fee();return {...pricing,standardAmountCents:pricing.participantAmountCents,exempt:true,canPay:true};
+    if(args.freeEntries!=null && typeof args.freeEntries!=='boolean')throw new Error('Revisá la opción de inscripciones gratis.');
+    const freeUpdate=typeof args.freeEntries==='boolean';
+    await db.send(new UpdateCommand({TableName:table('BILLING_SETTINGS_TABLE_NAME'),Key:{id:'participation'},UpdateExpression:'SET amountCents=:a, enabled=:e, updatedAt=:now, createdAt=if_not_exists(createdAt,:now), #t=:t'+(freeUpdate?', freeEntries=:free':''),ExpressionAttributeNames:{'#t':'__typename'},ExpressionAttributeValues:{...(freeUpdate?{':free':args.freeEntries}:{}),':a':args.amountCents,':e':args.enabled,':now':new Date().toISOString(),':t':'BillingSettings'}}));
+    const pricing=await fee();return {...pricing,exempt:true,canPay:true};
   }
   await assertBillingAccess(sub);
   if(operation==='prepareTournamentEntryPayment')return prepareEntry(sub,args);

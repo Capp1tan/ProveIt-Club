@@ -2,7 +2,7 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand, UpdateCommand, TransactWriteCommand } from '@aws-sdk/lib-dynamodb';
 import {respond} from '../respond-invitation/handler';
-import {DEFAULT_ENTRY_CENTS} from './entry-policy';
+import {participationPricing} from '../../../shared/tournament-pricing';
 export const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 export const table = (key: string) => process.env[key]!;
 export const read = async (key: string, id: string): Promise<any> => (await db.send(new GetCommand({TableName:table(key),Key:{id},ConsistentRead:true}))).Item;
@@ -27,10 +27,10 @@ export async function creationExemption(sub:string) {
 }
 export async function fee() {
   const settings=await read('BILLING_SETTINGS_TABLE_NAME','participation');
-  return {amountCents:0,participantAmountCents:settings?.amountCents ?? DEFAULT_ENTRY_CENTS,currency:'ARS',enabled:settings?.enabled ?? true,mode:mode()};
+  return participationPricing(settings,mode());
 }
 export async function assertBillingAccess(sub:string) {
-  if(mode()==='TEST' && !(await creationExemption(sub)).enabled)throw new Error('Los pagos están en preparación. Por ahora sólo el Creador puede probar el proceso.');
+  if(mode()==='TEST' && !(await fee()).freeEntries && !(await creationExemption(sub)).enabled)throw new Error('Los pagos están en preparación. Por ahora sólo el Creador puede probar el proceso.');
 }
 export function publicCheckout(row:any) {
   // Las mutaciones no necesitan enviar el borrador ni el identificador del pagador.

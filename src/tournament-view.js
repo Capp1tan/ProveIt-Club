@@ -180,9 +180,8 @@ function renderTournament(t) {
   if(isClubAdmin || currentUser?.userId===t.createdBySub) {
     const remove=element('button','Eliminar torneo','danger-button');remove.type='button';
     remove.addEventListener('click',async()=>{
-      if(!window.confirm('¿Eliminar «'+t.name+'»? Se ocultará y quedará bloqueado para todos. Los pagos existentes requieren revisión del administrador; esta acción no ejecuta devoluciones.'))return;
       remove.disabled=true;
-      try{await deleteTournament(t.id);location.href='/torneos.html';}
+      try{if(await deleteTournament(t.id,{name:t.name}))location.href='/torneos.html';else remove.disabled=false;}
       catch(error){remove.disabled=false;notice.hidden=false;notice.textContent=error.message;}
     });detail.append(remove);
   }

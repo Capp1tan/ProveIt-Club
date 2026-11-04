@@ -95,6 +95,27 @@ const expect=(value,expected)=>{assert.deepEqual(value,expected);checks++;};
  const liveId='eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',live={...draft,id:liveId,competitionState:'{}',membershipRevision:0,rosterStatuses:['ACCEPTED','ACCEPTED'],status:'CHECK_IN'};delete live.draw;put('TOURNAMENT_TABLE_NAME',live);
  await assert.rejects(()=>resolver({fieldName:'tournamentCompetition',identity:{sub:'organizer'},arguments:{tournamentId:liveId,action:'ATTENDANCE',ready:true}}),/propia/);checks++;
  const signal=await resolver({fieldName:'tournamentCompetition',identity:{sub:subs[0]},arguments:{tournamentId:liveId,action:'ATTENDANCE',ready:true}});expect(signal.tournamentId,liveId);expect(Object.keys(signal).sort(),['changedAt','id','status','tournamentId']);expect(read('TOURNAMENT_TABLE_NAME',liveId).membershipRevision,1);
- const signal2=await resolver({fieldName:'tournamentCompetition',identity:{sub:subs[1]},arguments:{tournamentId:liveId,action:'ATTENDANCE',ready:true}});expect(signal2.status,'READY');expect(read('TOURNAMENT_TABLE_NAME',liveId).membershipRevision,2);assert.ok(read('TOURNAMENT_TABLE_NAME',liveId).draw);checks++;
+ const signal2=await resolver({fieldName:'tournamentCompetition',identity:{sub:subs[1]},arguments:{tournamentId:liveId,action:'ATTENDANCE',ready:true}});expect(signal2.status,'CHECK_IN');expect(read('TOURNAMENT_TABLE_NAME',liveId).membershipRevision,2);expect(read('TOURNAMENT_TABLE_NAME',liveId).draw,null);
+ await resolver({fieldName:'tournamentCompetition',identity:{sub:'organizer'},arguments:{tournamentId:liveId,action:'DRAW_SCHEDULE'}});
+ const waiting=read('TOURNAMENT_TABLE_NAME',liveId),clock=JSON.parse(waiting.competitionState);clock.drawAt=new Date(Date.now()-1).toISOString();waiting.competitionState=JSON.stringify(clock);put('TOURNAMENT_TABLE_NAME',waiting);
+ const drawn=await resolver({fieldName:'tournamentCompetition',identity:{sub:subs[1]},arguments:{tournamentId:liveId,action:'DRAW_FINISH'}});expect(drawn.status,'READY');assert.ok(read('TOURNAMENT_TABLE_NAME',liveId).draw);checks++;
+ // Gratuidad global: sólo el administrador puede activarla; no se abre MP.
+ const {handler:billing}=require('../amplify/functions/billing/handler.ts');put('CLAIM_TABLE_NAME',{id:'creator',accountSub:'organizer'});
+ await assert.rejects(()=>billing({fieldName:'setTournamentFee',identity:{sub:subs[0]},arguments:{amountCents:50000,enabled:true,freeEntries:true}}),/Sólo/);checks++;
+ const free=await billing({fieldName:'setTournamentFee',identity:{sub:'organizer'},arguments:{amountCents:70000,enabled:true,freeEntries:true}});expect(free.freeEntries,true);expect(free.participantAmountCents,0);expect(free.standardAmountCents,70000);
+ const freeId='ffffffff-ffff-4fff-8fff-ffffffffffff',beforeFree=calls.length;await create({identity:{sub:'organizer'},arguments:{...args,tournamentId:freeId}});expect(read('TOURNAMENT_TABLE_NAME',freeId).entryFeeCents,0);
+ for(let i=0;i<2;i++)await respond({identity:{sub:subs[i]},arguments:{invitationId:freeId+':'+i,accept:true,acceptTerms:true,termsVersion:1,acceptOrganizerDecision:true}});
+ expect(read('TOURNAMENT_TABLE_NAME',freeId).rosterStatuses,['ACCEPTED','ACCEPTED']);expect(calls.length,beforeFree);expect(allEntriesPaid(read('TOURNAMENT_TABLE_NAME',freeId)),true);
+ const paidAgain=await billing({fieldName:'setTournamentFee',identity:{sub:'organizer'},arguments:{amountCents:70000,enabled:true,freeEntries:false}});expect(paidAgain.participantAmountCents,70000);expect(read('TOURNAMENT_TABLE_NAME',freeId).entryFeeCents,0);expect(read('TOURNAMENT_TABLE_NAME',tid).entryFeeCents,50000);
+ const preserve=await billing({fieldName:'setTournamentFee',identity:{sub:'organizer'},arguments:{amountCents:70000,enabled:true,freeEntries:true}});expect(preserve.freeEntries,true);
+ await billing({fieldName:'setTournamentFee',identity:{sub:'organizer'},arguments:{amountCents:70000,enabled:true}});expect(read('BILLING_SETTINGS_TABLE_NAME','participation').freeEntries,true);
+ process.env.MERCADOPAGO_MODE='test';await require('../amplify/functions/billing/common.ts').assertBillingAccess(subs[0]);checks++;process.env.MERCADOPAGO_MODE='live';
+ // Torneo finalizado: eliminación individual, texto obligatorio y permisos del servidor.
+ const {handler:maintenance}=require('../amplify/functions/maintenance/handler.ts');const playedId='abababab-abab-4bab-8bab-abababababab';put('TOURNAMENT_TABLE_NAME',{...read('TOURNAMENT_TABLE_NAME',freeId),id:playedId,status:'COMPLETED',winnerProfileId:ids[0],createdBySub:'another-organizer'});
+ await assert.rejects(()=>maintenance({fieldName:'deleteClubTournament',identity:{sub:'organizer'},arguments:{tournamentId:playedId}}),/ELIMINAR/);checks++;
+ await assert.rejects(()=>maintenance({fieldName:'deleteClubTournament',identity:{sub:subs[0]},arguments:{tournamentId:playedId,confirmation:'ELIMINAR'}}),/organizador/);checks++;
+ expect(read('TOURNAMENT_TABLE_NAME',playedId).status,'COMPLETED');
+ expect(await maintenance({fieldName:'deleteClubTournament',identity:{sub:'organizer'},arguments:{tournamentId:playedId,confirmation:'ELIMINAR'}}),true);expect(read('TOURNAMENT_TABLE_NAME',playedId).status,'DELETED');expect(read('TOURNAMENT_TABLE_NAME',freeId).status,'CHECK_IN');
+
  console.log(`${checks} comprobaciones de inscripción correctas. Todos los cobros, tablas y webhooks fueron simulados sin red.`);
 })().catch(error=>{console.error(error);process.exitCode=1;});

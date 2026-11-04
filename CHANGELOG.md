@@ -1,5 +1,11 @@
 ## 4.3.0 — 2026-11-04
 
+## 4.5.0 — 2026-11-04
+- Administración → Configuración de tarifas: inscripciones gratis globales para torneos nuevos, sin Mercado Pago, conservando la tarifa habitual para reactivarla. Los eventos existentes conservan su precio.
+- Administración → Torneos: eliminación individual visible en la lista y la ficha, incluidos eventos finalizados con sala cerrada.
+- Confirmación escrita «ELIMINAR» antes de cada eliminación de torneo, también validada por el servidor. Se conservan registros de pagos y no se ejecutan devoluciones automáticas.
+
+
 ## 4.4.0 — 2026-11-04
 - Torneos: estados naranja, celeste y verde con pulso en vivo; portadas reales y filtro de participaciones activas.
 - Sorteo público: el organizador inicia una cuenta regresiva de un minuto tras completar asistencias y pagos; el servidor guarda una única llave aleatoria. Cancelar asistencia detiene el sorteo.

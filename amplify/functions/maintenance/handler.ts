@@ -38,6 +38,7 @@ export const handler=async(event:Event)=>{
   const args=event.arguments || {},operation=event.fieldName || event.info?.fieldName || (args.tournamentId?'deleteClubTournament':'deleteMyClubAccount');
   if(operation==='deleteClubTournament') {
     await assertActiveAccount(sub);
+    if(args.confirmation!=='ELIMINAR')throw new Error('Escribí ELIMINAR para confirmar la eliminación de este torneo.');
     if(typeof args.tournamentId!=='string' || !/^[0-9a-f-]{36}$/i.test(args.tournamentId))throw new Error('Identificador inválido.');
     await retire(args.tournamentId,sub,admin);return true;
   }

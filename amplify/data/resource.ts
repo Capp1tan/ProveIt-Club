@@ -52,7 +52,7 @@ const schema = a.schema({
   ClubBadge: a.model({ accountSub: a.string().required(), accountUsername: a.string(), code: a.string().required(), label:a.string(), color:a.string(), effect:a.string() })
     .authorization(allow => [allow.ownerDefinedIn('accountSub').identityClaim('sub').to(['read'])]),
   ClubAccess: a.customType({ isCreator: a.boolean().required(),phoneOptional:a.boolean() }),
-  deleteClubTournament: a.mutation().arguments({ tournamentId: a.id().required() }).returns(a.boolean()).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(maintenance)),
+  deleteClubTournament: a.mutation().arguments({ tournamentId: a.id().required(), confirmation:a.string() }).returns(a.boolean()).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(maintenance)),
   deleteMyClubAccount: a.mutation().arguments({ confirmation: a.string().required() }).returns(a.boolean()).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(maintenance)),
   initializeClubAccess: a.mutation().returns(a.ref('ClubAccess')).authorization(allow => [allow.authenticated()]).handler(a.handler.function(clubAccount)),
   setClubPhoneOptional:a.mutation().arguments({profileId:a.id().required(),phoneOptional:a.boolean().required()}).returns(a.ref('ClubAccess')).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(clubAccount)),
@@ -68,11 +68,11 @@ const schema = a.schema({
     payload:a.string(),checkoutUrl:a.string(),preferenceId:a.string(),collectorId:a.string(),paymentId:a.string(),
     expiresAt:a.datetime().required(),leaseUntil:a.float(),lastCheckedAt:a.float(),deletedAt:a.datetime(),
   }).authorization(allow=>[allow.ownerDefinedIn('createdBySub').identityClaim('sub').to(['read'])]),
-  BillingSettings: a.model({amountCents:a.integer().required(),enabled:a.boolean().required()})
+  BillingSettings: a.model({amountCents:a.integer().required(),enabled:a.boolean().required(),freeEntries:a.boolean()})
     .authorization(allow=>[allow.authenticated().to(['read'])]),
-  TournamentFee: a.customType({amountCents:a.integer().required(),currency:a.string().required(),enabled:a.boolean().required(),mode:a.string().required(),canPay:a.boolean().required(),exempt:a.boolean(),exemptionSource:a.string(),standardAmountCents:a.integer(),participantAmountCents:a.integer()}),
+  TournamentFee: a.customType({amountCents:a.integer().required(),currency:a.string().required(),enabled:a.boolean().required(),mode:a.string().required(),canPay:a.boolean().required(),exempt:a.boolean(),exemptionSource:a.string(),standardAmountCents:a.integer(),participantAmountCents:a.integer(),freeEntries:a.boolean()}),
   getTournamentFee:a.query().returns(a.ref('TournamentFee')).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(billing)),
-  setTournamentFee:a.mutation().arguments({amountCents:a.integer().required(),enabled:a.boolean().required()}).returns(a.ref('TournamentFee')).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(billing)),
+  setTournamentFee:a.mutation().arguments({amountCents:a.integer().required(),enabled:a.boolean().required(),freeEntries:a.boolean()}).returns(a.ref('TournamentFee')).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(billing)),
   prepareTournamentEntryPayment:a.mutation().arguments({invitationId:a.id().required(),acceptTerms:a.boolean().required(),termsVersion:a.integer().required(),acceptOrganizerDecision:a.boolean()}).returns(a.ref('TournamentPayment')).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(billing)),
   checkTournamentPayment:a.mutation().arguments({checkoutId:a.id().required()}).returns(a.ref('TournamentPayment')).authorization(allow=>[allow.authenticated()]).handler(a.handler.function(billing)),
   // Las cuentas pueden consultar torneos. Sólo la función validada los escribe.
