@@ -71,3 +71,8 @@ html[data-theme] body.proveit-theme .profile-avatar-link:not([data-account-accen
 @media(max-width:450px){html[data-theme] body.proveit-theme .brand{font-size:23px;gap:6px}html[data-theme] body.proveit-theme .top-actions{gap:5px}.creation-prize-grid{grid-template-columns:1fr}.creation-prize-grid .wide{grid-column:auto}}
 
 html[data-theme] body.proveit-theme .tournament-cover-content{padding:22px 26px}html[data-theme] body.proveit-theme .tournament-cover h1{font-size:clamp(28px,3.2vw,40px);margin:8px 0 12px}html[data-theme] body.proveit-theme .tournament-cover p{margin:6px 0}html[data-theme] body.proveit-theme .tournament-cover:not(:has(>img)){min-height:0}
+
+html[data-theme=light] body.proveit-theme :is(.league-experience small,.league-event small,.league-achievements small,.league-panel>p,.league-panel>small,.league-rules,.judge-reputation small,.account-settings){color:var(--site-muted)}
+html[data-theme=light] body.proveit-theme :is(.league-rules summary,.profile-edit-details>summary,.account-settings summary){color:var(--site-text)}
+html[data-theme=light] body.proveit-theme .league-event:hover strong{color:var(--site-accent-hover)}
+html[data-theme=light] body.proveit-theme .profile-edit-details>summary{border-color:var(--site-line)}

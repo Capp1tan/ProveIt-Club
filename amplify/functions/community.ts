@@ -40,19 +40,24 @@ export async function community(db:DynamoDBDocumentClient,sub:string,a:any){
   if(!state?.friends?.some((f:any)=>f.sub===target))return false;
   const other=await social('USER#'+target);return Boolean(other?.friends?.some((f:any)=>f.sub===sub));
  };
- const summary=async(id:string)=>{
+ const summary=async(id:string,includeComments:boolean)=>{
   // Cada evento tiene una sola entrada histórica y cada votante una sola valoración.
   let key;const rows:any[]=[];
   do{const page=await db.send(new QueryCommand({TableName:env('SOCIAL_TABLE_NAME'),KeyConditionExpression:'pk=:p',ExpressionAttributeValues:{':p':'JUDGE#'+id},ExclusiveStartKey:key,ConsistentRead:true}));rows.push(...(page.Items || []));key=page.LastEvaluatedKey;}while(key);
   const votes=rows.filter(r=>r.sk.startsWith('VOTE#')),positive=votes.filter(r=>r.positive).length;
   let scanKey,events=0;
   do{const page=await db.send(new ScanCommand({TableName:env('TOURNAMENT_TABLE_NAME'),FilterExpression:'#s=:s AND contains(judgeIds,:id) AND attribute_not_exists(deletedAt)',ExpressionAttributeNames:{'#s':'status'},ExpressionAttributeValues:{':s':'COMPLETED',':id':id},ProjectionExpression:'participantIds,judgeIds,rosterStatuses',ExclusiveStartKey:scanKey}));events+=(page.Items || []).filter(t=>!t.rosterStatuses || t.rosterStatuses[t.participantIds.length+t.judgeIds.indexOf(id)]==='ACCEPTED').length;scanKey=page.LastEvaluatedKey;}while(scanKey);
-  return {events,votes:votes.length,positive,negative:votes.length-positive,stars:votes.length?Math.round((1+4*positive/votes.length)*10)/10:null,confirmedReports:rows.filter(r=>r.sk.startsWith('REPORT#') && r.status==='CONFIRMED').length};
+  const comments=includeComments
+   ? rows.filter(row=>row.sk.startsWith('COMMENT#') && typeof row.comment==='string')
+     .sort((a,b)=>b.createdAt.localeCompare(a.createdAt))
+     .map(({comment,tournamentName,createdAt})=>({comment,tournamentName,createdAt}))
+   : undefined;
+  return {comments,events,votes:votes.length,positive,negative:votes.length-positive,stars:votes.length?Math.round((1+4*positive/votes.length)*10)/10:null,confirmedReports:rows.filter(r=>r.sk.startsWith('REPORT#') && r.status==='CONFIRMED').length};
  };
  const clean=async(p:any,reputation=true)=>{
   if(!p || await get('CLAIM_TABLE_NAME','deleted-account:'+owner(p)))return null;
   const canView=await visible(p);
-  return {id:p.id,nickname:p.nickname,owner:owner(p)+'::'+owner(p),accountComplete:Boolean(p.accountComplete),visibility:p.visibility==='PUBLIC'?'PUBLIC':'PRIVATE',canView,avatarPath:p.avatarPath || '',judgeEnabled:true,...(canView?{bio:p.bio || '',socialLinks:p.socialLinks || '{}'}:{}),...(reputation?{reputation:await summary(p.id)}:{})};
+  return {id:p.id,nickname:p.nickname,owner:owner(p)+'::'+owner(p),accountComplete:Boolean(p.accountComplete),visibility:p.visibility==='PUBLIC'?'PUBLIC':'PRIVATE',canView,avatarPath:p.avatarPath || '',judgeEnabled:true,...(canView?{bio:p.bio || '',socialLinks:p.socialLinks || '{}'}:{}),...(reputation?{reputation:await summary(p.id,owner(p)===sub)}:{})};
  };
  if(a.action==='COMMUNITY_BADGES'){
   const badges:any[]=[];let key;
@@ -112,6 +117,49 @@ export async function community(db:DynamoDBDocumentClient,sub:string,a:any){
  }
  const t=await get('TOURNAMENT_TABLE_NAME',a.tournamentId);assertActiveTournament(t);
  if(!t || t.creationPaymentStatus==='REVERSED')throw new Error('Torneo no disponible.');
+ if(['COMMUNITY_JUDGE_COMMENT_TARGETS','COMMUNITY_JUDGE_COMMENT'].includes(a.action)){
+  const listing=a.action==='COMMUNITY_JUDGE_COMMENT_TARGETS';
+  if(t.status!=='COMPLETED' || !t.judgeIds?.length){
+   if(listing)return {judges:[]};
+   throw new Error('Podés comentar después de finalizar el torneo.');
+  }
+  const people=await Promise.all(t.participantIds.map((id:string)=>get('PROFILE_TABLE_NAME',id)));
+  const participantIndex=people.findIndex((profile:any)=>owner(profile)===sub);
+  if(participantIndex<0 || t.rosterStatuses?.[participantIndex]!=='ACCEPTED'){
+   if(listing)return {judges:[]};
+   throw new Error('Sólo quienes participaron pueden dejar un comentario.');
+  }
+  const eligible=async(id:string)=>{
+   const judgeIndex=t.judgeIds.indexOf(id);
+   if(judgeIndex<0 || t.rosterStatuses?.[t.participantIds.length+judgeIndex]!=='ACCEPTED')return null;
+   const judge=await get('PROFILE_TABLE_NAME',id);
+   return judge && owner(judge)!==sub ? judge : null;
+  };
+  const commentKey='COMMENT#'+t.id+'#'+sub;
+  if(listing){
+   const judges=await Promise.all(t.judgeIds.map(async(id:string)=>{
+    const judge=await eligible(id);
+    if(!judge)return null;
+    const previous=await social('JUDGE#'+id,commentKey);
+    return {id,name:judge.nickname,submitted:Boolean(previous)};
+   }));
+   return {judges:judges.filter(Boolean)};
+  }
+  if(typeof a.judgeId!=='string' || !await eligible(a.judgeId))throw new Error('Elegí un juez de este torneo distinto de tu cuenta.');
+  const comment=typeof a.reason==='string'?a.reason.trim():'';
+  if(!comment || comment.length>500)throw new Error('Escribí un comentario de hasta 500 caracteres.');
+  const pk='JUDGE#'+a.judgeId;
+  try{
+   await db.send(new TransactWriteCommand({TransactItems:[
+    {ConditionCheck:{TableName:env('TOURNAMENT_TABLE_NAME'),Key:{id:t.id},ConditionExpression:'#s=:completed AND attribute_not_exists(deletedAt)',ExpressionAttributeNames:{'#s':'status'},ExpressionAttributeValues:{':completed':'COMPLETED'}}},
+    {Put:{TableName:env('SOCIAL_TABLE_NAME'),Item:{pk,sk:commentKey,tournamentId:t.id,tournamentName:t.name,comment,createdAt:new Date().toISOString()},ConditionExpression:'attribute_not_exists(pk)'}},
+   ]}));
+  }catch(error){
+   if((error as Error).name==='TransactionCanceledException' && await social(pk,commentKey))throw new Error('Ya dejaste un comentario para este juez en este torneo.');
+   throw error;
+  }
+  return {ok:true};
+ }
  if(['COMMUNITY_RATE','COMMUNITY_REPORT'].includes(a.action)){
   if(typeof a.judgeId!=='string' || !t.judgeIds?.includes(a.judgeId))throw new Error('Elegí un juez de este torneo.');
   const judge=await get('PROFILE_TABLE_NAME',a.judgeId);if(owner(judge)===sub)throw new Error('El juez no puede valorarse ni reportarse a sí mismo.');

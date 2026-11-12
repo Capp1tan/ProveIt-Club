@@ -30,5 +30,15 @@ export function reputationPanel(rep,enabled=false){
  root.append(el('p',rep.events+' torneos arbitrados · '+rep.votes+' valoraciones'),el('small',rep.positive+' positivas · '+rep.negative+' negativas · '+rep.confirmedReports+' reclamos confirmados'));
  if(rep.votes>0 && rep.votes<5)root.append(el('small','Pocas valoraciones. Consultá también la cantidad de eventos.'));
  root.append(el('small','Las estrellas reflejan votos: 1 + 4 × proporción positiva. Los reclamos se muestran por separado.'));
+ if(rep.comments?.length){
+  const comments=el('details','','judge-comment-list');
+  comments.append(el('summary','Comentarios recibidos ('+rep.comments.length+')'));
+  for(const entry of rep.comments){
+   const item=el('article','','judge-feedback');
+   item.append(el('strong',entry.tournamentName),el('p',entry.comment));
+   comments.append(item);
+  }
+  root.append(comments);
+ }
  return root;
 }

@@ -3,7 +3,7 @@ import {attendancePanel,drawAudit,animateDraw,updateDrawCountdown} from './tourn
 import {tournamentIsLive} from '../shared/tournament-room.ts';
 import {roomDeadline,roomIsClosed,validatePodium,allEntriesPaid} from '../shared/tournament-room.ts';
 import { createRealLobby } from './tournament-real-lobby.js';
-import {judgePanel} from './judge-ui.js';
+import {judgePanel,judgeComments} from './judge-ui.js';
 import { tournamentCoverUrl } from './tournament-cover.js';
 import { mountChat } from './chat-ui.js';
 import { prizePanel } from './tournament-prize.js';
@@ -97,14 +97,14 @@ function drawBoard(t) {
 function showClosedRoom(t){
  lobbyStopped=true;clearTimeout(lobbyRetry);lobbySubscription?.unsubscribe();lobbySubscription=null;closeTournamentChat();profilePreview?.lock();drawCleanup?.();drawCleanup=null;realLobby?.destroy();currentTournament=null;
  const card=element('section','','tournament-panel room-closed');card.append(element('h1','La sala está cerrada'),element('p',t.name || 'Torneo finalizado'),element('p','Pasaron los cinco minutos posteriores al resultado. La sala y el chat ya no están disponibles. Tu participación se conserva en el historial.'));
- const link=element('a','Ir a mi historial','primary-button');link.href='/perfil.html';card.append(link);detail.replaceChildren(card);notice.hidden=true;
+ const link=element('a','Ir a mi historial','primary-button');link.href='/perfil.html';card.append(link);detail.replaceChildren(card,judgeComments(t.id));notice.hidden=true;
 }
 function updateClock() {
   if(lobbyStopped)return;
   if(currentTournament && roomIsClosed(currentTournament,roomNow())){showClosedRoom(currentTournament);return;}
   realLobby?.clock();
   if(currentTournament)updateDrawCountdown(currentTournament,{sub:currentUser?.userId,profiles,onChanged:()=>refreshTournament(true),now:roomNow()});
-  if(currentTournament){const action=detail.querySelector('[data-attendance-action]');if(action && !action.closest('[data-competition-busy]'))action.disabled=tournamentIsLive(currentTournament,roomNow()) || (action.dataset.ready!=='true' && roomNow()<Date.parse(action.dataset.scheduledAt));if(tournamentIsLive(currentTournament,roomNow()))detail.querySelectorAll('.competition-actions button,.competition-actions input,.competition-actions select').forEach(n=>n.disabled=true);}
+  if(currentTournament){const action=detail.querySelector('[data-attendance-action]');if(action && !action.closest('[data-competition-busy]'))action.disabled=tournamentIsLive(currentTournament,roomNow()) || roomNow()<Date.parse(action.dataset.scheduledAt);if(tournamentIsLive(currentTournament,roomNow()))detail.querySelectorAll('.competition-actions button,.competition-actions input,.competition-actions select').forEach(n=>n.disabled=true);}
   if(currentTournament && !currentTournament.winnerProfileId && !detail.querySelector('.tournament-decision') && tournamentIsLive(currentTournament,roomNow())){const decision=resultPanel(currentTournament);if(decision)detail.append(decision);}
   const button=document.getElementById('recordDuelWinner');
   if(button && !button.dataset.saving) button.disabled=!tournamentIsLive(currentTournament,roomNow());
@@ -175,6 +175,7 @@ function renderTournament(t) {
   else detail.append(element('p','Este torneo se creó antes del sistema de invitaciones; conserva sus integrantes históricos. El sorteo automático se aplica a los nuevos torneos.','tournament-notice'));
   const outcome=resultPanel(t);if(outcome)detail.append(outcome);
   if(t.judgeIds?.length || currentUser?.userId===t.createdBySub){
+    if(t.status==='COMPLETED')detail.append(judgeComments(t.id));
     const conditions=element('details','','tournament-panel');conditions.append(element('summary',t.judgeIds?.length?'Condiciones y jueces':'Administrar condiciones'),judgePanel(t,{isOrganizer:currentUser?.userId===t.createdBySub,onChanged:()=>refreshTournament(true)}));detail.append(conditions);
   }
   if(isClubAdmin || currentUser?.userId===t.createdBySub) {

@@ -1,5 +1,8 @@
 ## 4.3.0 — 2026-11-04
 
+## 4.6.0 — 2026-11-12
+- Mejor contraste en modo claro, comentarios privados al juez, asistencia definitiva, carga de portada con clic o arrastre y aviso de voz a diez segundos del sorteo.
+
 ## 4.5.0 — 2026-11-04
 - Administración → Configuración de tarifas: inscripciones gratis globales para torneos nuevos, sin Mercado Pago, conservando la tarifa habitual para reactivarla. Los eventos existentes conservan su precio.
 - Administración → Torneos: eliminación individual visible en la lista y la ficha, incluidos eventos finalizados con sala cerrada.

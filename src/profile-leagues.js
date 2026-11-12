@@ -32,7 +32,7 @@ function messagePanel(title,copy){const card=node('section','','league-panel');c
 /** Carga secundaria: un error del progreso no impide ver o editar el perfil.
  * No se calcula XP en el cliente ni se guarda en localStorage. Recargar no suma.
  */
-export function profileProgress(profile){
+export function profileProgress(profile,{own=false}={}){
  const root=node('div','','league-progress-root');root.setAttribute('aria-busy','true');
  const pending=messagePanel('Liga y participaciones','Cargando tu recorrido en el club…');root.append(pending);
  if(!profile.canView){root.replaceChildren(messagePanel('Recorrido privado','Las ligas, participaciones y logros de este perfil sólo están disponibles para sus amigos.'));root.removeAttribute('aria-busy');return root;}
@@ -68,7 +68,14 @@ export function profileProgress(profile){
      const copy=node('div');copy.append(node('strong',event.name),node('small',event.activity+' · '+event.role));if(closed)copy.append(node('small','Sala cerrada','league-room-closed'));identity.append(image,copy);
      const when=node('time',date(event.date),'league-event-date');when.dateTime=event.date;
      const result=node('span',event.result,'league-result');result.dataset.tone=['gold','silver','bronze'].includes(event.resultTone)?event.resultTone:'neutral';
-     link.append(identity,when,result);li.append(link);list.append(li);
+     link.append(identity,when,result);
+     li.append(link);
+     if(own && closed && event.canCommentOnJudge){
+      const comment=node('a','Comentar al juez','league-action');
+      comment.href='/torneo.html?id='+encodeURIComponent(event.id);
+      li.append(comment);
+     }
+     list.append(li);
     }history.append(list);
     if(data.history.length===20)history.append(node('small','Se muestran las últimas 20 participaciones.'));
    }

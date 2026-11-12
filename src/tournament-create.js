@@ -245,7 +245,42 @@ function clearCover() {
   $('posterEmpty').hidden = false; $('removeCover').hidden = true; $('coverInput').value = ''; $('chooseCover').querySelector('span').textContent = 'Agregar imagen';
   $('coverStatus').textContent = 'JPG, PNG o WebP · hasta 5 MB. Podés mover y ajustar la imagen antes de usarla.';
 }
-$('chooseCover').addEventListener('click', () => $('coverInput').click());
+const poster=$('creationPoster');
+const coverInput=$('coverInput');
+const canChooseCover=()=>!coverInput.matches(':disabled') && !coverWorking && !saving;
+function openCoverPicker(){
+ if(canChooseCover())coverInput.click();
+}
+$('chooseCover').addEventListener('click',openCoverPicker);
+$('posterPicker').addEventListener('click',openCoverPicker);
+let fileDragDepth=0;
+poster.addEventListener('dragenter',event=>{
+ if(!event.dataTransfer?.types.includes('Files'))return;
+ event.preventDefault();
+ fileDragDepth++;
+ poster.classList.toggle('is-file-over',canChooseCover());
+});
+poster.addEventListener('dragover',event=>{
+ if(!event.dataTransfer?.types.includes('Files'))return;
+ event.preventDefault();
+ event.dataTransfer.dropEffect=canChooseCover()?'copy':'none';
+});
+poster.addEventListener('dragleave',()=>{
+ fileDragDepth=Math.max(0,fileDragDepth-1);
+ if(!fileDragDepth)poster.classList.remove('is-file-over');
+});
+poster.addEventListener('drop',event=>{
+ if(!event.dataTransfer?.files.length)return;
+ event.preventDefault();
+ fileDragDepth=0;
+ poster.classList.remove('is-file-over');
+ if(!canChooseCover())return;
+ if(event.dataTransfer.files.length!==1){
+  $('coverStatus').textContent='Elegí una sola imagen para la portada.';
+  return;
+ }
+ void adjustCover(event.dataTransfer.files[0]);
+});
 $('removeCover').addEventListener('click', () => { clearCover(); saveDraft(); });
 async function adjustCover(file,framing=null){
   if(coverWorking || saving)return;const activeEpoch=epoch;coverWorking=true;coverEditorAbort=new AbortController();$('coverStatus').textContent='Ajustá el encuadre de la imagen…';

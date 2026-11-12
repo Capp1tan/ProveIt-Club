@@ -22,3 +22,7 @@ body.create-page .creation-shell select{color-scheme:light}
 /* La portada creada y la vista previa comparten siempre el formato de historia. */
 .creation-poster{aspect-ratio:9/16;min-height:0}.poster-tools{flex-wrap:wrap;justify-content:flex-start;gap:12px 20px}.cover-size-guide{line-height:1.7;margin-top:12px}
 @media(max-width:740px){.creation-poster{aspect-ratio:9/16;min-height:0;max-width:380px;margin-inline:auto}}
+
+.poster-picker{position:absolute;inset:0;z-index:4;width:100%;border:0;border-radius:inherit;background:transparent;cursor:pointer}
+.poster-picker:focus-visible,.creation-poster.is-file-over{outline:3px solid var(--site-accent,#5271ff);outline-offset:4px}
+.poster-picker:disabled{cursor:default}

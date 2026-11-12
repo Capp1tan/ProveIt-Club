@@ -64,6 +64,8 @@ export async function leagueProgress(db:DynamoDBDocumentClient,profileId:string)
     try{coverUrl=await getSignedUrl(covers,new GetObjectCommand({Bucket:process.env.PROFILE_BUCKET_NAME!,Key:t.coverPath}),{expiresIn:120});}catch{/* El historial funciona aunque la portada falle. */}
    }
    return {id:t.id,name:t.name,activity:t.activity,status:t.status,date:t.decidedAt || t.startsAt || t.createdAt,
+    canCommentOnJudge:t.status==='COMPLETED' && t.participantIds.includes(profileId) &&
+      t.judgeIds?.some((id:string,index:number)=>id!==profileId && t.rosterStatuses?.[t.participantIds.length+index]==='ACCEPTED'),
     role:t.participantIds.includes(profileId)?'Participante':'Juez',...historyResult(t,profileId),coverUrl,
     roomClosed:roomIsClosed(t),roomClosesAt:roomDeadline(t)};
   }))};

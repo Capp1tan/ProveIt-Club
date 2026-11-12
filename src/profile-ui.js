@@ -29,7 +29,7 @@ async function refreshDashboard(id){
  try{
   const [p]=await Promise.all([viewClubProfile(id),loadBadges()]);
   if(!p)return;
-  document.getElementById('profileDashboard').replaceChildren(profileIdentity(p),profileProgress(p));
+  document.getElementById('profileDashboard').replaceChildren(profileIdentity(p),profileProgress(p,{own:true}));
   document.querySelector('.profile-heading').hidden=true;
  }catch{
   const root=document.getElementById('profileDashboard');

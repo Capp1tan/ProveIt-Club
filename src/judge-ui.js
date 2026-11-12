@@ -26,6 +26,58 @@ export function judgePanel(t,{isOrganizer,onChanged}){
   actions.append(report);card.append(actions,el('small','Sólo participantes confirmados pueden valorar o reclamar. Una valoración por juez y evento; no se permiten autoevaluaciones.'),message);root.append(card);
  });return root;
 }
+export function judgeComments(tournamentId){
+ const root=el('section','','tournament-panel judge-comments');
+ const open=el('button','Dejar comentario al juez','social-button');
+ open.type='button';
+ root.append(open);
+ const status=el('p','','community-notice');
+ status.setAttribute('role','status');
+ root.append(status);
+ open.hidden=true;
+ const load=async()=>{
+  const {judges}=await communityAction('JUDGE_COMMENT_TARGETS',{tournamentId});
+  if(!judges.length || !root.isConnected)return;
+  open.hidden=false;
+  open.addEventListener('click',()=>{
+   open.remove();
+   root.append(el('h2','Comentarios para el jurado'),el('p','Cada comentario es privado y lo recibe el juez en su perfil.'));
+   for(const judge of judges){
+    if(judge.submitted){root.append(el('p','Ya dejaste un comentario para '+judge.name+'.'));continue;}
+    const form=el('form','','community-form'),label=el('label','Comentario para '+judge.name);
+    const input=el('textarea'),send=el('button','Enviar comentario','social-button');
+    const message=el('p','','community-notice');
+    message.setAttribute('role','status');
+    input.required=true;
+    input.maxLength=500;
+    input.rows=3;
+    label.append(input);
+    send.type='submit';
+    form.append(label,send,message);
+    form.addEventListener('submit',async event=>{
+     event.preventDefault();
+     const comment=input.value.trim();
+     if(!comment || send.disabled)return;
+     send.disabled=true;
+     input.readOnly=true;
+     try{
+      await communityAction('JUDGE_COMMENT',{tournamentId,judgeId:judge.id,reason:comment});
+      form.replaceChildren(el('p','Comentario enviado a '+judge.name+'.'));
+     }catch(error){
+      message.textContent=error.message;
+      send.disabled=false;
+      input.readOnly=false;
+     }
+    });
+    root.append(form);
+   }
+  },{once:true});
+ };
+ root.hidden=true;
+ void load().then(()=>{root.hidden=open.hidden;}).catch(()=>{});
+ return root;
+}
+
 export async function mountJudgeReportAdmin(host=document.querySelector('main')){
  const root=el('section','','profile-card');root.append(el('h2','Reclamos de jueces'));host.append(root);
  const status=el('p','Cargando…','community-notice'),list=el('div');root.append(status,list);

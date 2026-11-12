@@ -14,9 +14,11 @@ export function changeCompetition(t:any,sub:string,owned:string[],a:any,now=Date
  let resultDraw=t.draw,status=t.status;const at=new Date(now).toISOString();
  if(a.action==='ATTENDANCE'){
   if(owned.length!==1 || typeof a.ready!=='boolean')throw new Error('Sólo podés confirmar tu propia asistencia.');
-  if(a.ready && now<Date.parse(t.startsAt))throw new Error('La asistencia se habilita a partir del horario previsto del encuentro.');
-  const id=owned[0];s.attendance[id]={ready:a.ready,at};
-  if(!a.ready){s.startAt=null;s.drawAt=null;}
+  if(!a.ready)throw new Error('La asistencia confirmada no se puede cancelar.');
+  const id=owned[0];
+  if(s.attendance[id]?.ready===true)return t;
+  if(now<Date.parse(t.startsAt))throw new Error('La asistencia se habilita a partir del horario previsto del encuentro.');
+  s.attendance[id]={ready:true,at};
  }else if(a.action==='DRAW_SCHEDULE'){
   if(sub!==t.createdBySub)throw new Error('Sólo el organizador puede iniciar el sorteo.');
   if(resultDraw)throw new Error('La llave ya fue sorteada.');
