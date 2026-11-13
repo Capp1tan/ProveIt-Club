@@ -47,7 +47,7 @@ export function createRealLobby({ profilePreview, getUser, getConnection, getNow
     } catch(error) { message.textContent=error.message || 'No pudimos guardar tu respuesta.'; }
     finally { if(generation===actionId){busy=false;root.querySelectorAll('.rl-answer').forEach(n=>n.disabled=false);} }
   }
-  function render(value) {
+  function render(value,{bracketFocus=false}={}) {
     t=value;root.replaceChildren();headerStats?.remove();
     const statuses=t.rosterStatuses || Array(t.participantIds.length+t.judgeIds.length+(t.treasurerId?1:0)).fill('ACCEPTED');
     const people=t.participantIds.map((id,i)=>({id,name:t.participantNames[i],paymentReversed:t.entryPaymentStatuses?.[i]==='REVERSED',status:t.entryPaymentStatuses?.[i]==='REVERSED'?'PENDING':statuses[i] || 'PENDING'}));
@@ -70,6 +70,7 @@ export function createRealLobby({ profilePreview, getUser, getConnection, getNow
     copy.append(el('p',(t.winnerProfileId?'ENCUENTRO FINALIZADO':'FASE DE CONFIRMACIÓN')+' · '+t.name+' · '+t.activity,'rl-kicker'),el('h1',t.winnerProfileId?'Desafío completado':'Sala de espera y confirmación de asistencia'),el('p',t.winnerProfileId?'Revisá el resultado y la participación.':'Confirmá tu asistencia para preparar el encuentro.'));
     copy.querySelector('p:last-child').dataset.lobbyIntro='';
     const deadline=roomDeadline(t);if(deadline!==null){const closing=el('aside','','rl-closing-notice');closing.setAttribute('role','status');const time=el('strong');time.dataset.roomClosing='';closing.append(el('span','Esta sala se cerrará automáticamente en '),time,el('p','El resultado ya está guardado. Podés salir de la sala sin problemas; tu participación seguirá en el historial.'));root.append(closing);}
+    if(bracketFocus){clock();return root;}
     const connected=Boolean(getConnection?.());const live=el('small',connected?'Confirmaciones en vivo':'Actualización automática · reconectando','lobby-live');live.id='lobbyConnection';live.classList.toggle('lobby-reconnect',!connected);copy.append(live);
     const scheduleNote=el('small','El horario no confirma personas ni inicia automáticamente el torneo.');copy.append(scheduleNote);hero.append(copy,ring);root.append(hero);
     ringText.textContent=accepted+' / '+total;ring.setAttribute('role','img');ring.setAttribute('aria-label',accepted+' de '+total+' participantes confirmados');

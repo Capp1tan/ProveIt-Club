@@ -3,12 +3,12 @@ import { formats } from './tournament-formats.js';
 const el = (tag, text, className) => { const n = document.createElement(tag); n.textContent = text; if (className) n.className = className; return n; };
 
 // Modelo sin sorteo: no modifica el torneo ni consume azar del servidor.
-export function renderTournamentPreview(root, { format, count, names = [] }) {
+export function renderTournamentPreview(root, { format, count, names = [], awaitingDraw = false }) {
   root.replaceChildren();
   const info = formats.find(f => f.id === format);
   const heading = el('div', '', 'model-heading');
-  heading.append(el('span', 'MODELO INTERACTIVO', 'editorial-kicker'), el('h3', info.name));
-  root.append(heading, el('p', 'Tocá un encuentro para ver su lugar en la competencia. Los nombres y cruces son ilustrativos hasta que todos confirmen.', 'editorial-help'));
+  heading.append(el('h3', info.name));
+  root.append(heading, el('p', awaitingDraw ? 'Tocá un encuentro para explorar el formato. Los cruces se definirán en el sorteo.' : 'Tocá un encuentro para ver su lugar en la competencia. Los nombres y cruces son ilustrativos hasta que todos confirmen.', 'editorial-help'));
   const players = Array.from({ length: count }, (_, i) => names[i] || `Participante ${i + 1}`);
   const columns = [], model = el('div', '', 'model-board');
   model.tabIndex = 0; model.setAttribute('role', 'region'); model.setAttribute('aria-label', 'Modelo de llaves desplazable');
@@ -23,7 +23,7 @@ export function renderTournamentPreview(root, { format, count, names = [] }) {
       pair.forEach(name => button.append(el('span', name)));
       button.addEventListener('click', () => {
         model.querySelectorAll('[aria-pressed]').forEach(n => n.setAttribute('aria-pressed', 'false'));
-        button.setAttribute('aria-pressed', 'true'); output.textContent = label + '. Modelo de referencia; el sorteo definitivo se guarda al confirmar todos.';
+        button.setAttribute('aria-pressed', 'true'); output.textContent = label + '. Los cruces definitivos se guardan al completar el sorteo.';
       }); col.append(button);
     } columns.push(col);
   }

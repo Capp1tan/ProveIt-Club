@@ -1,3 +1,4 @@
+import {renderTournamentPreview} from './tournament-preview.js';
 import {usesCompetition,competitionStart} from '../shared/competition.ts';
 import {attendancePanel,drawAudit,animateDraw,updateDrawCountdown} from './tournament-competition.js';
 import {tournamentIsLive} from '../shared/tournament-room.ts';
@@ -55,6 +56,8 @@ function states(t) {return t.rosterStatuses || Array(t.participantIds.length+t.j
 function drawBoard(t) {
   const section=element('section','','tournament-panel'); section.id='tournamentDraw';
   section.append(element('h2','Cruces sorteados'));
+  const selection=element('p','Seleccioná un encuentro para ver sus cruces.','draw-selection');
+  selection.setAttribute('role','status');
   let draw;
   try {draw=JSON.parse(t.draw);} catch {section.append(element('p','No pudimos leer el sorteo guardado. Actualizá para reintentar.'));return section;}
   const players=new Map(draw.order.map(player=>[player.id,player]));
@@ -69,6 +72,7 @@ function drawBoard(t) {
     const player=slot.playerId?players.get(slot.playerId):slot.name?slot:null;
     if(player) {
       row.append(profilePreview.button(player.id,player.name));
+      if(profiles.get(player.id)?.owner?.split('::')[0]===currentUser?.userId)row.append(element('small','Vos','draw-self'));
       if(t.winnerProfileId===player.id) { row.dataset.winner='true'; row.append(element('strong','Ganador','winner-tag')); }
     }
     else {row.append(element('span',(slot.outcome==='loser'?'Perdedor de ':'Ganador de ')+slot.source,'draw-placeholder'));links.push({source:slot.source,target:matchId,slot:index,outcome:slot.outcome});}
@@ -81,13 +85,22 @@ function drawBoard(t) {
     round.matches.forEach(match=>{
       const card=element('article','','draw-match');
       card.dataset.matchId=match.id;card.setAttribute('aria-label','Encuentro '+match.id);
-      card.append(element('small',match.id));
+      const inspect=element('button','Ver encuentro '+match.id,'draw-inspect');
+      inspect.type='button';
+      inspect.setAttribute('aria-pressed','false');
+      inspect.addEventListener('click',()=>{
+        canvas.querySelector('[aria-pressed="true"]')?.setAttribute('aria-pressed','false');
+        inspect.setAttribute('aria-pressed','true');
+        const names=[...card.querySelectorAll('.draw-player')].map(row=>row.firstElementChild?.textContent.trim()).filter(Boolean);
+        selection.textContent=round.name+' · '+names.join(' vs ');
+      });
+      card.append(inspect);
       if(match.entrants) match.entrants.forEach((player,index)=>card.append(slotNode(player,match.id,index)));
       else {card.append(slotNode(match.left,match.id,0),element('span','VS','draw-versus'),slotNode(match.right,match.id,1));}
       matches.append(card);
     });canvas.append(column);
   });
-  section.append(element('p','Sorteo aleatorio guardado. Mantené el cursor sobre un nombre para ver su perfil, o tocá el nombre.'),board);
+  section.append(board,selection);
   drawCleanup=connectBracket(canvas,links);
   if(t.format==='SWISS')section.append(element('p','Se sorteó la primera ronda. Las siguientes requieren resultados y emparejamientos por puntaje, que todavía no están implementados.','tournament-notice'));
   if(t.format==='DOUBLE_ELIMINATION')section.append(element('p','Los casilleros de ganadores y perdedores se completarán al registrar resultados. El reinicio de la gran final depende de las reglas acordadas.'));
@@ -161,7 +174,41 @@ function renderTournament(t) {
    if(!coverRequests.has(t.coverPath) || coverRequests.get(t.coverPath).expires<Date.now())coverRequests.set(t.coverPath,{expires:Date.now()+90000,promise:tournamentCoverUrl(t.id).catch(()=>{coverRequests.delete(t.coverPath);return '';})});
    void coverRequests.get(t.coverPath).promise.then(url=>{if(!url || !hero.isConnected)return;const image=document.createElement('img');image.alt='Portada de '+t.name;image.src=url;hero.prepend(image);});
   }
-  detail.append(realLobby.render(t));const attendance=attendancePanel(t,{sub:currentUser?.userId,profiles,onChanged:()=>refreshTournament(true),now:roomNow()});if(attendance)detail.append(attendance);updateLobbyConnection();
+  const savedDraw=Boolean(t.draw && (usesCompetition(t) || t.status==='READY' || t.status==='COMPLETED'));
+  const ready=Boolean(t.rosterStatuses?.length && t.rosterStatuses.every(value=>value==='ACCEPTED') &&
+    allEntriesPaid(t) && t.creationPaymentStatus!=='REVERSED');
+  const bracketFocus=ready && (savedDraw || usesCompetition(t));
+  const lobby=realLobby.render(t,{bracketFocus});
+  const controls=attendancePanel(t,{sub:currentUser?.userId,profiles,onChanged:()=>refreshTournament(true),now:roomNow()});
+  if(bracketFocus){
+    const stage=element('section','','tournament-bracket-stage');
+    const heading=element('header','','bracket-stage-heading');
+    heading.append(element('h1',t.name),element('p',[t.activity,format?.name].filter(Boolean).join(' · ')));
+    stage.append(heading);
+    if(!savedDraw && controls)stage.append(controls);
+    if(savedDraw){
+      const board=drawBoard(t);
+      stage.append(board);
+      detail.append(stage);
+      animateDraw(t,board);
+    }else{
+      const preview=element('div','','bracket-stage-preview');
+      preview.append(element('h2','Llave por sortear'));
+      if(format && t.participantIds.length>=2){
+        const model=element('div');
+        renderTournamentPreview(model,{format:t.format,count:t.participantIds.length,awaitingDraw:true});
+        preview.append(model);
+      }
+      stage.append(preview);
+      detail.append(stage);
+    }
+    if(lobby.childElementCount)detail.append(lobby);
+    if(savedDraw && controls)detail.append(controls);
+  }else{
+    detail.append(lobby);
+    if(controls)detail.append(controls);
+  }
+  updateLobbyConnection();
   if(t.paymentMode==='TEST')detail.append(element('p','TORNEO DE PRUEBA · no corresponde a un cobro real','tournament-notice'));
   if(t.creationPaymentStatus==='REVERSED')detail.append(element('p','El pago de creación fue revertido. Contactá al administrador.','tournament-notice'));
   const canEditPrize=t.arbitrationMode==='ORGANIZER' ? currentUser?.userId===t.createdBySub : (t.judgeIds || []).some((id,index)=>Boolean(profiles.get(id)?.owner && (profiles.get(id).owner===currentUser?.username || profiles.get(id).owner===currentUser?.userId || profiles.get(id).owner.startsWith(currentUser?.userId+'::'))) && (!t.rosterStatuses || t.rosterStatuses[t.participantIds.length+index]==='ACCEPTED'));
@@ -170,9 +217,12 @@ function renderTournament(t) {
   const info=element('details','','tournament-panel');info.append(element('summary','Reglas, formato y condiciones'),element('h2',format?.name || t.format));
   if(format && !t.draw){const image=element('div','','format-preview');image.innerHTML=formatImage(format.id);image.append(element('p',format.description));info.append(image);}
   const rules=element('p',t.description || 'El organizador todavía no agregó reglas.');rules.style.whiteSpace='pre-wrap';info.append(rules);if(t.overview)info.append(element('p',t.overview));if(t.coverPath)info.append(hero);detail.append(info);
-  if(t.draw && (usesCompetition(t) || t.status==='READY' || t.status==='COMPLETED')){const board=drawBoard(t);detail.append(board);const audit=drawAudit(t);if(audit)detail.append(audit);animateDraw(t,board);}
-  else if(t.rosterStatuses) detail.append(element('p',status.includes('REJECTED')?'Una persona rechazó. El torneo no se sortea: por ahora es necesario crear otro con los integrantes que acepten.':'Esperando que todos los participantes y responsables confirmen. Después de aceptar y completar los pagos, cada jugador confirma su asistencia para realizar el sorteo.','tournament-notice'));
-  else detail.append(element('p','Este torneo se creó antes del sistema de invitaciones; conserva sus integrantes históricos. El sorteo automático se aplica a los nuevos torneos.','tournament-notice'));
+  if(savedDraw){
+    if(!bracketFocus){const board=drawBoard(t);detail.append(board);animateDraw(t,board);}
+    const audit=drawAudit(t);if(audit)detail.append(audit);
+  }else if(!bracketFocus && status.includes('REJECTED')){
+    detail.append(element('p','Una persona rechazó la invitación. El sorteo quedó detenido.','tournament-notice'));
+  }
   const outcome=resultPanel(t);if(outcome)detail.append(outcome);
   if(t.judgeIds?.length || currentUser?.userId===t.createdBySub){
     if(t.status==='COMPLETED')detail.append(judgeComments(t.id));
