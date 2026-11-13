@@ -55,7 +55,14 @@ function avatar(id,name) {
 function states(t) {return t.rosterStatuses || Array(t.participantIds.length+t.judgeIds.length+(t.treasurerId?1:0)).fill('ACCEPTED');}
 function drawBoard(t) {
   const section=element('section','','tournament-panel'); section.id='tournamentDraw';
-  section.append(element('h2','Cruces sorteados'));
+  const header=element('header','','bracket-reveal-header');
+  const status=element('h2',t.winnerProfileId?'Torneo finalizado':'Cruces sorteados','bracket-reveal-status');
+  status.setAttribute('aria-live','polite');
+  const replay=element('button','↻ Repetir animación','bracket-replay');
+  replay.type='button';
+  replay.addEventListener('click',()=>animateDraw(t,section,{replay:true}));
+  header.append(status,replay);
+  section.append(header);
   const selection=element('p','Seleccioná un encuentro para ver sus cruces.','draw-selection');
   selection.setAttribute('role','status');
   let draw;
@@ -72,6 +79,7 @@ function drawBoard(t) {
     const player=slot.playerId?players.get(slot.playerId):slot.name?slot:null;
     if(player) {
       row.dataset.playerLabel=player.name;
+      row.dataset.playerId=player.id;
       row.append(profilePreview.button(player.id,player.name));
       if(profiles.get(player.id)?.owner?.split('::')[0]===currentUser?.userId)row.append(element('small','Vos','draw-self'));
       if(t.winnerProfileId===player.id) { row.dataset.winner='true'; row.append(element('strong','Ganador','winner-tag')); }
@@ -81,7 +89,7 @@ function drawBoard(t) {
   };
   draw.rounds.forEach(round=>{
     const column=element('section','','draw-round');
-    column.append(element('p',round.group,'eyebrow'),element('h3',round.name));
+    column.append(element('h3',round.name));
     const matches=element('div','','round-matches');column.append(matches);
     round.matches.forEach(match=>{
       const card=element('article','','draw-match');
@@ -97,11 +105,19 @@ function drawBoard(t) {
       });
       card.append(inspect);
       if(match.entrants) match.entrants.forEach((player,index)=>card.append(slotNode(player,match.id,index)));
-      else {card.append(slotNode(match.left,match.id,0),element('span','VS','draw-versus'),slotNode(match.right,match.id,1));}
+      else card.append(slotNode(match.left,match.id,0),slotNode(match.right,match.id,1));
       matches.append(card);
     });canvas.append(column);
   });
   section.append(board,selection);
+  const winner=players.get(t.winnerProfileId);
+  if(winner){
+    const champion=element('p','','bracket-champion');
+    const trophy=element('span','🏆','bracket-trophy');
+    trophy.setAttribute('aria-hidden','true');
+    champion.append(trophy,element('strong','Ganador: '+winner.name));
+    section.append(champion);
+  }
   drawCleanup=connectBracket(canvas,links);
   if(t.format==='SWISS')section.append(element('p','Se sorteó la primera ronda. Las siguientes requieren resultados y emparejamientos por puntaje, que todavía no están implementados.','tournament-notice'));
   if(t.format==='DOUBLE_ELIMINATION')section.append(element('p','Los casilleros de ganadores y perdedores se completarán al registrar resultados. El reinicio de la gran final depende de las reglas acordadas.'));

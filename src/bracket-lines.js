@@ -2,7 +2,7 @@
 export function connectBracket(canvas, links) {
   const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg');
   svg.classList.add('bracket-connections');svg.setAttribute('aria-hidden','true');canvas.prepend(svg);
-  const paths=links.map(link=>{const path=document.createElementNS(ns,'path');path.dataset.source=link.source;path.dataset.target=link.target;path.dataset.outcome=link.outcome;svg.append(path);return {...link,path};});
+  const paths=links.map(link=>{const path=document.createElementNS(ns,'path');path.setAttribute('pathLength','1');path.dataset.source=link.source;path.dataset.target=link.target;path.dataset.outcome=link.outcome;svg.append(path);return {...link,path};});
   let frame;
   function paint() {
     if(!canvas.isConnected)return;
