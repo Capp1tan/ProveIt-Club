@@ -68,9 +68,10 @@ function drawBoard(t) {
   const slotNode=(slot,matchId,index)=>{
     const row=element('div','','draw-player');
     row.dataset.slot=String(index);
-    if(!slot) {row.append(element('span','Descanso / pase libre'));return row;}
+    if(!slot) {row.dataset.playerLabel='Pase libre';row.append(element('span','Descanso / pase libre'));return row;}
     const player=slot.playerId?players.get(slot.playerId):slot.name?slot:null;
     if(player) {
+      row.dataset.playerLabel=player.name;
       row.append(profilePreview.button(player.id,player.name));
       if(profiles.get(player.id)?.owner?.split('::')[0]===currentUser?.userId)row.append(element('small','Vos','draw-self'));
       if(t.winnerProfileId===player.id) { row.dataset.winner='true'; row.append(element('strong','Ganador','winner-tag')); }
@@ -91,7 +92,7 @@ function drawBoard(t) {
       inspect.addEventListener('click',()=>{
         canvas.querySelector('[aria-pressed="true"]')?.setAttribute('aria-pressed','false');
         inspect.setAttribute('aria-pressed','true');
-        const names=[...card.querySelectorAll('.draw-player')].map(row=>row.firstElementChild?.textContent.trim()).filter(Boolean);
+        const names=[...card.querySelectorAll('.draw-player')].map(row=>row.dataset.playerLabel || row.textContent.trim()).filter(Boolean);
         selection.textContent=round.name+' · '+names.join(' vs ');
       });
       card.append(inspect);
