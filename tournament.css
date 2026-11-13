@@ -57,8 +57,6 @@
 .bracket-reveal-header{display:flex;align-items:center;justify-content:space-between;gap:12px;position:relative}
 .bracket-reveal-header h2{font-size:14px;margin:0}
 .bracket-reveal-header h2::before{content:'';display:inline-block;width:6px;height:6px;margin-right:8px;border-radius:50%;background:var(--site-accent);vertical-align:middle}
-.bracket-replay{min-height:36px;padding:0 12px;border:1px solid var(--site-line);border-radius:999px;background:var(--site-tint);color:var(--site-text);cursor:pointer;font:600 12px var(--font)}
-.bracket-replay:disabled{opacity:.5}
 html[data-theme] body.proveit-theme #tournamentDraw .draw-match{background:transparent;border:0;padding:0;display:grid;gap:6px}
 #tournamentDraw .draw-round{flex:0 0 clamp(220px,35vw,315px)}
 #tournamentDraw .draw-round h3{font-size:14px}
@@ -78,11 +76,14 @@ html[data-theme] body.proveit-theme #tournamentDraw .draw-match{background:trans
 .bracket-trophy{position:relative;display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:var(--site-tint)}
 .bracket-confetti{position:absolute;left:50%;top:50%;width:5px;height:7px;background:var(--site-accent);pointer-events:none}
 .bracket-confetti:nth-child(3n){background:var(--site-muted)}
-@media(prefers-reduced-motion:reduce){.bracket-replay{display:none}#tournamentDraw .draw-player{transition:none}}
 @media(prefers-reduced-motion:no-preference){
  #tournamentDraw[data-revealing=true] .bracket-reveal-status::before{animation:bracket-status-pulse 900ms ease-in-out infinite alternate}
- #tournamentDraw .bracket-replay:active:not(:disabled){transform:scale(.97)}
 }
 @keyframes bracket-status-pulse{from{opacity:.4}to{opacity:1}}
 #tournamentDraw[data-revealing=true] .draw-player[data-winner=true]{background:var(--site-raised);border-color:var(--site-line)}
 #tournamentDraw[data-revealing=true] .winner-tag{visibility:hidden}
+
+#tournamentDraw .draw-winner-round .round-matches{padding-top:32px}
+#tournamentDraw .draw-winner-round .bracket-champion{margin:0;min-height:48px}
+#tournamentDraw .draw-winner-round .bracket-trophy{flex:none}
+@media(prefers-reduced-motion:reduce){#tournamentDraw .draw-player{transition:none}}

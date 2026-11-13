@@ -132,14 +132,14 @@ export function updateDrawCountdown(t,{sub,profiles,onChanged,now=Date.now()}){
  finishing=true;nextAttempt=now+5000;
  void tournamentCompetition(t.id,'DRAW_FINISH').then(()=>onChanged()).catch(()=>{const n=document.querySelector('[data-draw-countdown]');if(n)n.textContent='Sincronizando sorteo… Se reintentará automáticamente.';}).finally(()=>{finishing=false;});
 }
-export function animateDraw(t,section,{replay=false}={}){
+export function animateDraw(t,section){
  const state=competitionState(t);
  const reduced=matchMedia('(prefers-reduced-motion: reduce)');
  if(reduced.matches || section.dataset.revealing==='true')return;
- if(!replay && !t.winnerProfileId && (!state.drawnAt || Date.now()-Date.parse(state.drawnAt)>20000))return;
+ if(!t.winnerProfileId && (!state.drawnAt || Date.now()-Date.parse(state.drawnAt)>20000))return;
  const key='proveit:bracket-reveal:'+t.id+':'+(t.winnerProfileId || state.drawnAt);
  try{
-  if(!replay && sessionStorage.getItem(key))return;
+  if(sessionStorage.getItem(key))return;
   sessionStorage.setItem(key,'1');
  }catch{}
  const status=section.querySelector('.bracket-reveal-status');
@@ -149,11 +149,9 @@ export function animateDraw(t,section,{replay=false}={}){
  const names=[...new Set(t.participantNames || [])];
  const originals=slots.map(slot=>slot.textContent);
  const champion=section.querySelector('.bracket-champion');
- const button=section.querySelector('.bracket-replay');
  const ease='cubic-bezier(.23,1,.32,1)';
  section.dataset.revealing='true';
  board.inert=true;
- if(button)button.disabled=true;
  status.textContent='Sorteando cruces';
  let tick=0;
  const shuffle=setInterval(()=>{
@@ -168,7 +166,6 @@ export function animateDraw(t,section,{replay=false}={}){
   slots.forEach((slot,i)=>{slot.textContent=originals[i];});
   delete section.dataset.revealing;
   board.inert=false;
-  if(button)button.disabled=false;
   status.textContent=champion?'Torneo finalizado':'Cruces sorteados';
   if(!section.isConnected || reduced.matches || document.hidden)return;
   const previousSlots=new Map();
@@ -194,7 +191,7 @@ export function animateDraw(t,section,{replay=false}={}){
    champion.animate([{opacity:0,transform:'translateY(8px) scale(.96)'},{opacity:1,transform:'none'}],{duration:500,delay:750,easing:ease,fill:'backwards'});
    setTimeout(()=>{
     if(!champion.isConnected || document.hidden || reduced.matches)return;
-    const trophy=champion.firstElementChild;
+    const trophy=champion.querySelector('.bracket-trophy');
     if(!trophy)return;
     for(let i=0;i<45;i++){
      const piece=el('i','','bracket-confetti');

@@ -58,10 +58,7 @@ function drawBoard(t) {
   const header=element('header','','bracket-reveal-header');
   const status=element('h2',t.winnerProfileId?'Torneo finalizado':'Cruces sorteados','bracket-reveal-status');
   status.setAttribute('aria-live','polite');
-  const replay=element('button','↻ Repetir animación','bracket-replay');
-  replay.type='button';
-  replay.addEventListener('click',()=>animateDraw(t,section,{replay:true}));
-  header.append(status,replay);
+  header.append(status);
   section.append(header);
   const selection=element('p','Seleccioná un encuentro para ver sus cruces.','draw-selection');
   selection.setAttribute('role','status');
@@ -109,9 +106,31 @@ function drawBoard(t) {
       matches.append(card);
     });canvas.append(column);
   });
-  section.append(board,selection);
   const winner=players.get(t.winnerProfileId);
-  if(winner){
+  const finalMatch=t.format==='DUEL' && draw.rounds.length===1 && draw.rounds[0].matches.length===1
+    ? draw.rounds[0].matches[0] : null;
+  if(finalMatch){
+    const column=element('section','','draw-round draw-winner-round');
+    column.append(element('h3','Ganador del duelo'));
+    const matches=element('div','','round-matches');
+    const card=element('article','','draw-match');
+    card.dataset.matchId='duel-winner';
+    const result=winner
+      ? slotNode({playerId:winner.id},card.dataset.matchId,0)
+      : element('div','Por definir','draw-player draw-placeholder');
+    result.dataset.slot='0';
+    if(winner){
+      result.classList.add('bracket-champion');
+      result.prepend(element('span','🏆','bracket-trophy'));
+    }
+    card.append(result);
+    matches.append(card);
+    column.append(matches);
+    canvas.append(column);
+    links.push({source:finalMatch.id,target:card.dataset.matchId,slot:0,outcome:'winner',joinPlayers:true});
+  }
+  section.append(board,selection);
+  if(winner && !finalMatch){
     const champion=element('p','','bracket-champion');
     const trophy=element('span','🏆','bracket-trophy');
     trophy.setAttribute('aria-hidden','true');
