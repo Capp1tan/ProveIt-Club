@@ -1,4 +1,4 @@
-import {usesCompetition,competitionState,competitionStart,scheduledDraw} from '../shared/competition.ts';
+import {usesCompetition,competitionStart,scheduledDraw} from '../shared/competition.ts';
 import {roomDeadline,tournamentIsLive,allEntriesPaid} from '../shared/tournament-room.ts';
 import { pendingInvitations, respondInvitation } from './tournaments-api.js';
 import { noJudgeConsent, countdownLabel, scheduleLabel } from './tournament-schedule.js';
@@ -12,7 +12,7 @@ export function createRealLobby({ profilePreview, getUser, getConnection, getNow
   const inner=el('div');inner.append(el('small','PARTICIPANTES CONFIRMADOS'),ringText);const track=el('span','','rl-progress-track');track.append(el('span'));ring.append(inner,track);
   const reduced=window.matchMedia('(prefers-reduced-motion: reduce)');
   let headerStats;const previousStatuses=new Map();
-  let t, filter='all', shown=null,target=0,frame=0,context='',busy=false,consents=new Set(),actionId=0;
+  let t, filter='all', shown=null,target=0,frame=0,context='',busy=false,actionId=0;
   const paint=v=>{shown=v;ring.style.setProperty('--progress',`${v*100}%`);};
   function animate(value,reset) {
     if(reset || shown===null || reduced.matches){cancelAnimationFrame(frame);frame=0;target=value;paint(value);return;}
@@ -23,7 +23,7 @@ export function createRealLobby({ profilePreview, getUser, getConnection, getNow
   function clock() {
     if(!t)return;const n=headerStats?.querySelector('[data-real-clock]'),live=tournamentIsLive(t,getNow()),deadline=roomDeadline(t),done=Boolean(t.winnerProfileId || t.status==='COMPLETED');
     const drawDue=scheduledDraw(t);
-    if(n){n.classList.toggle('rl-live-badge',live);n.setAttribute('role',live?'status':'timer');n.textContent=live?'PARTIDA EN CURSO':done?'Finalizado':Number.isFinite(drawDue)?countdownLabel(new Date(drawDue).toISOString(),getNow()):usesCompetition(t)?(Number.isFinite(competitionStart(t))?countdownLabel(new Date(competitionStart(t)).toISOString(),getNow()):'Esperando asistencia'):t.startsAt?(getNow()>=Date.parse(t.startsAt)?'Esperando confirmaciones':countdownLabel(t.startsAt,getNow())):'Horario sin definir';}
+    if(n){n.classList.toggle('rl-live-badge',live);n.setAttribute('role',live?'status':'timer');n.textContent=live?'PARTIDA EN CURSO':done?'Finalizado':Number.isFinite(drawDue)?countdownLabel(new Date(drawDue).toISOString(),getNow()):usesCompetition(t)?(Number.isFinite(competitionStart(t))?countdownLabel(new Date(competitionStart(t)).toISOString(),getNow()):'Esperando el sorteo'):t.startsAt?(getNow()>=Date.parse(t.startsAt)?'Esperando confirmaciones':countdownLabel(t.startsAt,getNow())):'Horario sin definir';}
     const caption=headerStats?.querySelector('[data-clock-caption]');if(caption)caption.textContent=live?'EN VIVO':done?'TORNEO FINALIZADO':Number.isFinite(drawDue)?'SORTEO EN':usesCompetition(t)?'INICIO DEL ENCUENTRO':'INICIO PREVISTO';
     const phase=root.querySelector('.rl-kicker');if(phase)phase.textContent=(done?'ENCUENTRO FINALIZADO':live?'EN CURSO':Number.isFinite(drawDue)?'SORTEO PROGRAMADO':'FASE DE CONFIRMACIÓN')+' · '+t.name+' · '+t.activity;
     const heading=root.querySelector('.rl-hero h1');if(heading)heading.textContent=done?'Desafío completado':live?'El torneo está en curso':'Sala de espera y confirmación de asistencia';
@@ -40,18 +40,17 @@ export function createRealLobby({ profilePreview, getUser, getConnection, getNow
       const invitations=(await pendingInvitations()).filter(i=>i.tournamentId===id && (i.termsVersion || 0)===version);
       if(!invitations.length)throw new Error('Tu invitación cambió o ya fue respondida. Actualizá la sala.');
       // Si se tienen dos cargos se aceptan explícitamente en una misma acción; cada uno se valida en AWS.
-      for(const invite of invitations){const response=await respondInvitation(invite.id,accept,accept && t.arbitrationMode==='ORGANIZER',accept,version);if(response.paymentRequired){message.textContent='Abriendo el pago de tu inscripción…';return;}}
+      for(const invite of [...invitations].sort((a,b)=>Number(a.role==='PARTICIPANT')-Number(b.role==='PARTICIPANT'))){const response=await respondInvitation(invite.id,accept,accept && t.arbitrationMode==='ORGANIZER',accept,version);if(response.paymentRequired){message.textContent='Abriendo el pago de tu inscripción…';return;}}
       if(generation!==actionId)return;
       message.textContent=accept?'Respuesta guardada. Actualizando la sala…':'Invitación rechazada.';
       window.dispatchEvent(new Event('proveit:invitation-updated'));await onChanged();
     } catch(error) { message.textContent=error.message || 'No pudimos guardar tu respuesta.'; }
-    finally { if(generation===actionId){busy=false;const check=root.querySelector('.rl-consent input');root.querySelectorAll('.rl-answer').forEach(n=>n.disabled=n.dataset.accept==='true' && !check?.checked);} }
+    finally { if(generation===actionId){busy=false;root.querySelectorAll('.rl-answer').forEach(n=>n.disabled=false);} }
   }
   function render(value) {
     t=value;root.replaceChildren();headerStats?.remove();
     const statuses=t.rosterStatuses || Array(t.participantIds.length+t.judgeIds.length+(t.treasurerId?1:0)).fill('ACCEPTED');
-    const cs=competitionState(t);
-    const people=t.participantIds.map((id,i)=>({id,name:t.participantNames[i],paymentReversed:t.entryPaymentStatuses?.[i]==='REVERSED',invitation:statuses[i] || 'PENDING',status:t.entryPaymentStatuses?.[i]==='REVERSED'?'PENDING':usesCompetition(t)?(statuses[i]==='REJECTED'?'REJECTED':cs.attendance?.[id]?.ready?'ACCEPTED':'PENDING'):statuses[i] || 'PENDING'}));
+    const people=t.participantIds.map((id,i)=>({id,name:t.participantNames[i],paymentReversed:t.entryPaymentStatuses?.[i]==='REVERSED',status:t.entryPaymentStatuses?.[i]==='REVERSED'?'PENDING':statuses[i] || 'PENDING'}));
     const accepted=people.filter(p=>p.status==='ACCEPTED').length,total=people.length;
     const top=el('div','','rl-overview');
     const timing=el('section','','rl-card');const caption=el('small','INICIO PREVISTO');caption.dataset.clockCaption='';timing.append(caption);const digits=el('strong');digits.dataset.realClock='';digits.setAttribute('role','timer');digits.setAttribute('aria-live','off');timing.append(digits,el('span',scheduleLabel(t.startsAt,t.timeZone)));top.append(timing);
@@ -87,27 +86,12 @@ export function createRealLobby({ profilePreview, getUser, getConnection, getNow
       const row=el('li','','rl-person');row.dataset.state=p.status;
       if(context===t.id && previousStatuses.has(p.id) && previousStatuses.get(p.id)!==p.status)row.classList.add('rl-state-changed');
       row.append(profilePreview.button(p.id,p.name));
-      const state=el('span',p.status==='ACCEPTED'?'✓ Confirmado':p.status==='REJECTED'?'No asiste':p.paymentReversed?'Pago en revisión':usesCompetition(t) && p.invitation==='ACCEPTED'?'Inscripto · sin asistencia':'Invitación pendiente','rl-state');state.dataset.state=p.status;row.append(state);list.append(row);
+      const state=el('span',p.status==='ACCEPTED'?'✓ Confirmado':p.status==='REJECTED'?'No asiste':p.paymentReversed?'Pago en revisión':'Invitación pendiente','rl-state');state.dataset.state=p.status;row.append(state);list.append(row);
     }if(!list.childElementCount)list.append(el('li','No hay participantes en este estado.','field-help'));root.append(list);
     const user=getUser(),mine=[];
     [...t.participantIds,...t.judgeIds,...(t.treasurerId?[t.treasurerId]:[])].forEach((id,index)=>{const profile=profilePreview.profiles.get(id);if(profile?.owner?.split('::')[0]===user?.userId)mine.push({index,status:statuses[index] || 'PENDING',judge:index>=total});});
-    const primary=el('button',mine.some(role=>role.status==='PENDING')?'Responder mi invitación':mine.length?'Invitación respondida':'Sólo participantes','primary-button rl-toolbar-action');primary.type='button';primary.disabled=!mine.some(role=>role.status==='PENDING') || Boolean(t.winnerProfileId);toolbar.append(primary);
     if(mine.some(role=>role.status==='PENDING') && !t.winnerProfileId){
-      const form=el('section','','rl-card rl-response'),key=t.id+':'+(t.termsVersion || 0);
-      form.id='myTournamentResponse';form.hidden=true;primary.setAttribute('aria-expanded','false');primary.setAttribute('aria-controls',form.id);primary.addEventListener('click',()=>{const open=primary.getAttribute('aria-expanded')!=='true';
-       primary.setAttribute('aria-expanded',String(open));
-       form.getAnimations().forEach(animation=>animation.cancel());
-       if(open){
-        form.hidden=false;form.inert=false;
-        if(!reduced.matches)form.animate([{opacity:0,transform:'translateY(6px)'},{opacity:1,transform:'none'}],{duration:200,easing:'ease-out'});
-        form.scrollIntoView({behavior:reduced.matches?'instant':'smooth',block:'nearest'});
-        check.focus({preventScroll:true});
-       }else{
-        form.inert=true;
-        primary.focus({preventScroll:true});
-        if(reduced.matches)form.hidden=true;
-        else form.animate([{opacity:1,transform:'none'},{opacity:0,transform:'translateY(4px)'}],{duration:150,easing:'ease-in',fill:'forwards'}).finished.then(()=>{form.hidden=true;}).catch(()=>{});
-       }});
+      const form=el('section','','rl-card rl-response');
       form.append(el('h3',mine.some(r=>r.judge)?'Aceptar mi participación y cargo':'Confirmar mi asistencia'));
       const rules=el('details');
       if((t.termsVersion || 0)>1){
@@ -120,19 +104,23 @@ export function createRealLobby({ profilePreview, getUser, getConnection, getNow
       if(t.prizeDescription)rules.append(el('p',t.prizeDescription));
       if(announced)rules.append(el('p','Entrega: '+(t.prizeHolder || 'Sin declarar')+' · Gestión externa a ProveIt.'));
       form.append(rules);
-      const consent=el('label','','rl-consent'),check=el('input');check.type='checkbox';check.checked=consents.has(key);
-      consent.append(check,document.createTextNode((t.arbitrationMode==='ORGANIZER'?noJudgeConsent+' ':'')+'Leí y acepto las reglas y las condiciones declaradas'+(announced || t.prizeExpected===true?' y las condiciones del premio.':'.')+(t.entryFeeCents>0 && mine.some(r=>!r.judge)?' Acepto el costo de inscripción de '+money(t.entryFeeCents)+'.':'')+(mine.some(r=>r.judge)?' Acepto el cargo de juez y la coordinación del premio según esas condiciones.':'')));form.append(consent);
+      const pays=mine.some(role=>!role.judge && role.status==='PENDING' && t.entryFeeCents>0 && t.entryPaymentStatuses?.[role.index]!=='APPROVED');
+      const consent=el('p',(t.arbitrationMode==='ORGANIZER'?noJudgeConsent+' ':'')+
+       'Al confirmar aceptás las reglas y condiciones vigentes.'+
+       (mine.some(role=>role.judge)?' También aceptás tu cargo en el torneo.':'')+
+       (pays?' La inscripción se confirma cuando se acredita el pago de '+money(t.entryFeeCents)+'.':''),'field-help');
+      form.append(consent);
       const actions=el('div','','rl-actions'),message=el('p','','field-help');message.setAttribute('role','status');
-      const yes=el('button',mine.some(r=>!r.judge) && t.entryFeeCents>0?'Confirmar inscripción · '+money(t.entryFeeCents):mine.some(r=>r.judge)?'Aceptar mis cargos':'Confirmar mi asistencia','primary-button rl-answer');yes.type='button';yes.dataset.accept='true';yes.disabled=busy || !check.checked;
+      const label=pays?'Confirmar y pagar · '+money(t.entryFeeCents):mine.some(role=>!role.judge)?'Confirmar asistencia':'Aceptar cargo';
+      const yes=el('button',label,'primary-button rl-answer');yes.type='button';yes.disabled=busy;
       const no=el('button','No podré asistir','format-choice rl-answer');no.type='button';no.disabled=busy;
-      check.addEventListener('change',()=>{check.checked?consents.add(key):consents.delete(key);yes.disabled=busy || !check.checked;});
       yes.addEventListener('click',()=>void answer(true,message));no.addEventListener('click',()=>void answer(false,message));actions.append(yes,no);form.append(actions,message);root.append(form);
-    }else if(mine.length)root.append(el('p',mine.every(r=>r.status==='ACCEPTED')?(mine.some(r=>r.judge)?'Tu participación y tus cargos están aceptados.':'Tu inscripción está aceptada. Confirmá tu asistencia cuando estés listo para jugar.'):'Ya respondiste a la invitación.','rl-own-state'));
+    }else if(mine.length)root.append(el('p',mine.every(r=>r.status==='ACCEPTED')?(mine.some(r=>r.judge)?'Tu participación y tus cargos están aceptados.':'✓ Asistencia confirmada.'):'Ya respondiste a la invitación.','rl-own-state'));
     if(t.judgeIds?.length){const judgeDetails=el('details','','rl-judge-details');judgeDetails.append(el('summary','Jurado y responsables'),judge);root.append(judgeDetails);}
     people.forEach(p=>previousStatuses.set(p.id,p.status));
     const next=el('section','','rl-card rl-next');
     const allAccepted=statuses.every(s=>s==='ACCEPTED') && allEntriesPaid(t);
-    next.append(el('p',t.draw && allAccepted?'Las llaves ya están disponibles.':statuses.includes('REJECTED')?'Hay una invitación rechazada. El sorteo permanece detenido.':`El sorteo requiere todos los cargos aceptados, los pagos acreditados y la asistencia de todos los jugadores. Cargos aceptados (${statuses.filter(s=>s==='ACCEPTED').length}/${statuses.length} cargos).`));
+    next.append(el('p',t.draw && allAccepted?'Las llaves ya están disponibles.':statuses.includes('REJECTED')?'Hay una invitación rechazada. El sorteo permanece detenido.':`El sorteo requiere todos los cargos aceptados y las inscripciones acreditadas. Cargos aceptados (${statuses.filter(s=>s==='ACCEPTED').length}/${statuses.length} cargos).`));
     if(t.draw && allAccepted){const link=el('a','Ver llaves →','format-choice');link.href='#tournamentDraw';next.append(link);}root.append(next);clock();return root;
   }
   return {render,clock,destroy(){cancelAnimationFrame(frame);actionId++;root.replaceChildren();headerStats?.remove();}};

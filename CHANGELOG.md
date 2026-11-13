@@ -1,5 +1,8 @@
 ## 4.3.0 — 2026-11-04
 
+## 4.8.0 — 2026-11-13
+- Confirmación de asistencia en un solo paso y sorteo de 30 segundos.
+
 ## 4.7.0 — 2026-11-12
 - Audio grabado para el aviso de sorteo, notificaciones de cambios de condiciones y transiciones suaves en la confirmación.
 

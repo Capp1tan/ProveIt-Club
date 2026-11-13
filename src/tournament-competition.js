@@ -10,22 +10,9 @@ export function attendancePanel(t,{sub,profiles,onChanged,now=Date.now()}){
  const s=competitionState(t),root=el('section','','competition-actions rl-card'),mine=t.participantIds.find(id=>profiles.get(id)?.owner?.split('::')[0]===sub),start=competitionStart(t);
  if(Number.isFinite(start) && now>=start)return null;
  const accepted=allEntriesPaid(t) && t.rosterStatuses?.every(v=>v==='ACCEPTED');
- if(!accepted){root.append(el('p','Primero se completan las invitaciones y los pagos. Luego cada jugador confirma que está presente.'));return root;}
+ if(!accepted){root.append(el('p','Esperando las confirmaciones y las inscripciones pendientes.'));return root;}
  const message=el('p','','field-help');message.setAttribute('role','status');
  async function act(action,values){root.dataset.competitionBusy='true';root.querySelectorAll('button').forEach(b=>b.disabled=true);message.textContent='Guardando…';try{await tournamentCompetition(t.id,action,values);document.activeElement?.blur();await onChanged();}catch(e){delete root.dataset.competitionBusy;message.textContent=e.message;root.querySelectorAll('button').forEach(b=>b.disabled=false);}}
- if(mine){
-  if(s.attendance?.[mine]?.ready)root.append(el('p','✓ Asistencia confirmada','attendance-confirmed'));
-  else{
-   const button=el('button','Estoy listo para jugar','primary-button');
-   button.type='button';
-   button.dataset.attendanceAction='';
-   button.dataset.scheduledAt=t.startsAt;
-   button.disabled=now<Date.parse(t.startsAt);
-   button.addEventListener('click',()=>void act('ATTENDANCE',{ready:true}));
-   root.append(button);
-   if(button.disabled)root.append(el('p','La confirmación de asistencia se habilita a la hora programada.','field-help'));
-  }
- }
  if(!t.draw){
   const ready=attendanceReady(t),due=scheduledDraw(t);
   if(Number.isFinite(due)){const seconds=Math.max(0,Math.ceil((due-now)/1000)),countdown=el('p','Se sortean en '+Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0'),'draw-countdown');countdown.dataset.drawCountdown='';countdown.setAttribute('role','timer');countdown.setAttribute('aria-live','off');root.append(el('h2','El sorteo está por comenzar'),countdown,el('p','Todos verán la misma llave.','field-help'));
@@ -38,7 +25,7 @@ export function attendancePanel(t,{sub,profiles,onChanged,now=Date.now()}){
     root.append(enableVoice);
    }
   }
-  else if(ready){root.append(el('p','Todos listos. El organizador puede iniciar el sorteo público de los cruces.'));if(sub===t.createdBySub){const draw=el('button','Sortear participantes','primary-button');draw.type='button';draw.addEventListener('click',()=>void act('DRAW_SCHEDULE',{}));root.append(draw,el('p','Al pulsarlo comenzará una cuenta regresiva de un minuto para todos.','field-help'));}}
+  else if(ready){root.append(el('p','Todos listos. El organizador puede iniciar el sorteo público de los cruces.'));if(sub===t.createdBySub){const draw=el('button','Sortear participantes','primary-button');draw.type='button';draw.dataset.drawSchedule='';draw.disabled=now<Date.parse(t.startsAt);draw.addEventListener('click',()=>void act('DRAW_SCHEDULE',{}));root.append(draw,el('p','El sorteo se habilita a la hora programada y dura 30 segundos.','field-help'));}}
   else root.append(el('p','Cuando todos estén listos, el organizador podrá iniciar el sorteo de participantes.'));
  }
 

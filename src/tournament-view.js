@@ -104,7 +104,7 @@ function updateClock() {
   if(currentTournament && roomIsClosed(currentTournament,roomNow())){showClosedRoom(currentTournament);return;}
   realLobby?.clock();
   if(currentTournament)updateDrawCountdown(currentTournament,{sub:currentUser?.userId,profiles,onChanged:()=>refreshTournament(true),now:roomNow()});
-  if(currentTournament){const action=detail.querySelector('[data-attendance-action]');if(action && !action.closest('[data-competition-busy]'))action.disabled=tournamentIsLive(currentTournament,roomNow()) || roomNow()<Date.parse(action.dataset.scheduledAt);if(tournamentIsLive(currentTournament,roomNow()))detail.querySelectorAll('.competition-actions button,.competition-actions input,.competition-actions select').forEach(n=>n.disabled=true);}
+  if(currentTournament){const action=detail.querySelector('[data-draw-schedule]');if(action && !action.closest('[data-competition-busy]'))action.disabled=tournamentIsLive(currentTournament,roomNow()) || roomNow()<Date.parse(currentTournament.startsAt);if(tournamentIsLive(currentTournament,roomNow()))detail.querySelectorAll('.competition-actions button,.competition-actions input,.competition-actions select').forEach(n=>n.disabled=true);}
   if(currentTournament && !currentTournament.winnerProfileId && !detail.querySelector('.tournament-decision') && tournamentIsLive(currentTournament,roomNow())){const decision=resultPanel(currentTournament);if(decision)detail.append(decision);}
   const button=document.getElementById('recordDuelWinner');
   if(button && !button.dataset.saving) button.disabled=!tournamentIsLive(currentTournament,roomNow());

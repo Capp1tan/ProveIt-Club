@@ -21,13 +21,14 @@ export function changeCompetition(t:any,sub:string,owned:string[],a:any,now=Date
   s.attendance[id]={ready:true,at};
  }else if(a.action==='DRAW_SCHEDULE'){
   if(sub!==t.createdBySub)throw new Error('Sólo el organizador puede iniciar el sorteo.');
+  if(now<Date.parse(t.startsAt))throw new Error('El sorteo se habilita a la hora programada.');
   if(resultDraw)throw new Error('La llave ya fue sorteada.');
-  if(!attendanceReady(t,s))throw new Error('Todos los jugadores deben estar listos para sortear.');
+  if(!attendanceReady(t))throw new Error('Todos los jugadores deben estar listos para sortear.');
   if(s.drawAt)return t;
   s.drawAt=new Date(now+DRAW_COUNTDOWN_MS).toISOString();
  }else if(a.action==='DRAW_FINISH'){
   if(sub!==t.createdBySub && !owned.length)throw new Error('Sólo los integrantes pueden completar el sorteo.');
-  if(!attendanceReady(t,s) || !s.drawAt)throw new Error('El sorteo todavía no está preparado.');
+  if(!attendanceReady(t) || !s.drawAt)throw new Error('El sorteo todavía no está preparado.');
   if(now<Date.parse(s.drawAt))throw new Error('Todavía no terminó la cuenta regresiva del sorteo.');
   resultDraw=draw(t);s.originalDraw=resultDraw;s.revision=(s.revision || 0)+1;s.drawnAt=at;s.affected=[];s.approvals=[];
  }else if(a.action==='SWAP'){
@@ -48,7 +49,7 @@ export function changeCompetition(t:any,sub:string,owned:string[],a:any,now=Date
   if(!s.affected.includes(owned[0]))throw new Error('Tu posición no requiere una nueva aceptación.');
   s.approvals=[...new Set([...s.approvals,owned[0]])];
  }else throw new Error('Acción del encuentro inválida.');
- if(resultDraw && attendanceReady(t,s) && pendingDrawApprovals(t,s).length===0){s.startAt ||= new Date(now+COUNTDOWN_MS).toISOString();status='READY';}
+ if(resultDraw && attendanceReady(t) && pendingDrawApprovals(t,s).length===0){s.startAt ||= new Date(now+COUNTDOWN_MS).toISOString();status='READY';}
  else{s.startAt=null;status=resultDraw?'DRAW_APPROVAL':'CHECK_IN';}
  if(Buffer.byteLength(JSON.stringify(s),'utf8')>220000)throw new Error('La auditoría alcanzó su límite. Conservá esta llave o creá un nuevo torneo.');
  return {...t,draw:resultDraw || null,status,competitionState:JSON.stringify(s),membershipRevision:(t.membershipRevision || 0)+1,updatedAt:at};

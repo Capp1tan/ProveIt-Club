@@ -78,6 +78,12 @@ const expect=(value,expected)=>{assert.deepEqual(value,expected);checks++;};
  // Cambiar reglas o premio invalida asistencia y sorteo, no los pagos acreditados.
  const {changeCompetition}=require('../amplify/functions/respond-invitation/competition.ts'),{competitionState}=require('../shared/competition.ts'),{prizeAction}=require('../amplify/functions/respond-invitation/prize.ts'),{community}=require('../amplify/functions/community.ts');
  const db=DynamoDBDocumentClient.from(new (require('@aws-sdk/client-dynamodb').DynamoDBClient)({}));
+ // La confirmación de un pago habilita el sorteo sin un segundo check-in.
+ const scheduledAt=Date.parse(complete.startsAt);
+ const paidTournament={...complete,rosterStatuses:['ACCEPTED','ACCEPTED'],competitionState:'{}'};
+ assert.throws(()=>changeCompetition(paidTournament,'organizer',[],{action:'DRAW_SCHEDULE'},scheduledAt-1),/hora programada/);checks++;
+ const paidDraw=changeCompetition(paidTournament,'organizer',[],{action:'DRAW_SCHEDULE'},scheduledAt);
+ expect(Date.parse(competitionState(paidDraw).drawAt),scheduledAt+30000);
  const resetId='dddddddd-dddd-4ddd-8ddd-dddddddddddd';let draft={...structuredClone(complete),id:resetId,startsAt:new Date(Date.now()-1000).toISOString(),rosterStatuses:['ACCEPTED','ACCEPTED'],entryPaymentStatuses:['APPROVED','APPROVED'],competitionState:'{}',competitionVersion:4,prizeRevision:0};delete draft.draw;
  for(let i=0;i<2;i++)draft=changeCompetition(draft,subs[i],[ids[i]],{action:'ATTENDANCE',ready:true});put('TOURNAMENT_TABLE_NAME',draft);
  await assert.rejects(()=>prizeAction(db,subs[0],{tournamentId:resetId,prizeTitle:'Una cena',prizeHolder:'Organizador',prizeFundingStatus:'CONFIRMED',prizeRevision:0}),/organizador/);checks++;
