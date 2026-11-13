@@ -1,5 +1,8 @@
 ## 4.3.0 — 2026-11-04
 
+## 4.7.0 — 2026-11-12
+- Audio grabado para el aviso de sorteo, notificaciones de cambios de condiciones y transiciones suaves en la confirmación.
+
 ## 4.6.1 — 2026-11-12
 - Golpes de tambor originales sincronizados con los últimos diez segundos del sorteo.
 

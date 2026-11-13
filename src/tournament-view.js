@@ -176,7 +176,7 @@ function renderTournament(t) {
   const outcome=resultPanel(t);if(outcome)detail.append(outcome);
   if(t.judgeIds?.length || currentUser?.userId===t.createdBySub){
     if(t.status==='COMPLETED')detail.append(judgeComments(t.id));
-    const conditions=element('details','','tournament-panel');conditions.append(element('summary',t.judgeIds?.length?'Condiciones y jueces':'Administrar condiciones'),judgePanel(t,{isOrganizer:currentUser?.userId===t.createdBySub,onChanged:()=>refreshTournament(true)}));detail.append(conditions);
+    const conditions=element('details','','tournament-panel');conditions.append(element('summary',t.judgeIds?.length?'Condiciones y jueces':'Administrar condiciones'),judgePanel(t,{canEditRules:currentUser?.userId===t.createdBySub || (t.judgeIds || []).some((id,index)=>profiles.get(id)?.owner?.split('::')[0]===currentUser?.userId && t.rosterStatuses?.[t.participantIds.length+index]==='ACCEPTED'),onChanged:()=>refreshTournament(true)}));detail.append(conditions);
   }
   if(isClubAdmin || currentUser?.userId===t.createdBySub) {
     const remove=element('button','Eliminar torneo','danger-button');remove.type='button';

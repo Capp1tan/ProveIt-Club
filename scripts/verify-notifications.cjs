@@ -25,5 +25,9 @@ DynamoDBDocumentClient.prototype.send=async function(command){const c=command.in
  for(const href of ['javascript:alert(1)','https://evil.test/','//evil.test/','https://proveitclub.win.evil.test/','https://x:secret@proveitclub.win/'])ok(notificationItems([],{announcements:[{id:'bad',title:'Aviso',href}]} )[0].href,null);
  ok(notificationItems([],{announcements:[{id:'message',message:'Sólo texto'}]})[0].href,null);
  ok(notificationItems([],{friendRequests:[feed.friendRequests[0],feed.friendRequests[0]]}).length,1);ok(notificationItems().length,0);
+ const changed=notificationItems(invites.map(invite=>({...invite,termsVersion:2,termsChangedBy:'JUDGE'})));
+ ok(changed.length,1);
+ ok(changed[0].id,'tournament:t1:2');
+ ok(changed[0].text,'El juez o jurado cambió las condiciones de «Duelo». Revisalas antes de volver a confirmar tu participación.');
  console.log(checks+' comprobaciones correctas: bandeja unificada, solicitudes propias, privacidad, avisos publicados, vínculos seguros y eventos sin duplicar.');
 })().catch(e=>{console.error(e);process.exitCode=1;});

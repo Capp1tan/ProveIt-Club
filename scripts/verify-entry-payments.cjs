@@ -90,6 +90,19 @@ const expect=(value,expected)=>{assert.deepEqual(value,expected);checks++;};
  changed.competitionState=JSON.stringify({startAt:new Date(Date.now()-1).toISOString()});put('TOURNAMENT_TABLE_NAME',changed);
  await assert.rejects(()=>prizeAction(db,'organizer',{tournamentId:resetId,prizeTitle:'Otro premio',prizeHolder:'Organizador',prizeFundingStatus:'PENDING',prizeRevision:1}),/antes de comenzar/);checks++;
  await assert.rejects(()=>community(db,'organizer',{action:'COMMUNITY_TERMS',tournamentId:resetId,description:'Cambio después de empezar el torneo'}),/bloqueadas/);checks++;
+ const judged=read('TOURNAMENT_TABLE_NAME',judgedId);
+ const judgeSub='judge-reviewer';
+ put('PROFILE_TABLE_NAME',{...read('PROFILE_TABLE_NAME',judgeId),owner:judgeSub+'::judge'});
+ const change={action:'COMMUNITY_TERMS',tournamentId:judgedId,description:'El jurado actualizó las reglas del encuentro'};
+ await assert.rejects(()=>community(db,subs[0],change),/juez confirmado/);checks++;
+ await community(db,judgeSub,change);
+ expect(read('TOURNAMENT_TABLE_NAME',judgedId).rosterStatuses,['PENDING','PENDING','PENDING']);
+ for(let i=0;i<judged.rosterStatuses.length;i++){
+  const invitation=read('INVITATION_TABLE_NAME',judgedId+':'+i);
+  expect(invitation.termsChangedBy,'JUDGE');
+  expect(invitation.termsVersion,judged.termsVersion+1);
+ }
+ await assert.rejects(()=>community(db,judgeSub,change),/juez confirmado/);checks++;
  // La operación pública devuelve una señal mínima y persiste con revisión en la tabla.
  const {handler:resolver}=require('../amplify/functions/respond-invitation/handler.ts');
  const liveId='eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',live={...draft,id:liveId,competitionState:'{}',membershipRevision:0,rosterStatuses:['ACCEPTED','ACCEPTED'],status:'CHECK_IN'};delete live.draw;put('TOURNAMENT_TABLE_NAME',live);

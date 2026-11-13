@@ -1,10 +1,12 @@
 import {competitionState,usesCompetition,competitionStart,pendingDrawApprovals,attendanceReady,scheduledDraw} from '../shared/competition.ts';
 import {allEntriesPaid} from '../shared/tournament-room.ts';
 import {tournamentCompetition} from './tournaments-api.js';
+const drawAnnouncement = import.meta.glob('./audio/draw-announcement.mp3', {
+ eager:true, import:'default', query:'?url'
+})['./audio/draw-announcement.mp3'];
 const el=(tag,text='',cls='')=>{const n=document.createElement(tag);n.textContent=text;n.className=cls;return n;};
 export function attendancePanel(t,{sub,profiles,onChanged,now=Date.now()}){
  if(!usesCompetition(t) || t.winnerProfileId)return null;
- const renderedAt=Date.now();
  const s=competitionState(t),root=el('section','','competition-actions rl-card'),mine=t.participantIds.find(id=>profiles.get(id)?.owner?.split('::')[0]===sub),start=competitionStart(t);
  if(Number.isFinite(start) && now>=start)return null;
  const accepted=allEntriesPaid(t) && t.rosterStatuses?.every(v=>v==='ACCEPTED');
@@ -12,7 +14,7 @@ export function attendancePanel(t,{sub,profiles,onChanged,now=Date.now()}){
  const message=el('p','','field-help');message.setAttribute('role','status');
  async function act(action,values){root.dataset.competitionBusy='true';root.querySelectorAll('button').forEach(b=>b.disabled=true);message.textContent='Guardando…';try{await tournamentCompetition(t.id,action,values);document.activeElement?.blur();await onChanged();}catch(e){delete root.dataset.competitionBusy;message.textContent=e.message;root.querySelectorAll('button').forEach(b=>b.disabled=false);}}
  if(mine){
-  if(s.attendance?.[mine]?.ready)root.append(el('p','✓ Asistencia confirmada'));
+  if(s.attendance?.[mine]?.ready)root.append(el('p','✓ Asistencia confirmada','attendance-confirmed'));
   else{
    const button=el('button','Estoy listo para jugar','primary-button');
    button.type='button';
@@ -32,9 +34,7 @@ export function attendancePanel(t,{sub,profiles,onChanged,now=Date.now()}){
     enableVoice.type='button';
     enableVoice.addEventListener('click',()=>{
      void unlockDrawAudio().then(()=>{if(drumAudio?.state==='running')enableVoice.remove();});
-     if(due-(Date.now()+now-renderedAt)>10000)speakDraw('Aviso de voz activado.');
-     else announcedDraw='';
-    },{once:true});
+    });
     root.append(enableVoice);
    }
   }
@@ -65,14 +65,23 @@ export function drawAudit(t){
  return root;
 }
 let finishing=false,nextAttempt=0,attemptTournament='';
-let drumAudio;
+let drumAudio, announcementBuffer, announcementLoading;
 let lastDrumSecond='';
 async function unlockDrawAudio(){
  const AudioContext=window.AudioContext || window.webkitAudioContext;
  if(!AudioContext)return;
  try{
   drumAudio ||= new AudioContext();
-  if(drumAudio.state!=='running')await drumAudio.resume();
+  const resume=drumAudio.state==='running'?Promise.resolve():drumAudio.resume();
+  if(drawAnnouncement)announcementLoading ||= fetch(drawAnnouncement)
+   .then(response=>{
+    if(!response.ok)throw new Error('Audio no disponible');
+    return response.arrayBuffer();
+   })
+   .then(bytes=>drumAudio.decodeAudioData(bytes))
+   .then(buffer=>{announcementBuffer=buffer;})
+   .catch(()=>{announcementLoading=null;});
+  await resume;
  }catch{}
 }
 
@@ -112,20 +121,17 @@ if(typeof window!=='undefined'){
 
 let announcedDraw='';
 function announceDraw(tournamentId,due){
- if(document.hidden || !window.speechSynthesis || !window.SpeechSynthesisUtterance)return;
- const key='proveit:draw-voice:'+tournamentId+':'+due;
+ if(document.hidden || !announcementBuffer || drumAudio?.state!=='running')return;
+ const key='proveit:draw-recording:'+tournamentId+':'+due;
  if(announcedDraw===key)return;
  try{if(sessionStorage.getItem(key))return;}catch{}
+ const voice=drumAudio.createBufferSource();
+ voice.buffer=announcementBuffer;
+ voice.connect(drumAudio.destination);
+ voice.onended=()=>voice.disconnect();
+ voice.start();
  announcedDraw=key;
- speakDraw('Los sorteos comenzarán en 10 segundos',()=>{try{sessionStorage.setItem(key,'1');}catch{}});
-}
-function speakDraw(text,onStart){
- try{
-  const announcement=new SpeechSynthesisUtterance(text);
-  announcement.lang='es-AR';
-  if(onStart)announcement.onstart=onStart;
-  speechSynthesis.speak(announcement);
- }catch{}
+ try{sessionStorage.setItem(key,'1');}catch{}
 }
 export function updateDrawCountdown(t,{sub,profiles,onChanged,now=Date.now()}){
  const due=scheduledDraw(t);if(!Number.isFinite(due))return;

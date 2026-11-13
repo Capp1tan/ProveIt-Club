@@ -94,9 +94,27 @@ export function createRealLobby({ profilePreview, getUser, getConnection, getNow
     const primary=el('button',mine.some(role=>role.status==='PENDING')?'Responder mi invitación':mine.length?'Invitación respondida':'Sólo participantes','primary-button rl-toolbar-action');primary.type='button';primary.disabled=!mine.some(role=>role.status==='PENDING') || Boolean(t.winnerProfileId);toolbar.append(primary);
     if(mine.some(role=>role.status==='PENDING') && !t.winnerProfileId){
       const form=el('section','','rl-card rl-response'),key=t.id+':'+(t.termsVersion || 0);
-      form.id='myTournamentResponse';form.hidden=true;primary.setAttribute('aria-expanded','false');primary.setAttribute('aria-controls',form.id);primary.addEventListener('click',()=>{form.hidden=!form.hidden;primary.setAttribute('aria-expanded',String(!form.hidden));if(!form.hidden){form.scrollIntoView({behavior:reduced.matches?'instant':'smooth',block:'nearest'});check.focus({preventScroll:true});}});
+      form.id='myTournamentResponse';form.hidden=true;primary.setAttribute('aria-expanded','false');primary.setAttribute('aria-controls',form.id);primary.addEventListener('click',()=>{const open=primary.getAttribute('aria-expanded')!=='true';
+       primary.setAttribute('aria-expanded',String(open));
+       form.getAnimations().forEach(animation=>animation.cancel());
+       if(open){
+        form.hidden=false;form.inert=false;
+        if(!reduced.matches)form.animate([{opacity:0,transform:'translateY(6px)'},{opacity:1,transform:'none'}],{duration:200,easing:'ease-out'});
+        form.scrollIntoView({behavior:reduced.matches?'instant':'smooth',block:'nearest'});
+        check.focus({preventScroll:true});
+       }else{
+        form.inert=true;
+        primary.focus({preventScroll:true});
+        if(reduced.matches)form.hidden=true;
+        else form.animate([{opacity:1,transform:'none'},{opacity:0,transform:'translateY(4px)'}],{duration:150,easing:'ease-in',fill:'forwards'}).finished.then(()=>{form.hidden=true;}).catch(()=>{});
+       }});
       form.append(el('h3',mine.some(r=>r.judge)?'Aceptar mi participación y cargo':'Confirmar mi asistencia'));
-      const rules=el('details');rules.append(el('summary','Leer reglas y condiciones'),el('p',t.description || 'Sin reglas adicionales'));
+      const rules=el('details');
+      if((t.termsVersion || 0)>1){
+       rules.open=true;
+       form.append(el('p','Las condiciones cambiaron. Revisalas antes de volver a confirmar.','tournament-notice'));
+      }
+      rules.append(el('summary','Leer reglas y condiciones'),el('p',t.description || 'Sin reglas adicionales'));
       if(t.conflicts)rules.append(el('p','Conflictos declarados: '+t.conflicts));
       if(announced || t.prizeExpected===true)rules.append(el('p','Premio: '+(t.prizeTitle || 'Por definir')+' · '+(confirmed?'Confirmado por el responsable':'No disponible / pendiente de confirmación')));
       if(t.prizeDescription)rules.append(el('p',t.prizeDescription));

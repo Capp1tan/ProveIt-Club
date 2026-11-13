@@ -181,15 +181,22 @@ export async function community(db:DynamoDBDocumentClient,sub:string,a:any){
   catch(e){if((e as Error).name==='TransactionCanceledException')throw new Error('Ya hay un reclamo tuyo sobre este juez y evento.');throw e;}return {ok:true};
  }
  if(a.action==='COMMUNITY_TERMS'){
-  if(t.createdBySub!==sub || t.status==='COMPLETED' || t.winnerProfileId)throw new Error('Sólo el organizador puede actualizar las condiciones antes del resultado.');
+  const roster=[...t.participantIds,...(t.judgeIds || []),...(t.treasurerId?[t.treasurerId]:[])];
+  const people=await Promise.all(roster.map(id=>get('PROFILE_TABLE_NAME',id)));
+  const judge=(t.judgeIds || []).some((_:string,i:number)=>{
+   const index=t.participantIds.length+i;
+   return t.rosterStatuses?.[index]==='ACCEPTED' && owner(people[index])===sub;
+  });
+  if((!judge && t.createdBySub!==sub) || t.status==='COMPLETED' || t.winnerProfileId)throw new Error('Sólo el organizador o un juez confirmado puede cambiar las reglas antes del inicio.');
+  const termsChangedBy=judge?'JUDGE':'ORGANIZER';
   if(competitionHasBegun(t))throw new Error('El torneo ya comenzó; las condiciones están bloqueadas.');
   const description=String(a.description || '').trim(),conflicts=t.judgeIds.some((id:string)=>t.participantIds.includes(id))?'Un juez también participa.':'';
   if(description.length<10 || description.length>1000 || conflicts.length>500)throw new Error('Reglas entre 10 y 1000 caracteres; conflictos hasta 500.');
   if(t.clubRewards && (conflicts || t.judgeIds.some((id:string)=>t.participantIds.includes(id))))throw new Error('Las recompensas del club requieren jueces independientes.');
   const version=(t.termsVersion || 0)+1,now=new Date().toISOString(),invites:any[]=[];
-  for(let i=0;i<t.participantIds.length+t.judgeIds.length;i++){
-   const id=[...t.participantIds,...t.judgeIds][i],p=await get('PROFILE_TABLE_NAME',id);if(!p)throw new Error('Una cuenta ya no está disponible.');
-   invites.push({Put:{TableName:env('INVITATION_TABLE_NAME'),Item:{id:t.id+':'+i,tournamentId:t.id,tournamentName:t.name,profileId:id,recipientSub:owner(p),role:i<t.participantIds.length?'PARTICIPANT':'JUDGE',rosterIndex:i,status:'PENDING',entryFeeCents:i<t.participantIds.length?(t.entryFeeCents || 0):0,invitedBySub:sub,arbitrationMode:t.arbitrationMode,consentVersion:t.consentVersion || null,termsVersion:version,startsAt:t.startsAt,timeZone:t.timeZone,rulesSnapshot:description+'\nPremio: '+(t.prizeTitle || 'Sin anunciar')+' · Responsable: '+(t.prizeHolder || 'Sin declarar')+' · Financia: '+(t.prizeFunder || 'Sin declarar')+' · '+(t.prizeFundingStatus==='CONFIRMED'?'Confirmado por el responsable':'Pendiente'),conflictsSnapshot:[t.judgeIds.some((id:string)=>t.participantIds.includes(id))?'Un juez también participa.':'',conflicts].filter(Boolean).join(' '),createdAt:now,updatedAt:now,__typename:'TournamentInvitation'}}});
+  for(let i=0;i<roster.length;i++){
+   const id=roster[i],p=people[i];if(!p)throw new Error('Una cuenta ya no está disponible.');
+   invites.push({Put:{TableName:env('INVITATION_TABLE_NAME'),Item:{id:t.id+':'+i,tournamentId:t.id,tournamentName:t.name,profileId:id,recipientSub:owner(p),role:i<t.participantIds.length?'PARTICIPANT':id===t.treasurerId && i===roster.length-1?'TREASURER':'JUDGE',rosterIndex:i,status:'PENDING',entryFeeCents:i<t.participantIds.length?(t.entryFeeCents || 0):0,invitedBySub:sub,arbitrationMode:t.arbitrationMode,consentVersion:t.consentVersion || null,termsVersion:version,termsChangedBy,startsAt:t.startsAt,timeZone:t.timeZone,rulesSnapshot:description+'\nPremio: '+(t.prizeTitle || 'Sin anunciar')+' · Responsable: '+(t.prizeHolder || 'Sin declarar')+' · Financia: '+(t.prizeFunder || 'Sin declarar')+' · '+(t.prizeFundingStatus==='CONFIRMED'?'Confirmado por el responsable':'Pendiente'),conflictsSnapshot:[t.judgeIds.some((id:string)=>t.participantIds.includes(id))?'Un juez también participa.':'',conflicts].filter(Boolean).join(' '),createdAt:now,updatedAt:now,__typename:'TournamentInvitation'}}});
   }
   await db.send(new TransactWriteCommand({TransactItems:[...invites,{Update:{TableName:env('TOURNAMENT_TABLE_NAME'),Key:{id:t.id},UpdateExpression:'SET description=:d,conflicts=:c,termsVersion=:v,rosterStatuses=:r,#s=:s,membershipRevision=:rev,updatedAt=:now,competitionState=:cs REMOVE #draw',ConditionExpression:'attribute_not_exists(deletedAt) AND attribute_not_exists(winnerProfileId) AND (attribute_not_exists(termsVersion) OR termsVersion=:old) AND (attribute_not_exists(membershipRevision) OR membershipRevision=:oldMr)',ExpressionAttributeNames:{'#s':'status','#draw':'draw'},ExpressionAttributeValues:{':cs':resetCompetition(t),':d':description,':c':conflicts,':v':version,':oldMr':t.membershipRevision || 0,':old':t.termsVersion || 0,':r':Array(invites.length).fill('PENDING'),':s':'AWAITING_RESPONSES',':rev':(t.membershipRevision || 0)+1,':now':now}}}]}));return {ok:true};
  }

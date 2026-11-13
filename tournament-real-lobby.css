@@ -52,3 +52,10 @@ html[data-theme=dark] header.topbar>.rl-overview .rl-live-badge{color:#ff629e}
 @media(prefers-reduced-motion:reduce){.draw-match{transition:none}}
 
 header.topbar>.rl-overview .rl-live-badge{color:#16864c;border-color:#28b56e66;background:#28b56e0d}html[data-theme=dark] header.topbar>.rl-overview .rl-live-badge{color:#68e7a2}.rl-live-badge:before{animation:none;box-shadow:none;position:relative}.rl-live-badge{position:relative}.rl-live-badge:after{content:'';position:absolute;left:14px;top:50%;width:9px;height:9px;border:1px solid currentColor;border-radius:50%;animation:live-ring-signal 1.8s ease-out infinite;pointer-events:none}@keyframes live-ring-signal{from{transform:translateY(-50%) scale(1);opacity:.7}to{transform:translateY(-50%) scale(3);opacity:0}}@media(prefers-reduced-motion:reduce){.rl-live-badge:after{animation:none;opacity:0}}
+
+@media(prefers-reduced-motion:no-preference){
+ .attendance-confirmed,.rl-own-state{animation:attendance-enter 220ms ease-out both}
+ .rl-actions button{transition:transform 150ms ease,opacity 150ms ease}
+ .rl-actions button:active:not(:disabled){transform:scale(.98)}
+}
+@keyframes attendance-enter{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}

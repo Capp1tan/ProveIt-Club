@@ -130,7 +130,7 @@ const schema = a.schema({
     consentAcceptedAt: a.datetime(),
     startsAt: a.datetime(),
     timeZone: a.string(),
-    rulesSnapshot: a.string(), termsVersion:a.integer(), termsAcceptedAt:a.datetime(), conflictsSnapshot:a.string(),
+    rulesSnapshot: a.string(), termsChangedBy:a.string(), termsVersion:a.integer(), termsAcceptedAt:a.datetime(), conflictsSnapshot:a.string(),
   }).secondaryIndexes(index=>[index('recipientSub').sortKeys(['status']).name('byRecipientStatus').queryField('invitationsByRecipient')])
     .authorization(allow => [allow.ownerDefinedIn('recipientSub').identityClaim('sub').to(['read'])]),
   PrizeUpload:a.customType({path:a.string().required(),url:a.string().required()}),
