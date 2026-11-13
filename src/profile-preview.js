@@ -31,7 +31,13 @@ export class ProfilePreview {
     button.setAttribute('aria-label','Ver perfil de '+name);button.setAttribute('aria-haspopup','dialog');
     button.setAttribute('aria-controls',this.card.id);button.setAttribute('aria-expanded','false');
     const text=document.createElement('span');text.className='participant-name';text.textContent=name;
-    button.append(this.avatar(id,name),text,this.badges(profile?.owner?.split('::')[0]));
+    const badges=this.badges(profile?.owner?.split('::')[0]);
+    const verified=badges?.querySelector?.('[data-code="VERIFIED"]');
+    const nameLine=document.createElement('span');
+    nameLine.className='participant-name-line';
+    nameLine.append(text);
+    if(verified)nameLine.append(verified);
+    button.append(this.avatar(id,name),nameLine,badges);
     const queue=()=>{if(!this.enabled || this.pinned || this.suppressFocus===button)return;clearTimeout(this.showTimer);clearTimeout(this.hideTimer);this.showTimer=setTimeout(()=>{if(button.isConnected)this.show(button,id,historicalName);},HOVER_DELAY);};
     button.addEventListener('pointerenter',event=>{if(event.pointerType!=='touch')queue();});
     button.addEventListener('pointerleave',()=>{clearTimeout(this.showTimer);this.scheduleHide();});
