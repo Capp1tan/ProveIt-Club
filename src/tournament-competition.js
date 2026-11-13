@@ -27,11 +27,11 @@ export function attendancePanel(t,{sub,profiles,onChanged,now=Date.now()}){
  if(!t.draw){
   const ready=attendanceReady(t),due=scheduledDraw(t);
   if(Number.isFinite(due)){const seconds=Math.max(0,Math.ceil((due-now)/1000)),countdown=el('p','Se sortean en '+Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0'),'draw-countdown');countdown.dataset.drawCountdown='';countdown.setAttribute('role','timer');countdown.setAttribute('aria-live','off');root.append(el('h2','El sorteo está por comenzar'),countdown,el('p','Todos verán la misma llave.','field-help'));
-   if(window.speechSynthesis && window.SpeechSynthesisUtterance && navigator.userActivation?.hasBeenActive===false){
-    const enableVoice=el('button','Activar aviso de voz','format-choice');
+   if((window.AudioContext || window.webkitAudioContext) && drumAudio?.state!=='running'){
+    const enableVoice=el('button','Activar sonido del sorteo','format-choice');
     enableVoice.type='button';
     enableVoice.addEventListener('click',()=>{
-     enableVoice.remove();
+     void unlockDrawAudio().then(()=>{if(drumAudio?.state==='running')enableVoice.remove();});
      if(due-(Date.now()+now-renderedAt)>10000)speakDraw('Aviso de voz activado.');
      else announcedDraw='';
     },{once:true});
@@ -65,6 +65,51 @@ export function drawAudit(t){
  return root;
 }
 let finishing=false,nextAttempt=0,attemptTournament='';
+let drumAudio;
+let lastDrumSecond='';
+async function unlockDrawAudio(){
+ const AudioContext=window.AudioContext || window.webkitAudioContext;
+ if(!AudioContext)return;
+ try{
+  drumAudio ||= new AudioContext();
+  if(drumAudio.state!=='running')await drumAudio.resume();
+ }catch{}
+}
+
+function playDrawDrum(drawId,seconds){
+ if(seconds<1 || seconds>10 || document.hidden || drumAudio?.state!=='running')return;
+ const beat=drawId+':'+seconds;
+ if(beat===lastDrumSecond)return;
+ lastDrumSecond=beat;
+
+ const now=drumAudio.currentTime;
+ const pitch=drumAudio.createOscillator();
+ const envelope=drumAudio.createGain();
+ pitch.type='sine';
+ pitch.frequency.setValueAtTime(122,now);
+ pitch.frequency.exponentialRampToValueAtTime(47,now+.17);
+ envelope.gain.setValueAtTime(.001,now);
+ envelope.gain.exponentialRampToValueAtTime(seconds<=3?.42:.32,now+.008);
+ envelope.gain.exponentialRampToValueAtTime(.001,now+.26);
+ pitch.connect(envelope).connect(drumAudio.destination);
+ pitch.start(now);
+ pitch.stop(now+.27);
+ pitch.onended=()=>{pitch.disconnect();envelope.disconnect();};
+}
+
+if(typeof window!=='undefined'){
+ const prime=event=>{
+  if(!event.isTrusted)return;
+  void unlockDrawAudio().then(()=>{
+   if(drumAudio?.state!=='running')return;
+   window.removeEventListener('click',prime,true);
+   window.removeEventListener('keydown',prime,true);
+  });
+ };
+ window.addEventListener('click',prime,true);
+ window.addEventListener('keydown',prime,true);
+}
+
 let announcedDraw='';
 function announceDraw(tournamentId,due){
  if(document.hidden || !window.speechSynthesis || !window.SpeechSynthesisUtterance)return;
@@ -86,6 +131,7 @@ export function updateDrawCountdown(t,{sub,profiles,onChanged,now=Date.now()}){
  const due=scheduledDraw(t);if(!Number.isFinite(due))return;
  const seconds=Math.max(0,Math.ceil((due-now)/1000));
  document.querySelectorAll('[data-draw-countdown]').forEach(n=>{n.textContent=seconds?'Se sortean en '+Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0'):'Preparando la llave…';});
+ playDrawDrum(t.id+':'+due,seconds);
  if(seconds>=9 && seconds<=10)announceDraw(t.id,due);
  const mine=t.participantIds.some(id=>profiles.get(id)?.owner?.split('::')[0]===sub);
  if(attemptTournament!==t.id){attemptTournament=t.id;nextAttempt=0;}

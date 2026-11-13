@@ -1,5 +1,8 @@
 ## 4.3.0 — 2026-11-04
 
+## 4.6.1 — 2026-11-12
+- Golpes de tambor originales sincronizados con los últimos diez segundos del sorteo.
+
 ## 4.6.0 — 2026-11-12
 - Mejor contraste en modo claro, comentarios privados al juez, asistencia definitiva, carga de portada con clic o arrastre y aviso de voz a diez segundos del sorteo.
 
