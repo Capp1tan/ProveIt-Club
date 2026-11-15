@@ -12,7 +12,7 @@ export function createRealLobby({ profilePreview, getUser, getConnection, getNow
   const inner=el('div');inner.append(el('small','PARTICIPANTES CONFIRMADOS'),ringText);const track=el('span','','rl-progress-track');track.append(el('span'));ring.append(inner,track);
   const reduced=window.matchMedia('(prefers-reduced-motion: reduce)');
   let headerStats;const previousStatuses=new Map();
-  let t, filter='all', shown=null,target=0,frame=0,context='',busy=false,actionId=0;
+  let t, shown=null,target=0,frame=0,context='',busy=false,actionId=0;
   const paint=v=>{shown=v;ring.style.setProperty('--progress',`${v*100}%`);};
   function animate(value,reset) {
     if(reset || shown===null || reduced.matches){cancelAnimationFrame(frame);frame=0;target=value;paint(value);return;}
@@ -76,18 +76,13 @@ export function createRealLobby({ profilePreview, getUser, getConnection, getNow
     if(context!==t.id)previousStatuses.clear();
     animate(total?accepted/total:0,context!==t.id);context=t.id;
     if(t.entryFeeCents>0){const price=el('p',`Inscripción individual: ${money(t.entryFeeCents)}. Crear es gratis; tu lugar se confirma con el pago aprobado. Los jueces no pagan salvo que también compitan. Si hay una cancelación, contactá al administrador para revisar tu pago.`,'rl-entry-fee');root.append(price);if(t.entryPaymentStatuses?.includes('REVERSED'))root.append(el('p','Hay un pago de inscripción en revisión. El torneo no puede avanzar hasta resolverlo.','tournament-notice'));}
-    const toolbar=el('div','','rl-toolbar');
-    for(const [key,label] of [['all','Todos'],['ACCEPTED','Listos'],['PENDING','Pendientes'],['REJECTED','No asisten']]){
-      const n=key==='all'?total:people.filter(p=>p.status===key).length;
-      const b=el('button',`${label} (${n})`,'rl-filter');b.type='button';b.setAttribute('aria-pressed',String(filter===key));b.addEventListener('click',()=>{filter=key;render(t);});toolbar.append(b);
-    }root.append(toolbar);
     const list=el('ul','','rl-roster');
-    for(const p of people.filter(p=>filter==='all' || p.status===filter)){
+    for(const p of people){
       const row=el('li','','rl-person');row.dataset.state=p.status;
       if(context===t.id && previousStatuses.has(p.id) && previousStatuses.get(p.id)!==p.status)row.classList.add('rl-state-changed');
       row.append(profilePreview.button(p.id,p.name));
       const state=el('span',p.status==='ACCEPTED'?'✓ Confirmado':p.status==='REJECTED'?'No asiste':p.paymentReversed?'Pago en revisión':'Invitación pendiente','rl-state');state.dataset.state=p.status;row.append(state);list.append(row);
-    }if(!list.childElementCount)list.append(el('li','No hay participantes en este estado.','field-help'));root.append(list);
+    }if(!list.childElementCount)list.append(el('li','Todavía no hay participantes.','field-help'));
     const user=getUser(),mine=[];
     [...t.participantIds,...t.judgeIds,...(t.treasurerId?[t.treasurerId]:[])].forEach((id,index)=>{const profile=profilePreview.profiles.get(id);if(profile?.owner?.split('::')[0]===user?.userId)mine.push({index,status:statuses[index] || 'PENDING',judge:index>=total});});
     if(mine.some(role=>role.status==='PENDING') && !t.winnerProfileId){
@@ -105,7 +100,7 @@ export function createRealLobby({ profilePreview, getUser, getConnection, getNow
       if(announced)rules.append(el('p','Entrega: '+(t.prizeHolder || 'Sin declarar')+' · Gestión externa a ProveIt.'));
       form.append(rules);
       const pays=mine.some(role=>!role.judge && role.status==='PENDING' && t.entryFeeCents>0 && t.entryPaymentStatuses?.[role.index]!=='APPROVED');
-      const consent=el('p',(t.arbitrationMode==='ORGANIZER'?noJudgeConsent+' ':'')+
+      const consent=el('p',(t.arbitrationMode==='ORGANIZER' && user?.userId!==t.createdBySub?noJudgeConsent+' ':'')+
        'Al confirmar aceptás las reglas y condiciones vigentes.'+
        (mine.some(role=>role.judge)?' También aceptás tu cargo en el torneo.':'')+
        (pays?' La inscripción se confirma cuando se acredita el pago de '+money(t.entryFeeCents)+'.':''),'field-help');
@@ -116,6 +111,7 @@ export function createRealLobby({ profilePreview, getUser, getConnection, getNow
       const no=el('button','No podré asistir','format-choice rl-answer');no.type='button';no.disabled=busy;
       yes.addEventListener('click',()=>void answer(true,message));no.addEventListener('click',()=>void answer(false,message));actions.append(yes,no);form.append(actions,message);root.append(form);
     }else if(mine.length)root.append(el('p',mine.every(r=>r.status==='ACCEPTED')?(mine.some(r=>r.judge)?'Tu participación y tus cargos están aceptados.':'✓ Asistencia confirmada.'):'Ya respondiste a la invitación.','rl-own-state'));
+    root.append(list);
     if(t.judgeIds?.length){const judgeDetails=el('details','','rl-judge-details');judgeDetails.append(el('summary','Jurado y responsables'),judge);root.append(judgeDetails);}
     people.forEach(p=>previousStatuses.set(p.id,p.status));
     const next=el('section','','rl-card rl-next');

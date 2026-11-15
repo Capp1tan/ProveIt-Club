@@ -1,5 +1,5 @@
 import { tournamentFee, money } from './billing-api.js';
-import { noJudgeConsent, timeZones, zoneLabel, localToUtc, scheduleLabel } from './tournament-schedule.js';
+import { timeZones, zoneLabel, localToUtc, scheduleLabel } from './tournament-schedule.js';
 import { loadBadges, badgeElements, decorateAvatar } from './badges.js';
 import { Hub } from 'aws-amplify/utils';
 import { avatarUrl, configureAmplify, getCurrentUser } from './auth-client.js';
@@ -83,9 +83,9 @@ function syncPoster() {
 }
 function syncArbitration() {
   if (noJudge()) judges.clear();
-  $('judgesSection').hidden = noJudge(); $('organizerConsentLabel').hidden = !noJudge();
-  $('judgeModeHelp').textContent = noJudge() ? 'Sin juez: el organizador decide el resultado y coordina el dinero. Todos deben aceptarlo.' : 'El juez también coordina el dinero del torneo.';
-  $('organizerConsent').required = noJudge(); syncPoster();
+  $('judgesSection').hidden = noJudge();
+  $('judgeModeHelp').textContent = noJudge() ? 'Sin juez: el organizador decide el resultado y coordina el dinero. Los invitados deberán aceptarlo.' : 'El juez también coordina el dinero del torneo.';
+  syncPoster();
 }
 function updateSchedule() {
   try {
@@ -296,7 +296,7 @@ form.elements.participantLimit.addEventListener('change', () => {
   renderPeople(); if (participants.size > capacity()) show('Hay más invitados que cupos. Quitá las selecciones sobrantes en la siguiente etapa.', true);
 });
 form.addEventListener('input', e => {
-  if (e.target.name === 'arbitrationMode') { $('organizerConsent').checked = false; syncArbitration(); renderPeople(); }
+  if (e.target.name === 'arbitrationMode') { syncArbitration(); renderPeople(); }
   syncPoster(); updateSchedule(); updateSummary(); clearTimeout(draftTimer); draftTimer = setTimeout(saveDraft, 250);
 });
 
@@ -394,7 +394,6 @@ form.addEventListener('submit', async event => {
   if (participants.size !== capacity()) { $('participantsList').closest('details').open = true; return show(`Elegí exactamente ${capacity()} participantes. Por ahora seleccionaste ${participants.size}.`, true); }
   if (selectedFormat === 'DUEL' && capacity() !== 2) return show('El Duelo 1v1 necesita exactamente dos participantes. Elegí otro formato o cambiá el cupo.', true);
   if (!noJudge() && !judges.size) { $('judgesSection').closest('details').open = true; return show('Elegí al menos un juez o volvé a la primera etapa para elegir «Sin jurado».', true); }
-  if (noJudge() && !$('organizerConsent').checked) { $('organizerConsent').closest('details').open = true; return show(noJudgeConsent, true); }
   try { startsAt = localToUtc($('startsLocal').value, $('timeZone').value); if (Date.parse(startsAt) <= Date.now()) throw new Error('Elegí una fecha y hora futuras.'); }
   catch (e) { return show(e.message, true); }
   }
@@ -411,7 +410,7 @@ form.addEventListener('submit', async event => {
       pendingRequest = { prizeImagePath,tournamentId, name: form.elements.name.value.trim(), activity: form.elements.activity.value.trim(), overview: form.elements.overview.value.trim(),
         description: form.elements.description.value.trim(), conflicts: form.elements.conflicts.value.trim(), format: selectedFormat,
         participantIds: [...participants], judgeIds: [...judges], participantLimit: capacity(), arbitrationMode: form.elements.arbitrationMode.value,
-        startsAt, timeZone: $('timeZone').value, acceptOrganizerDecision: noJudge() && $('organizerConsent').checked,
+        startsAt, timeZone: $('timeZone').value,
         ...(form.elements.prizeExpected.value==='yes'?{prizeType:form.elements.prizeType.value,prizeTitle:form.elements.prizeTitle.value.trim(),prizeDescription:form.elements.prizeDescription.value.trim(),prizeHolder:form.elements.prizeHolder.value.trim(),prizeFunder:form.elements.prizeFunder.value.trim()}:{}),
         prizeExpected: form.elements.prizeExpected.value === 'yes', coverPath: coverPath || null, treasurerId: null };
       saving = false; saveDraft(); saving = true;

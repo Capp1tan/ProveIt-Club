@@ -38,7 +38,6 @@ export const handler = async (event: { arguments: Arguments; identity?: { sub?: 
   };
   if (!['ORGANIZER','JUDGES'].includes(args.arbitrationMode)) throw new Error('Elegí si el torneo tendrá juez.');
   const noJudge = args.arbitrationMode === 'ORGANIZER';
-  if (noJudge && args.acceptOrganizerDecision !== true) throw new Error('Aceptá explícitamente la condición de torneo sin juez.');
   const timestamp = Date.parse(args.startsAt);
   if (!Number.isFinite(timestamp) || new Date(timestamp).toISOString() !== args.startsAt || timestamp <= Date.now()) throw new Error('Elegí una fecha y hora futuras válidas.');
   if (typeof args.timeZone !== 'string' || args.timeZone.length > 80) throw new Error('Zona horaria inválida.');
