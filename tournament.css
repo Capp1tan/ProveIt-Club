@@ -70,7 +70,7 @@ html[data-theme] body.proveit-theme #tournamentDraw .draw-match{background:trans
 #tournamentDraw .bracket-connections path{stroke:var(--site-muted)}
 #tournamentDraw .bracket-connections path[data-active=true]{stroke:var(--site-accent)}
 #tournamentDraw[data-revealing=true] .bracket-connections{visibility:hidden}
-#tournamentDraw[data-revealing=true] .participant-name{filter:blur(.5px);opacity:.8}
+#tournamentDraw[data-revealing=true] .participant-name{overflow:visible;position:relative;z-index:2}
 #tournamentDraw[data-revealing=true] .bracket-champion{visibility:hidden}
 .bracket-champion{position:relative;display:flex;align-items:center;gap:8px}
 .bracket-trophy{position:relative;display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:var(--site-tint)}

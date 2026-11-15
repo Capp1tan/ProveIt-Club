@@ -132,7 +132,7 @@ export function updateDrawCountdown(t,{sub,profiles,onChanged,now=Date.now()}){
  finishing=true;nextAttempt=now+5000;
  void tournamentCompetition(t.id,'DRAW_FINISH').then(()=>onChanged()).catch(()=>{const n=document.querySelector('[data-draw-countdown]');if(n)n.textContent='Sincronizando sorteo… Se reintentará automáticamente.';}).finally(()=>{finishing=false;});
 }
-export function animateDraw(t,section){
+export async function animateDraw(t,section){
  const state=competitionState(t);
  const reduced=matchMedia('(prefers-reduced-motion: reduce)');
  if(reduced.matches || section.dataset.revealing==='true')return;
@@ -146,24 +146,40 @@ export function animateDraw(t,section){
  const board=section.querySelector('.draw-board');
  if(!status || !board)return;
  const slots=[...board.querySelectorAll('[data-player-label] .participant-name')];
- const names=[...new Set(t.participantNames || [])];
- const originals=slots.map(slot=>slot.textContent);
  const champion=section.querySelector('.bracket-champion');
  const ease='cubic-bezier(.23,1,.32,1)';
  section.dataset.revealing='true';
  board.inert=true;
  status.textContent='Sorteando cruces';
- let tick=0;
- const shuffle=setInterval(()=>{
-  if(!section.isConnected || reduced.matches){clearInterval(shuffle);return;}
-  if(!document.hidden && names.length){
-   slots.forEach((slot,i)=>{slot.textContent=names[(i*3+tick*(i+1))%names.length];});
-   tick++;
+ const movingSlots=slots.filter(slot=>!slot.closest('.bracket-champion'));
+ const originalNames=movingSlots.map(slot=>slot.textContent);
+ const size=movingSlots.length;
+ let offset=size>1?1:0;
+ movingSlots.forEach((slot,index)=>{slot.textContent=originalNames[(index+offset)%size];});
+ try{
+  for(let round=0;round<4 && size>1;round++){
+   if(!section.isConnected || reduced.matches || document.hidden)break;
+   const positions=movingSlots.map(slot=>slot.getBoundingClientRect());
+   const nextOffset=(offset+1)%size;
+   movingSlots.forEach((slot,index)=>{
+    slot.textContent=originalNames[(index+nextOffset)%size];
+   });
+   const animations=movingSlots.map((slot,index)=>{
+    const previous=positions[(index+1)%size];
+    const current=slot.getBoundingClientRect();
+    const x=previous.left-current.left,y=previous.top-current.top;
+    return slot.animate([
+     {transform:`translate(${x}px,${y}px)`},
+     {transform:`translate(${-x*.06}px,${-y*.06}px)`,offset:.76},
+     {transform:'translate(0,0)'}
+    ],{duration:360,easing:ease});
+   });
+   await Promise.allSettled(animations.map(animation=>animation.finished));
+   offset=nextOffset;
   }
- },85);
- setTimeout(()=>{
-  clearInterval(shuffle);
-  slots.forEach((slot,i)=>{slot.textContent=originals[i];});
+ }finally{
+  const shuffledPositions=new Map(movingSlots.map((slot,index)=>[slot,movingSlots[(index-offset+size)%size].getBoundingClientRect()]));
+  movingSlots.forEach((slot,index)=>{slot.textContent=originalNames[index];});
   delete section.dataset.revealing;
   board.inert=false;
   status.textContent=champion?'Torneo finalizado':'Cruces sorteados';
@@ -174,9 +190,10 @@ export function animateDraw(t,section){
    const round=slot.closest('.draw-round');
    const rect=slot.getBoundingClientRect();
    const previous=previousSlots.get(id);
+   const shuffled=shuffledPositions.get(slot);
    const from=previous && previous.round!==round
     ? `translate(${previous.rect.left-rect.left}px,${previous.rect.top-rect.top}px)`
-    : 'translateX(6px)';
+    : shuffled ? `translate(${shuffled.left-rect.left}px,${shuffled.top-rect.top}px)` : 'translateX(6px)';
    if(id)previousSlots.set(id,{round,rect});
    slot.animate([{opacity:0,transform:from},{opacity:1,transform:'none'}],{duration:500,delay:previous && previous.round!==round?700:Math.min(i,12)*45,easing:ease,fill:'backwards'});
   });
@@ -202,5 +219,5 @@ export function animateDraw(t,section){
     }
    },900);
   }
- },1500);
+ }
 }
