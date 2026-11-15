@@ -26,3 +26,10 @@ body.create-page .creation-shell select{color-scheme:light}
 .poster-picker{position:absolute;inset:0;z-index:4;width:100%;border:0;border-radius:inherit;background:transparent;cursor:pointer}
 .poster-picker:focus-visible,.creation-poster.is-file-over{outline:3px solid var(--site-accent,#5271ff);outline-offset:4px}
 .poster-picker:disabled{cursor:default}
+
+.creation-surface{position:relative;isolation:isolate}
+.creation-curtains{position:absolute;inset:0;z-index:10;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:hidden;border-radius:inherit;pointer-events:none}
+.creation-curtains span{background:var(--site-tint,var(--site-panel,#e1e6f0))}
+.creation-curtains span:first-child{transform:translateX(-101%);margin-right:-1px}
+.creation-curtains span:last-child{transform:translateX(101%);margin-left:-1px}
+@media(prefers-reduced-motion:reduce){.creation-curtains{display:none}}

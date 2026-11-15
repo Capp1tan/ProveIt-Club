@@ -207,13 +207,75 @@ function validateStepOne() {
   if (coverWorking) { show('Esperá a que termine de prepararse la imagen.', true); return false; }
   return true;
 }
+const creationSurface=form.closest('.creation-surface');
+const reducedStepMotion=matchMedia('(prefers-reduced-motion: reduce)');
+let stepTransition;
+
+function focusStep(value) {
+  (value === 2 ? $('stepTwoTitle') : $('tournamentName')).focus({preventScroll:true});
+}
+
 function setStep(value, focus = true) {
+  if (!focus) {
+    stepTransition?.abort();
+    applyStep(value,false);
+    return;
+  }
+  if (stepTransition || value === step) return;
+  if (reducedStepMotion.matches || !Element.prototype.animate || document.hidden) {
+    applyStep(value,true);
+    return;
+  }
+  void transitionStep(value);
+}
+
+async function transitionStep(value) {
+  const controller=new AbortController();
+  stepTransition=controller;
+  const curtain=document.createElement('div');
+  curtain.className='creation-curtains';
+  curtain.setAttribute('aria-hidden','true');
+  const panels=[document.createElement('span'),document.createElement('span')];
+  curtain.append(...panels);
+  creationSurface.append(curtain);
+  form.inert=true;
+  const outside=['translateX(-101%)','translateX(101%)'];
+  const closed='translateX(0)';
+  let animations=[];
+  const stop=()=>animations.forEach(animation=>animation.cancel());
+  controller.signal.addEventListener('abort',stop,{once:true});
+
+  try {
+    animations=panels.map((panel,index)=>panel.animate([
+      {transform:outside[index]},{transform:closed}
+    ],{duration:200,easing:'cubic-bezier(.65,0,.35,1)',fill:'forwards'}));
+    await Promise.all(animations.map(animation=>animation.finished));
+    if (controller.signal.aborted) return;
+    applyStep(value,false);
+    $('creationTitle').scrollIntoView({block:'start',behavior:'instant'});
+    stop();
+    animations=panels.map((panel,index)=>panel.animate([
+      {transform:closed},{transform:outside[index]}
+    ],{duration:250,easing:'cubic-bezier(.23,1,.32,1)',fill:'forwards'}));
+    await Promise.all(animations.map(animation=>animation.finished));
+  } catch {
+    if (!controller.signal.aborted && step !== value) applyStep(value,false);
+  } finally {
+    stop();
+    curtain.remove();
+    form.inert=false;
+    stepTransition=null;
+    if (!controller.signal.aborted) focusStep(value);
+  }
+}
+
+function applyStep(value, focus) {
   step = value; $('creationStep1').hidden = value !== 1; $('creationStep2').hidden = value !== 2;
   document.querySelectorAll('[data-step-indicator]').forEach(n => {
     const num = Number(n.dataset.stepIndicator); n.dataset.complete = String(num < value);
     if (num === value) n.setAttribute('aria-current', 'step'); else n.removeAttribute('aria-current');
   });
-  if (focus) { (value === 2 ? $('stepTwoTitle') : $('tournamentName')).focus(); $('creationTitle').scrollIntoView({ block: 'start', behavior: 'instant' }); }
+  if (focus) { focusStep(value); $('creationTitle').scrollIntoView({ block: 'start', behavior: 'instant' }); }
   if (value === 2 && !profiles.length) void refreshPeople();
   saveDraft();
 }
@@ -323,7 +385,7 @@ $('retryConnection').addEventListener('click', () => void connectAccount());
 $('tournamentLogin').addEventListener('click', () => { saveDraft(); try { sessionStorage.setItem('proveit:tournament-resume', '1'); } catch {} });
 
 form.addEventListener('submit', async event => {
-  event.preventDefault(); if (saving || loading) return;
+  event.preventDefault(); if (saving || loading || stepTransition) return;
   if (step === 1) { if (validateStepOne()) setStep(2); return; }
   if (!pricingReady) return show('Reintentá la conexión antes de publicar.', true);
   if (!pendingRequest && !validateStepOne()) { setStep(1); return; }
