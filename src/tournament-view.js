@@ -1,6 +1,6 @@
 import {renderTournamentPreview} from './tournament-preview.js';
 import {usesCompetition,competitionStart} from '../shared/competition.ts';
-import {attendancePanel,drawAudit,animateDraw,updateDrawCountdown} from './tournament-competition.js';
+import {attendancePanel,drawAudit,animateDraw,animateWinner,updateDrawCountdown} from './tournament-competition.js';
 import {tournamentIsLive} from '../shared/tournament-room.ts';
 import {roomDeadline,roomIsClosed,validatePodium,allEntriesPaid} from '../shared/tournament-room.ts';
 import { createRealLobby } from './tournament-real-lobby.js';
@@ -191,13 +191,14 @@ function resultPanel(t) {
     const podiumCopy=[[second.value,'2.º'],[third.value,'3.º']].filter(([id])=>id).map(([id,label])=>label+': '+t.participantNames[t.participantIds.indexOf(id)]).join(' · ');
     if(!window.confirm('¿Confirmar a '+name+' como ganador? '+(podiumCopy?podiumCopy+'. ':'')+'Esta decisión quedará registrada y no se podrá cambiar desde el sitio.'))return;
     button.disabled=true;button.dataset.saving='true';message.textContent='Guardando resultado…';
-    try {const saved=await recordClubDuelResult(t.id,select.value,reason.value,kind.value,second.value || null,third.value || null);if(!saved?.winnerProfileId)throw new Error('AWS no confirmó el resultado. Actualizá para revisar su estado.');currentTournament=saved;renderTournament(saved);lastVersion=saved.updatedAt+String(saved.draw);}
+    try {const saved=await recordClubDuelResult(t.id,select.value,reason.value,kind.value,second.value || null,third.value || null);if(!saved?.winnerProfileId)throw new Error('AWS no confirmó el resultado. Actualizá para revisar su estado.');renderTournament(saved);lastVersion=saved.updatedAt+String(saved.draw);}
     catch(error) {message.textContent=error.message;delete button.dataset.saving;updateClock();}
   });decision.append(form);return decision;
 }
 function renderTournament(t) {
   profilePreview?.dismiss();drawCleanup?.();drawCleanup=null;
   if(t.roomClosed || roomIsClosed(t,roomNow())){showClosedRoom(t);return;}
+  const winnerJustRecorded=Boolean(t.winnerProfileId && currentTournament?.id===t.id && !currentTournament.winnerProfileId);
   currentTournament=t;
   const chatRoot=document.getElementById('tournamentChat');
   if(chatRoot && chatId!==t.id){closeTournamentChat();chatRoot.hidden=false;chatId=t.id;chatCleanup=mountChat(chatRoot,{roomType:'TOURNAMENT',roomId:t.id});}
@@ -226,7 +227,7 @@ function renderTournament(t) {
       const board=drawBoard(t);
       stage.append(board);
       detail.append(stage);
-      animateDraw(t,board);
+      if(winnerJustRecorded)animateWinner(board,t.winnerProfileId);else void animateDraw(t,board);
     }else{
       const preview=element('div','','bracket-stage-preview');
       preview.append(element('h2','Llave por sortear'));
@@ -254,7 +255,7 @@ function renderTournament(t) {
   if(format && !t.draw){const image=element('div','','format-preview');image.innerHTML=formatImage(format.id);image.append(element('p',format.description));info.append(image);}
   const rules=element('p',t.description || 'El organizador todavía no agregó reglas.');rules.style.whiteSpace='pre-wrap';info.append(rules);if(t.overview)info.append(element('p',t.overview));if(t.coverPath)info.append(hero);detail.append(info);
   if(savedDraw){
-    if(!bracketFocus){const board=drawBoard(t);detail.append(board);animateDraw(t,board);}
+    if(!bracketFocus){const board=drawBoard(t);detail.append(board);if(winnerJustRecorded)animateWinner(board,t.winnerProfileId);else void animateDraw(t,board);}
     const audit=drawAudit(t);if(audit)detail.append(audit);
   }else if(!bracketFocus && status.includes('REJECTED')){
     detail.append(element('p','Una persona rechazó la invitación. El sorteo quedó detenido.','tournament-notice'));

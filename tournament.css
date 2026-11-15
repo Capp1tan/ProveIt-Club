@@ -71,11 +71,8 @@ html[data-theme] body.proveit-theme #tournamentDraw .draw-match{background:trans
 #tournamentDraw .bracket-connections path[data-active=true]{stroke:var(--site-accent)}
 #tournamentDraw[data-revealing=true] .bracket-connections{visibility:hidden}
 #tournamentDraw[data-revealing=true] .participant-name{overflow:visible;position:relative;z-index:2}
-#tournamentDraw[data-revealing=true] .bracket-champion{visibility:hidden}
 .bracket-champion{position:relative;display:flex;align-items:center;gap:8px}
 .bracket-trophy{position:relative;display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:var(--site-tint)}
-.bracket-confetti{position:absolute;left:50%;top:50%;width:5px;height:7px;background:var(--site-accent);pointer-events:none}
-.bracket-confetti:nth-child(3n){background:var(--site-muted)}
 @media(prefers-reduced-motion:no-preference){
  #tournamentDraw[data-revealing=true] .bracket-reveal-status::before{animation:bracket-status-pulse 900ms ease-in-out infinite alternate}
 }

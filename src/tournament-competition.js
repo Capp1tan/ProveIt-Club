@@ -135,9 +135,9 @@ export function updateDrawCountdown(t,{sub,profiles,onChanged,now=Date.now()}){
 export async function animateDraw(t,section){
  const state=competitionState(t);
  const reduced=matchMedia('(prefers-reduced-motion: reduce)');
- if(reduced.matches || section.dataset.revealing==='true')return;
- if(!t.winnerProfileId && (!state.drawnAt || Date.now()-Date.parse(state.drawnAt)>20000))return;
- const key='proveit:bracket-reveal:'+t.id+':'+(t.winnerProfileId || state.drawnAt);
+ if(t.winnerProfileId || t.status==='COMPLETED' || reduced.matches || section.dataset.revealing==='true')return;
+ if(!state.drawnAt || Date.now()-Date.parse(state.drawnAt)>20000)return;
+ const key='proveit:bracket-reveal:'+t.id+':'+state.drawnAt;
  try{
   if(sessionStorage.getItem(key))return;
   sessionStorage.setItem(key,'1');
@@ -146,12 +146,11 @@ export async function animateDraw(t,section){
  const board=section.querySelector('.draw-board');
  if(!status || !board)return;
  const slots=[...board.querySelectorAll('[data-player-label] .participant-name')];
- const champion=section.querySelector('.bracket-champion');
  const ease='cubic-bezier(.23,1,.32,1)';
  section.dataset.revealing='true';
  board.inert=true;
  status.textContent='Sorteando cruces';
- const movingSlots=slots.filter(slot=>!slot.closest('.bracket-champion'));
+ const movingSlots=slots;
  const originalNames=movingSlots.map(slot=>slot.textContent);
  const size=movingSlots.length;
  let offset=size>1?1:0;
@@ -182,7 +181,7 @@ export async function animateDraw(t,section){
   movingSlots.forEach((slot,index)=>{slot.textContent=originalNames[index];});
   delete section.dataset.revealing;
   board.inert=false;
-  status.textContent=champion?'Torneo finalizado':'Cruces sorteados';
+  status.textContent='Cruces sorteados';
   if(!section.isConnected || reduced.matches || document.hidden)return;
   const previousSlots=new Map();
   slots.forEach((slot,i)=>{
@@ -204,20 +203,21 @@ export async function animateDraw(t,section){
    }
    path.animate([{strokeDasharray:'1',strokeDashoffset:1},{strokeDasharray:'1',strokeDashoffset:0}],{duration:700,delay:Math.min(i,8)*85,easing:ease,fill:'backwards'});
   });
-  if(champion){
-   champion.animate([{opacity:0,transform:'translateY(8px) scale(.96)'},{opacity:1,transform:'none'}],{duration:500,delay:750,easing:ease,fill:'backwards'});
-   setTimeout(()=>{
-    if(!champion.isConnected || document.hidden || reduced.matches)return;
-    const trophy=champion.querySelector('.bracket-trophy');
-    if(!trophy)return;
-    for(let i=0;i<45;i++){
-     const piece=el('i','','bracket-confetti');
-     piece.setAttribute('aria-hidden','true');
-     trophy.append(piece);
-     const angle=i*2.39996,radius=30+(i%9)*8;
-     piece.animate([{opacity:1,transform:'translate(0,0) rotate(0)'},{opacity:0,transform:`translate(${Math.cos(angle)*radius}px,${Math.sin(angle)*radius-16}px) rotate(${i*41}deg)`}],{duration:620+(i%7)*40,easing:ease}).finished.then(()=>piece.remove(),()=>piece.remove());
-    }
-   },900);
-  }
  }
+}
+
+export function animateWinner(section,winnerId){
+ if(document.hidden || matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+ const target=section.querySelector('.bracket-champion');
+ if(!target)return;
+ const source=[...section.querySelectorAll('.draw-player[data-player-id]')]
+  .findLast(slot=>slot!==target && slot.dataset.playerId===winnerId);
+ const end=target.getBoundingClientRect();
+ const start=source?.getBoundingClientRect();
+ const x=start?start.left-end.left:0;
+ const y=start?start.top-end.top:8;
+ target.animate([
+  {opacity:0,transform:`translate(${x}px,${y}px)`},
+  {opacity:1,transform:'none'}
+ ],{duration:500,easing:'cubic-bezier(.23,1,.32,1)'});
 }
