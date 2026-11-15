@@ -1,5 +1,5 @@
 import {GetCommand,UpdateCommand,DynamoDBDocumentClient} from '@aws-sdk/lib-dynamodb';
-import {competitionState,usesCompetition,attendanceReady,pendingDrawApprovals,competitionHasBegun,COUNTDOWN_MS,DRAW_COUNTDOWN_MS} from '../../../shared/competition';
+import {competitionState,usesCompetition,attendanceReady,pendingDrawApprovals,competitionHasBegun,COUNTDOWN_MS} from '../../../shared/competition';
 import {allEntriesPaid} from '../../../shared/tournament-room';
 import {assertActiveTournament} from '../lifecycle';
 import {createDraw} from './draw';
@@ -7,6 +7,7 @@ import {createDraw} from './draw';
 // Función pura: el reloj y el sorteo se inyectan para probar el flujo sin AWS ni cobros.
 export function changeCompetition(t:any,sub:string,owned:string[],a:any,now=Date.now(),draw=createDraw){
  assertActiveTournament(t);if(!usesCompetition(t))throw new Error('Este encuentro usa el flujo anterior.');
+ if(a.action==='DRAW_SCHEDULE' && t.draw && sub===t.createdBySub)return t;
  if(a.action==='DRAW_FINISH' && t.draw){if(sub!==t.createdBySub && !owned.length)throw new Error('Sólo los integrantes pueden completar el sorteo.');return t;}
  if(t.winnerProfileId || t.status==='COMPLETED' || competitionHasBegun(t,now))throw new Error('El encuentro ya comenzó o finalizó. La llave quedó bloqueada.');
  if(!allEntriesPaid(t) || !t.rosterStatuses?.every((s:string)=>s==='ACCEPTED'))throw new Error('Primero deben aceptar todos los cargos y acreditarse las inscripciones.');
@@ -19,17 +20,16 @@ export function changeCompetition(t:any,sub:string,owned:string[],a:any,now=Date
   if(s.attendance[id]?.ready===true)return t;
   if(now<Date.parse(t.startsAt))throw new Error('La asistencia se habilita a partir del horario previsto del encuentro.');
   s.attendance[id]={ready:true,at};
- }else if(a.action==='DRAW_SCHEDULE'){
-  if(sub!==t.createdBySub)throw new Error('Sólo el organizador puede iniciar el sorteo.');
-  if(now<Date.parse(t.startsAt))throw new Error('El sorteo se habilita a la hora programada.');
-  if(resultDraw)throw new Error('La llave ya fue sorteada.');
+ }else if(a.action==='DRAW_SCHEDULE' || a.action==='DRAW_FINISH'){
+  if(a.action==='DRAW_SCHEDULE'){
+   if(sub!==t.createdBySub)throw new Error('Sólo el organizador puede iniciar el sorteo.');
+   if(now<Date.parse(t.startsAt))throw new Error('El sorteo se habilita a la hora programada.');
+  }else{
+   if(sub!==t.createdBySub && !owned.length)throw new Error('Sólo los integrantes pueden completar el sorteo.');
+   if(!s.drawAt)throw new Error('El sorteo todavía no está preparado.');
+  }
   if(!attendanceReady(t))throw new Error('Todos los jugadores deben estar listos para sortear.');
-  if(s.drawAt)return t;
-  s.drawAt=new Date(now+DRAW_COUNTDOWN_MS).toISOString();
- }else if(a.action==='DRAW_FINISH'){
-  if(sub!==t.createdBySub && !owned.length)throw new Error('Sólo los integrantes pueden completar el sorteo.');
-  if(!attendanceReady(t) || !s.drawAt)throw new Error('El sorteo todavía no está preparado.');
-  if(now<Date.parse(s.drawAt))throw new Error('Todavía no terminó la cuenta regresiva del sorteo.');
+  delete s.drawAt;
   resultDraw=draw(t);s.originalDraw=resultDraw;s.revision=(s.revision || 0)+1;s.drawnAt=at;s.affected=[];s.approvals=[];
  }else if(a.action==='SWAP'){
   if(sub!==t.createdBySub)throw new Error('Sólo el organizador puede cambiar posiciones.');

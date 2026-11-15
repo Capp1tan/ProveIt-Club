@@ -1,6 +1,6 @@
 import {renderTournamentPreview} from './tournament-preview.js';
 import {usesCompetition,competitionStart} from '../shared/competition.ts';
-import {attendancePanel,drawAudit,animateDraw,animateWinner,updateDrawCountdown} from './tournament-competition.js';
+import {attendancePanel,drawAudit,animateDraw,animateWinner} from './tournament-competition.js';
 import {tournamentIsLive} from '../shared/tournament-room.ts';
 import {roomDeadline,roomIsClosed,validatePodium,allEntriesPaid} from '../shared/tournament-room.ts';
 import { createRealLobby } from './tournament-real-lobby.js';
@@ -152,7 +152,6 @@ function updateClock() {
   if(lobbyStopped)return;
   if(currentTournament && roomIsClosed(currentTournament,roomNow())){showClosedRoom(currentTournament);return;}
   realLobby?.clock();
-  if(currentTournament)updateDrawCountdown(currentTournament,{sub:currentUser?.userId,profiles,onChanged:()=>refreshTournament(true),now:roomNow()});
   if(currentTournament){const action=detail.querySelector('[data-draw-schedule]');if(action && !action.closest('[data-competition-busy]'))action.disabled=tournamentIsLive(currentTournament,roomNow()) || roomNow()<Date.parse(currentTournament.startsAt);if(tournamentIsLive(currentTournament,roomNow()))detail.querySelectorAll('.competition-actions button,.competition-actions input,.competition-actions select').forEach(n=>n.disabled=true);}
   if(currentTournament && !currentTournament.winnerProfileId && !detail.querySelector('.tournament-decision') && tournamentIsLive(currentTournament,roomNow())){const decision=resultPanel(currentTournament);if(decision)detail.append(decision);}
   const button=document.getElementById('recordDuelWinner');
@@ -227,7 +226,7 @@ function renderTournament(t) {
       const board=drawBoard(t);
       stage.append(board);
       detail.append(stage);
-      if(winnerJustRecorded)animateWinner(board,t.winnerProfileId);else void animateDraw(t,board);
+      if(winnerJustRecorded)animateWinner(board,t.winnerProfileId);else void animateDraw(t,board,currentUser?.userId);
     }else{
       const preview=element('div','','bracket-stage-preview');
       preview.append(element('h2','Llave por sortear'));
@@ -255,7 +254,7 @@ function renderTournament(t) {
   if(format && !t.draw){const image=element('div','','format-preview');image.innerHTML=formatImage(format.id);image.append(element('p',format.description));info.append(image);}
   const rules=element('p',t.description || 'El organizador todavía no agregó reglas.');rules.style.whiteSpace='pre-wrap';info.append(rules);if(t.overview)info.append(element('p',t.overview));if(t.coverPath)info.append(hero);detail.append(info);
   if(savedDraw){
-    if(!bracketFocus){const board=drawBoard(t);detail.append(board);if(winnerJustRecorded)animateWinner(board,t.winnerProfileId);else void animateDraw(t,board);}
+    if(!bracketFocus){const board=drawBoard(t);detail.append(board);if(winnerJustRecorded)animateWinner(board,t.winnerProfileId);else void animateDraw(t,board,currentUser?.userId);}
     const audit=drawAudit(t);if(audit)detail.append(audit);
   }else if(!bracketFocus && status.includes('REJECTED')){
     detail.append(element('p','Una persona rechazó la invitación. El sorteo quedó detenido.','tournament-notice'));
@@ -284,6 +283,8 @@ async function refreshTournament(force=false) {
     if(t.roomClosed || roomIsClosed(t,roomNow())){showClosedRoom(t);return;}
     if (!usesCompetition(t) && !t.draw && t.rosterStatuses?.length && t.rosterStatuses.every(state=>state==='ACCEPTED') && (await getCurrentUser()).userId===t.createdBySub) t=await ensureClubTournamentDraw(id) || t;
     const version=t.updatedAt+String(t.draw);
+    const activeDraw=detail.querySelector('#tournamentDraw[data-revealing]');
+    if(activeDraw && version===lastVersion)return;
     if((force || version!==lastVersion) && (t.winnerProfileId || (!detail.querySelector('[data-prize-editing="true"]') && !detail.querySelector('.community-form:focus-within,.duel-result-form:focus-within')))){renderTournament(t);lastVersion=version;}
     notice.hidden=true;
   }catch(error){notice.hidden=false;notice.textContent=error.message;notice.dataset.error='true';}
@@ -302,7 +303,7 @@ try {
     setInterval(updateClock,1000);
     // Señal WebSocket inmediata; relectura de respaldo para cambios desde clientes anteriores.
     setInterval(()=>void refreshTournament(),30000);
-    document.addEventListener('visibilitychange',()=>{if(!document.hidden){updateClock();if(!lobbyStopped){void connectLobby();void refreshTournament();}}});
+    document.addEventListener('visibilitychange',()=>{if(!document.hidden){updateClock();const board=detail.querySelector('#tournamentDraw');if(board && currentTournament)void animateDraw(currentTournament,board,currentUser?.userId);if(!lobbyStopped){void connectLobby();void refreshTournament();}}});
     window.addEventListener('proveit:invitation-updated',()=>void refreshTournament(true));
   } else {
     const tournaments=await listClubTournaments();
