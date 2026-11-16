@@ -76,3 +76,9 @@ html[data-theme=light] body.proveit-theme :is(.league-experience small,.league-e
 html[data-theme=light] body.proveit-theme :is(.league-rules summary,.profile-edit-details>summary,.account-settings summary){color:var(--site-text)}
 html[data-theme=light] body.proveit-theme .league-event:hover strong{color:var(--site-accent-hover)}
 html[data-theme=light] body.proveit-theme .profile-edit-details>summary{border-color:var(--site-line)}
+
+html.theme-crossfade::view-transition-group(root){animation-duration:340ms;animation-timing-function:ease-in-out}
+html.theme-crossfade::view-transition-old(root),html.theme-crossfade::view-transition-new(root){animation-duration:340ms;animation-timing-function:ease-in-out}
+@media(prefers-reduced-motion:reduce){
+ html.theme-crossfade::view-transition-group(root),html.theme-crossfade::view-transition-old(root),html.theme-crossfade::view-transition-new(root){animation-duration:0s}
+}

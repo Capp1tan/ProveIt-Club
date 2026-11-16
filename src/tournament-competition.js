@@ -136,6 +136,34 @@ export async function animateDraw(t,section,accountId){
  }
 }
 
+function celebrateWinner(target){
+ const rect=target.getBoundingClientRect();
+ if(rect.bottom<0 || rect.top>innerHeight || rect.right<0 || rect.left>innerWidth)return;
+ const burst=el('div','','winner-confetti');
+ burst.setAttribute('aria-hidden','true');
+ burst.style.left=rect.left+rect.width/2+'px';
+ burst.style.top=rect.top+rect.height/2+'px';
+ const palette=['#ff547d','#ffd44d','#58d4ff','#a887ff','#69e597','#ff8752'];
+ const animations=[];
+ document.body.append(burst);
+ for(let i=0;i<42;i++){
+  const piece=el('span');
+  piece.style.backgroundColor=palette[i%palette.length];
+  piece.style.width=4+Math.random()*4+'px';
+  piece.style.height=5+Math.random()*7+'px';
+  if(i%5===0)piece.style.borderRadius='50%';
+  const x=(Math.random()-.5)*330, lift=55+Math.random()*105;
+  const spin=(Math.random()-.5)*850;
+  burst.append(piece);
+  animations.push(piece.animate([
+   {transform:'translate(0,0) rotate(0)',opacity:1},
+   {transform:`translate(${x*.7}px,${-lift}px) rotate(${spin*.45}deg)`,opacity:1,offset:.42},
+   {transform:`translate(${x}px,${40+Math.random()*115}px) rotate(${spin}deg)`,opacity:0}
+  ],{duration:750+Math.random()*450,fill:'both',easing:'ease-out'}).finished);
+ }
+ void Promise.allSettled(animations).then(()=>burst.remove());
+}
+
 export function animateWinner(section,winnerId){
  if(document.hidden || matchMedia('(prefers-reduced-motion: reduce)').matches)return;
  const target=section.querySelector('.bracket-champion');
@@ -146,8 +174,12 @@ export function animateWinner(section,winnerId){
  const start=source?.getBoundingClientRect();
  const x=start?start.left-end.left:0;
  const y=start?start.top-end.top:8;
- target.animate([
+ const movement=target.animate([
   {opacity:0,transform:`translate(${x}px,${y}px)`},
   {opacity:1,transform:'none'}
  ],{duration:500,easing:'cubic-bezier(.23,1,.32,1)'});
+ void movement.finished.then(()=>{
+  if(target.isConnected && !document.hidden && !matchMedia('(prefers-reduced-motion: reduce)').matches)celebrateWinner(target);
+ },()=>{});
+
 }

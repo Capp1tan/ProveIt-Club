@@ -17,13 +17,37 @@
         : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 14A8.7 8.7 0 0 1 10 3.5 9 9 0 1 0 20.5 14Z"/></svg>';
     }
   }
+  let themeTransition;
+  function switchTheme() {
+    const next = theme === 'light' ? 'dark' : 'light';
+    function commit() {
+      apply(next);
+      try { localStorage.setItem(key, next); } catch {}
+    }
+    if (themeTransition) {
+      themeTransition.skipTransition();
+      return;
+    }
+    if (!document.startViewTransition || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      commit();
+      return;
+    }
+    root.classList.add('theme-crossfade');
+    const transition = document.startViewTransition(commit);
+    themeTransition = transition;
+    const cleanup = () => {
+      themeTransition = null;
+      root.classList.remove('theme-crossfade');
+    };
+    transition.finished.then(cleanup, cleanup);
+  }
   apply(theme);
   document.addEventListener('DOMContentLoaded', () => {
     const nav = document.querySelector('.top-actions');
     if (nav && !nav.querySelector('[data-theme-toggle]')) {
       const button = document.createElement('button'); button.type = 'button';
       button.className = 'theme-toggle'; button.dataset.themeToggle = '';
-      button.addEventListener('click', () => { apply(theme === 'light' ? 'dark' : 'light'); try { localStorage.setItem(key, theme); } catch {} });
+      button.addEventListener('click', switchTheme);
       nav.prepend(button);
     }
     document.querySelectorAll('.brand').forEach(brand => {
