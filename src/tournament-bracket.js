@@ -1,3 +1,4 @@
+import {resolveBracket} from '../shared/tournament-bracket.ts';
 import {connectBracket} from './bracket-lines.js';
 const element=(tag,text='',className='')=>{const node=document.createElement(tag);node.textContent=text;node.className=className;return node;};
 export function drawBoard(draw,{winnerId,playerButton,selfPlayer,preview=false,roundLimit}={}) {
@@ -14,9 +15,15 @@ export function drawBoard(draw,{winnerId,playerButton,selfPlayer,preview=false,r
   board.setAttribute('role','region');board.setAttribute('aria-label',preview?'Vista previa desplazable de la llave':'Llave del torneo. Los nombres abren una vista previa de perfil.');board.tabIndex=0;
   const canvas=element('div','','draw-canvas');board.append(canvas);
   const links=[];
+  const resolved=draw.format==='DOUBLE_ELIMINATION'?resolveBracket(draw):new Map();
   const slotNode=(slot,matchId,index)=>{
     const row=element('div','','draw-player');
     row.dataset.slot=String(index);
+    if(slot?.source){
+      links.push({source:slot.source,target:matchId,slot:index,outcome:slot.outcome});
+      const id=resolved.get(slot.source)?.[slot.outcome];
+      if(id!==undefined)slot=id?{playerId:id}:null;
+    }
     if(!slot) {row.dataset.playerLabel='Pase libre';row.append(element('span','Descanso / pase libre'));return row;}
     const player=slot.playerId?players.get(slot.playerId):slot.name?slot:null;
     if(player) {
@@ -24,9 +31,9 @@ export function drawBoard(draw,{winnerId,playerButton,selfPlayer,preview=false,r
       row.dataset.playerId=player.id;
       row.append(playerButton?.(player.id,player.name) || element('span',player.name));
       if(selfPlayer?.(player.id))row.append(element('small','Vos','draw-self'));
-      if(winnerId===player.id) { row.dataset.winner='true'; row.append(element('strong','Ganador','winner-tag')); }
+      if((draw.format==='DOUBLE_ELIMINATION'?draw.results?.[matchId]?.winnerId:winnerId)===player.id) { row.dataset.winner='true'; row.append(element('strong','Ganador','winner-tag')); }
     }
-    else {row.append(element('span',(slot.outcome==='loser'?'Perdedor de ':'Ganador de ')+slot.source,'draw-placeholder'));links.push({source:slot.source,target:matchId,slot:index,outcome:slot.outcome});}
+    else {row.append(element('span',(slot.outcome==='loser'?'Perdedor de ':'Ganador de ')+slot.source,'draw-placeholder'));}
     return row;
   };
   draw.rounds.slice(0,roundLimit).forEach(round=>{
@@ -83,6 +90,6 @@ export function drawBoard(draw,{winnerId,playerButton,selfPlayer,preview=false,r
     section.append(champion);
   }
   if(draw.format==='SWISS')section.append(element('p','Se sorteó la primera ronda. Las siguientes requieren resultados y emparejamientos por puntaje, que todavía no están implementados.','tournament-notice'));
-  if(draw.format==='DOUBLE_ELIMINATION')section.append(element('p','Los casilleros de ganadores y perdedores se completarán al registrar resultados. El reinicio de la gran final depende de las reglas acordadas.'));
+  if(draw.format==='DOUBLE_ELIMINATION' && winnerId && !draw.results)section.append(element('p','Este torneo guardó solo el resultado general.','field-help'));
   return {section,cleanup:connectBracket(canvas,links)};
 }

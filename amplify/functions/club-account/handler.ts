@@ -38,7 +38,11 @@ export const handler = async (event: Event) => {
       claim = await get('CLAIM_TABLE_NAME', 'creator');
     }
     const isCreator = claim?.accountSub === sub;
-    if (isCreator) await db.send(new PutCommand({ TableName: table('BADGE_TABLE_NAME'), Item: { id: 'CREATOR:' + sub, accountSub: sub, accountUsername: event.identity!.username || event.identity!.claims?.['cognito:username'] || sub, code: 'CREATOR', createdAt: now, updatedAt: now, __typename: 'ClubBadge' } }));
+    if(isCreator && !await get('BADGE_TABLE_NAME','CREATOR:'+sub)){
+      try{
+        await db.send(new PutCommand({TableName:table('BADGE_TABLE_NAME'),Item:{id:'CREATOR:'+sub,accountSub:sub,accountUsername:event.identity!.username || event.identity!.claims?.['cognito:username'] || sub,code:'CREATOR',createdAt:now,updatedAt:now,__typename:'ClubBadge'},ConditionExpression:'attribute_not_exists(id)'}));
+      }catch(error){if((error as Error).name!=='ConditionalCheckFailedException')throw error;}
+    }
     return { isCreator, phoneOptional:await phoneOptional(sub) };
   }
   if(operation==='setClubPhoneOptional') {
@@ -56,18 +60,20 @@ export const handler = async (event: Event) => {
   if (operation === 'manageClubBadge') {
     const creator = await get('CLAIM_TABLE_NAME', 'creator');
     if (creator?.accountSub !== sub) throw new Error('Sólo el Creador puede administrar insignias.');
-    if (!['BETA_TESTER','VERIFIED'].includes(args.code) && !/^CUSTOM_[a-f0-9-]{36}$/i.test(args.code || '')) throw new Error('Esta insignia está reservada.');
+    if (!['BETA_TESTER','VERIFIED','CREATOR'].includes(args.code) && !/^CUSTOM_[a-f0-9-]{36}$/i.test(args.code || '')) throw new Error('Esta insignia está reservada.');
     const profile = await get('PROFILE_TABLE_NAME', args.profileId);
     const accountSub = profile?.owner?.split('::')[0];
     if (!accountSub) throw new Error('Perfil no encontrado.');
+    const founder=args.code==='CREATOR';
+    if(founder && accountSub!==creator.accountSub)throw new Error('Fundador sólo se puede personalizar en la cuenta fundadora.');
     // AppSync devuelve owner como username; el permiso de administración usa
     // siempre el sub de Cognito. El alias sólo sirve para mostrar la insignia.
     const accountUsername = profile.owner.split('::')[1] || accountSub;
     const custom=String(args.code).startsWith('CUSTOM_');
     const label=String(args.label || '').trim(),color=String(args.color || '#c1f36b'),effect=String(args.effect || 'NONE');
-    if(custom && args.enabled && (label.length<2 || label.length>24 || /[\x00-\x1f\x7f]/.test(label) || !/^#[a-f0-9]{6}$/i.test(color) || !['NONE','GLOW','SHIMMER'].includes(effect)))throw new Error('Emblema: nombre de 2–24 caracteres, color válido y efecto permitido.');
-    const item = { ...(custom?{label,color,effect}:{}),id: args.code+':' + accountSub, accountSub, accountUsername, code: args.code, createdAt: now, updatedAt: now, __typename: 'ClubBadge' };
-    if (args.enabled) await db.send(new PutCommand({ TableName: table('BADGE_TABLE_NAME'), Item: item }));
+    if((custom || founder && label) && args.enabled && (label.length<2 || label.length>24 || /[\x00-\x1f\x7f]/.test(label) || !/^#[a-f0-9]{6}$/i.test(color) || !['NONE','GLOW','SHIMMER'].includes(effect)))throw new Error('Emblema: nombre de 2–24 caracteres, color válido y efecto permitido.');
+    const item = { ...(custom?{label,color,effect}:founder?{label:args.enabled?(label || '★ Fundador'):'',color,effect}:{}),id: args.code+':' + accountSub, accountSub, accountUsername, code: args.code, createdAt: now, updatedAt: now, __typename: 'ClubBadge' };
+    if (args.enabled || founder) await db.send(new PutCommand({ TableName: table('BADGE_TABLE_NAME'), Item: item }));
     else await db.send(new DeleteCommand({ TableName: table('BADGE_TABLE_NAME'), Key: { id: item.id } }));
     return { isCreator: true };
   }

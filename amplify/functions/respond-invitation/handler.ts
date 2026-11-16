@@ -9,7 +9,7 @@ import {allEntriesPaid} from '../../../shared/tournament-room';
 import {entryAmount,entryCheckoutId,assertEntryPaid} from '../billing/entry-policy';
 import { createDraw } from './draw';
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
-export const respond = async (event: { identity?: { sub?: string }; arguments: { action?:string;ready?:boolean;fromProfileId?:string;toProfileId?:string;reason?:string;drawRevision?:number;prizeType?: string; prizeTitle?: string; prizeDescription?: string; prizeLinks?: string; prizeAttachments?: string; prizeRevision?: number; uploadContentType?: string; uploadSize?: number; invitationId?: string; accept?: boolean; tournamentId?: string; winnerProfileId?: string;runnerUpProfileId?:string;thirdPlaceProfileId?:string;resultReason?:string;resultKind?:string;acceptTerms?:boolean;termsVersion?:number;prizeHolder?:string;prizeFunder?:string;prizeFundingStatus?:string; acceptOrganizerDecision?: boolean } }) => {
+export const respond = async (event: { identity?: { sub?: string }; arguments: { action?:string;ready?:boolean;fromProfileId?:string;toProfileId?:string;reason?:string;drawRevision?:number;prizeType?: string; prizeTitle?: string; prizeDescription?: string; prizeLinks?: string; prizeAttachments?: string; prizeRevision?: number; uploadContentType?: string; uploadSize?: number; invitationId?: string; accept?: boolean; tournamentId?: string; winnerProfileId?: string;matchId?:string;runnerUpProfileId?:string;thirdPlaceProfileId?:string;resultReason?:string;resultKind?:string;acceptTerms?:boolean;termsVersion?:number;prizeHolder?:string;prizeFunder?:string;prizeFundingStatus?:string; acceptOrganizerDecision?: boolean } }) => {
   const sub=event.identity?.sub;
   if(!sub)throw new Error('Iniciá sesión.');
   await assertActiveAccount(sub);
@@ -17,7 +17,7 @@ export const respond = async (event: { identity?: { sub?: string }; arguments: {
   if ('prizeTitle' in event.arguments || 'uploadContentType' in event.arguments) return prizeAction(db,sub,event.arguments);
   if (event.arguments.winnerProfileId) {
     if (!sub || !event.arguments.tournamentId || typeof event.arguments.winnerProfileId !== 'string' || event.arguments.winnerProfileId.length>128) throw new Error('Resultado inválido.');
-    return recordDuelResult(db, sub, event.arguments.tournamentId, event.arguments.winnerProfileId,event.arguments.resultReason,event.arguments.resultKind,event.arguments.runnerUpProfileId,event.arguments.thirdPlaceProfileId);
+    return recordDuelResult(db, sub, event.arguments.tournamentId, event.arguments.winnerProfileId,event.arguments.resultReason,event.arguments.resultKind,event.arguments.runnerUpProfileId,event.arguments.thirdPlaceProfileId,event.arguments.matchId);
   }
   // Recupera también un torneo de 2.2.0 que ya tenía todas sus invitaciones aceptadas.
   if (event.arguments.tournamentId) {

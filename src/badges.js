@@ -20,7 +20,7 @@ export function badgeElements(sub) {
   const wrapper = document.createElement('span'); wrapper.className = 'club-badges';
   if (!sub) return wrapper;
   for (const badge of badges.filter(item => item.accountSub === sub || item.accountUsername === sub)) {
-    const text = badge.code.startsWith('CUSTOM_') ? badge.label : { CREATOR: '★ Fundador', BETA_TESTER: '✦ Betatester', VERIFIED:'✓ Verificado' }[badge.code];
+    const text = badge.code==='CREATOR' ? (badge.label ?? '★ Fundador') : badge.code.startsWith('CUSTOM_') ? badge.label : { BETA_TESTER: '✦ Betatester', VERIFIED:'✓ Verificado' }[badge.code];
     if (!text) continue;
     const node = document.createElement('span'); node.className = 'club-badge'; node.dataset.code = badge.code;
     if (badge.code === 'VERIFIED') {
@@ -35,7 +35,7 @@ export function badgeElements(sub) {
       const check = document.createElementNS(svg.namespaceURI, 'path');
       check.setAttribute('d', 'm7.3 12 3.1 3.1 6.3-6.3'); check.setAttribute('fill', 'none'); check.setAttribute('stroke', '#fff'); check.setAttribute('stroke-width', '2.2'); check.setAttribute('stroke-linecap', 'round'); check.setAttribute('stroke-linejoin', 'round');
       svg.append(seal, check); node.append(svg);
-    } else {node.textContent = text;if(badge.code.startsWith('CUSTOM_')){node.classList.add('custom-badge');if(/^#[a-f0-9]{6}$/i.test(badge.color || ''))node.style.setProperty('--badge-color',badge.color);node.dataset.effect=['GLOW','SHIMMER'].includes(badge.effect)?badge.effect:'NONE';node.title=text;}} 
+    } else {node.textContent = text;if(badge.code.startsWith('CUSTOM_') || (badge.code==='CREATOR' && badge.color)){node.classList.add('custom-badge');if(/^#[a-f0-9]{6}$/i.test(badge.color || ''))node.style.setProperty('--badge-color',badge.color);node.dataset.effect=['GLOW','SHIMMER'].includes(badge.effect)?badge.effect:'NONE';node.title=text;}} 
     wrapper.append(node);
   }
   return wrapper;
@@ -62,7 +62,14 @@ export async function mountBadgeAdmin(host){
  function render(){list.replaceChildren();for(const p of profiles.filter(p=>p.nickname.toLocaleLowerCase('es').includes(search.value.trim().toLocaleLowerCase('es')))){
   const sub=p.owner.split('::')[0],row=el('article');row.className='badge-admin-person';const heading=el('strong',p.nickname);heading.append(badgeElements(sub));row.append(heading);
   for(const [code,label] of [['VERIFIED','verificado'],['BETA_TESTER','Betatester']]){const enabled=badges.some(b=>b.accountSub===sub && b.code===code);row.append(action((enabled?'Quitar ':'Dar ')+label,()=>change({profileId:p.id,code,enabled:!enabled})));}
-  for(const b of badges.filter(b=>b.accountSub===sub && b.code.startsWith('CUSTOM_'))){row.append(action('Editar '+b.label,async()=>{target.value=p.id;name.value=b.label;color.value=b.color || '#c1f36b';effect.value=b.effect || 'NONE';editing=b.code;save.textContent='Guardar cambios del emblema';cancel.hidden=false;name.focus();}),action('Quitar '+b.label,()=>change({profileId:p.id,code:b.code,enabled:false})));}
+  for(const b of badges.filter(b=>b.accountSub===sub && (b.code==='CREATOR' || b.code.startsWith('CUSTOM_')))){
+   const founder=b.code==='CREATOR',label=b.label || (founder?'Fundador':'Emblema');
+   row.append(action((founder && b.label===''?'Mostrar ':'Editar ')+label,async()=>{
+    target.value=p.id;name.value=label;color.value=b.color || (founder?'#e9bd64':'#c1f36b');effect.value=b.effect || 'NONE';
+    editing=b.code;save.textContent='Guardar cambios del emblema';cancel.hidden=false;name.focus();
+   }));
+   if(!founder || b.label!=='')row.append(action((founder?'Ocultar ':'Quitar ')+label,()=>change({profileId:p.id,code:b.code,enabled:false,color:b.color || undefined,effect:b.effect || undefined})));
+  }
   row.append(action('Permitir sin teléfono',async()=>{data(await client.mutations.setClubPhoneOptional({profileId:p.id,phoneOptional:true}));status.textContent=p.nickname+': excepción de teléfono habilitada.';}));list.append(row);
  }}search.addEventListener('input',render);render();
 }

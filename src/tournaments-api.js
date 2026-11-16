@@ -76,9 +76,9 @@ export async function ensureClubTournamentDraw(tournamentId) {
   return resultData(await client.mutations.prepareTournamentDraw({ tournamentId }));
 }
 
-export async function recordClubDuelResult(tournamentId, winnerProfileId,resultReason='',resultKind='NORMAL',runnerUpProfileId=null,thirdPlaceProfileId=null) {
+export async function recordClubDuelResult(tournamentId, winnerProfileId,resultReason='',resultKind='NORMAL',runnerUpProfileId=null,thirdPlaceProfileId=null,matchId=null) {
   const client = await tournamentClient();
-  return resultData(await client.mutations.recordClubDuelResult({ tournamentId, winnerProfileId,resultReason,resultKind,runnerUpProfileId,thirdPlaceProfileId }));
+  return resultData(await client.mutations.recordClubDuelResult({ tournamentId, winnerProfileId,resultReason,resultKind,runnerUpProfileId,thirdPlaceProfileId,...(matchId?{matchId}:{}) }));
 }
 
 // Los permisos del premio se validan en AWS, no por los botones visibles.

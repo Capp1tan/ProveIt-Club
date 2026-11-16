@@ -1,3 +1,4 @@
+import {resolveBracket} from '../shared/tournament-bracket.ts';
 import {renderTournamentPreview} from './tournament-preview.js';
 import {usesCompetition,competitionStart} from '../shared/competition.ts';
 import {attendancePanel,drawAudit,animateDraw,animateWinner} from './tournament-competition.js';
@@ -94,10 +95,28 @@ function resultPanel(t) {
   const decision=element('details','','tournament-panel tournament-decision');decision.append(element('summary','Registrar decisión'));
   const form=element('form','','duel-result-form'),label=element('label','Quién ganó');
   const select=element('select');select.required=true;select.id='duelWinner';label.htmlFor=select.id;
-  const empty=element('option','Elegí al ganador');empty.value='';select.append(empty);
-  t.participantIds.forEach((id,index)=>{const option=element('option',t.participantNames[index]);option.value=id;select.append(option);});
+  const match=element('select');
+  const byMatch=t.format==='DOUBLE_ELIMINATION';
+  const available=byMatch?new Map([...resolveBracket(JSON.parse(t.draw))].filter(([,value])=>value.playable)):null;
+  function showPlayers(){
+    const empty=element('option','Elegí al ganador');empty.value='';select.replaceChildren(empty);
+    const selected=available?.get(match.value);
+    const ids=byMatch?(selected?[selected.left,selected.right]:[]):t.participantIds;
+    for(const id of ids){const option=element('option',t.participantNames[t.participantIds.indexOf(id)]);option.value=id;select.append(option);}
+  }
+  if(byMatch){
+    if(!available.size)return null;
+    const matchLabel=element('label','Encuentro');
+    for(const [id,value] of available){
+      const names=[value.left,value.right].map(player=>t.participantNames[t.participantIds.indexOf(player)]);
+      const option=element('option',value.round+' · '+names.join(' vs. '));option.value=id;match.append(option);
+    }
+    matchLabel.append(match);form.append(matchLabel);
+    match.addEventListener('change',showPlayers);
+  }
+  showPlayers();
   const podiumFields=element('div','','duel-podium-fields'),second=element('select'),third=element('select');
-  if(t.participantIds.length>2){
+  if(!byMatch && t.participantIds.length>2){
     for(const [field,text] of [[second,'Segundo puesto (opcional)'],[third,'Tercer puesto (opcional)']]){const fieldLabel=element('label',text),none=element('option','Sin definir');none.value='';field.append(none);t.participantIds.forEach((id,i)=>{const o=element('option',t.participantNames[i]);o.value=id;field.append(o);});fieldLabel.append(field);podiumFields.append(fieldLabel);}
   }
   const button=element('button','Confirmar resultado','primary-button');button.id='recordDuelWinner';button.type='submit';
@@ -110,9 +129,9 @@ function resultPanel(t) {
     const name=t.participantNames[t.participantIds.indexOf(select.value)];
     try{validatePodium(t.participantIds,select.value,second.value,third.value);}catch(error){message.textContent=error.message;return;}
     const podiumCopy=[[second.value,'2.º'],[third.value,'3.º']].filter(([id])=>id).map(([id,label])=>label+': '+t.participantNames[t.participantIds.indexOf(id)]).join(' · ');
-    if(!window.confirm('¿Confirmar a '+name+' como ganador? '+(podiumCopy?podiumCopy+'. ':'')+'Esta decisión quedará registrada y no se podrá cambiar desde el sitio.'))return;
+    if(!window.confirm('¿Confirmar a '+name+' como ganador'+(byMatch?' de este encuentro':'')+'? '+(podiumCopy?podiumCopy+'. ':'')+'Esta decisión quedará registrada y no se podrá cambiar desde el sitio.'))return;
     button.disabled=true;button.dataset.saving='true';message.textContent='Guardando resultado…';
-    try {const saved=await recordClubDuelResult(t.id,select.value,reason.value,kind.value,second.value || null,third.value || null);if(!saved?.winnerProfileId)throw new Error('AWS no confirmó el resultado. Actualizá para revisar su estado.');void refreshTournament(true);}
+    try {const saved=await recordClubDuelResult(t.id,select.value,reason.value,kind.value,second.value || null,third.value || null,byMatch?match.value:null);if(byMatch?!JSON.parse(saved?.draw || '{}').results?.[match.value]:!saved?.winnerProfileId)throw new Error('AWS no confirmó el resultado. Actualizá para revisar su estado.');document.activeElement?.blur();void refreshTournament(true);}
     catch(error) {message.textContent=error.message;delete button.dataset.saving;updateClock();}
   });decision.append(form);return decision;
 }

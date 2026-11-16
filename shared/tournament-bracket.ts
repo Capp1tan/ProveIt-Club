@@ -59,3 +59,28 @@ export function buildBracket(format:string,players:Player[]) {
   }
   return {order:players,format,rounds};
 }
+
+export type MatchDecision = {winnerId:string; kind:string; reason:string; decidedBySub:string; decidedAt:string};
+type SavedSlot = Slot | {playerId:string};
+type SavedMatch = Omit<Match,'left'|'right'> & {left?:SavedSlot;right?:SavedSlot};
+
+// undefined means a previous match is unresolved; null is an actual bye.
+export function resolveBracket(draw:{rounds:{name:string;matches:SavedMatch[]}[];results?:Record<string,MatchDecision>}){
+  const matches=new Map<string,{left:string|null|undefined;right:string|null|undefined;winner:string|null|undefined;loser:string|null|undefined;playable:boolean;round:string}>();
+  const resolve=(slot:SavedSlot|undefined):string|null|undefined=>{
+    if(!slot)return null;
+    if('playerId' in slot)return slot.playerId;
+    if('id' in slot)return slot.id;
+    return matches.get(slot.source)?.[slot.outcome];
+  };
+  for(const round of draw.rounds){
+    for(const match of round.matches){
+      const left=resolve(match.left),right=resolve(match.right),result=draw.results?.[match.id];
+      const ready=left!==undefined && right!==undefined;
+      const winner=result?.winnerId ?? (ready && (!left || !right)?left || right:undefined);
+      const loser=result?(winner===left?right:left):ready && (!left || !right)?null:undefined;
+      matches.set(match.id,{left,right,winner,loser,playable:Boolean(left && right && !result),round:round.name});
+    }
+  }
+  return matches;
+}

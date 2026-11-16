@@ -103,3 +103,11 @@ html[data-theme] body.proveit-theme #tournamentDraw .draw-match{background:trans
 .winner-confetti{position:fixed;z-index:2000;pointer-events:none}
 .winner-confetti span{position:absolute;display:block}
 @media(prefers-reduced-motion:reduce){.winner-confetti{display:none}}
+
+/* Keep the badge row within the player slot, including for players without badges. */
+#tournamentDraw .draw-player{box-sizing:border-box;height:76px;min-width:0}
+#tournamentDraw .draw-player>.participant-trigger{flex:1 1 0;min-width:0;display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:32px 21px;gap:2px 8px}
+#tournamentDraw .participant-trigger .participant-name-line{min-width:0}
+#tournamentDraw .participant-trigger .participant-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#tournamentDraw .participant-trigger .club-badges{grid-column:2;padding:0;flex-wrap:nowrap;overflow:hidden;min-width:0}
+#tournamentDraw .draw-player :is(.winner-tag,.draw-self){flex-shrink:0;padding-left:0}
