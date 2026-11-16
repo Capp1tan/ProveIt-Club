@@ -12,17 +12,17 @@ export function connectBracket(canvas, links) {
       const from=cards.get(link.source),to=cards.get(link.target),slot=to?.querySelector('[data-slot="'+link.slot+'"]');
       if(!from || !to || !slot){link.path.setAttribute('d','');continue;}
       const a=from.getBoundingClientRect(),b=to.getBoundingClientRect(),c=slot.getBoundingClientRect();
-      const x1=a.right-base.left,y1=a.top+a.height/2-base.top,x2=b.left-base.left,y2=c.top+c.height/2-base.top;
+      const first=from.querySelector('[data-slot="0"]')?.getBoundingClientRect();
+      const second=from.querySelector('[data-slot="1"]')?.getBoundingClientRect();
+      const top=first?first.top+first.height/2-base.top:undefined;
+      const bottom=second?second.top+second.height/2-base.top:undefined;
+      const pair=top!==undefined && bottom!==undefined;
+      const x1=a.right-base.left,x2=b.left-base.left,y2=c.top+c.height/2-base.top;
+      const y1=pair?(top+bottom)/2:a.top+a.height/2-base.top;
       const mid=x1+Math.max(12,(x2-x1)/2);
-      if(link.joinPlayers){
-        const first=from.querySelector('[data-slot="0"]')?.getBoundingClientRect();
-        const second=from.querySelector('[data-slot="1"]')?.getBoundingClientRect();
-        if(first && second){
-          const top=first.top+first.height/2-base.top;
-          const bottom=second.top+second.height/2-base.top;
-          link.path.setAttribute('d',`M ${x1} ${top} H ${mid} V ${bottom} H ${x1} M ${mid} ${(top+bottom)/2} V ${y2} H ${x2}`);
-          continue;
-        }
+      if(link.joinPlayers && pair){
+        link.path.setAttribute('d',`M ${x1} ${top} H ${mid} V ${bottom} H ${x1} M ${mid} ${y1} V ${y2} H ${x2}`);
+        continue;
       }
       link.path.setAttribute('d',`M ${x1} ${y1} H ${mid} V ${y2} H ${x2}`);
     }

@@ -59,3 +59,11 @@ header.topbar>.rl-overview .rl-live-badge{color:#16864c;border-color:#28b56e66;b
  .rl-actions button:active:not(:disabled){transform:scale(.98)}
 }
 @keyframes attendance-enter{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+.rl-overview .rl-prize{position:relative;isolation:isolate;overflow:hidden}
+.rl-prize-photo{position:absolute;inset:0 0 0 auto;width:68%;height:100%;object-fit:cover;opacity:0;mask-image:linear-gradient(to right,transparent,#000 64%);z-index:-1}
+.rl-prize-with-photo .rl-prize-photo{opacity:1}
+.rl-overview .rl-prize-with-photo{background:linear-gradient(#111827,#111827) padding-box,linear-gradient(120deg,#c89d4d,#5953a2 50%,#579df0) border-box;border-color:transparent;color:#f6f7ff}
+header.topbar>.rl-overview .rl-prize-with-photo{background:linear-gradient(#111827,#111827) padding-box,linear-gradient(120deg,#c89d4d,#5953a2 50%,#579df0) border-box}
+.rl-prize-with-photo small{color:#f6d99e}
+.rl-prize-with-photo strong{text-shadow:0 1px 4px #080c17,0 0 12px #080c17}

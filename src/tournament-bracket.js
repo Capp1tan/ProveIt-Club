@@ -8,8 +8,6 @@ export function drawBoard(draw,{winnerId,playerButton,selfPlayer,preview=false,r
   status.setAttribute('aria-live','polite');
   header.append(status);
   section.append(header);
-  const selection=element('p','Seleccioná un encuentro para ver sus cruces.','draw-selection');
-  selection.setAttribute('role','status');
   const players=new Map(draw.order.map(player=>[player.id,player]));
   const board=element('div','','draw-board');
   board.setAttribute('role','region');board.setAttribute('aria-label',preview?'Vista previa desplazable de la llave':'Llave del torneo. Los nombres abren una vista previa de perfil.');board.tabIndex=0;
@@ -43,16 +41,6 @@ export function drawBoard(draw,{winnerId,playerButton,selfPlayer,preview=false,r
     round.matches.forEach(match=>{
       const card=element('article','','draw-match');
       card.dataset.matchId=match.id;card.setAttribute('aria-label','Encuentro '+match.id);
-      const inspect=element('button','Ver encuentro '+match.id,'draw-inspect');
-      inspect.type='button';
-      inspect.setAttribute('aria-pressed','false');
-      inspect.addEventListener('click',()=>{
-        canvas.querySelector('[aria-pressed="true"]')?.setAttribute('aria-pressed','false');
-        inspect.setAttribute('aria-pressed','true');
-        const names=[...card.querySelectorAll('.draw-player')].map(row=>row.dataset.playerLabel || row.textContent.trim()).filter(Boolean);
-        selection.textContent=round.name+' · '+names.join(' vs ');
-      });
-      card.append(inspect);
       if(match.entrants) match.entrants.forEach((player,index)=>card.append(slotNode(player,match.id,index)));
       else card.append(slotNode(match.left,match.id,0),slotNode(match.right,match.id,1));
       matches.append(card);
@@ -81,7 +69,7 @@ export function drawBoard(draw,{winnerId,playerButton,selfPlayer,preview=false,r
     canvas.append(column);
     links.push({source:finalMatch.id,target:card.dataset.matchId,slot:0,outcome:'winner',joinPlayers:true});
   }
-  section.append(board,selection);
+  section.append(board);
   if(winner && !finalMatch){
     const champion=element('p','','bracket-champion');
     const trophy=element('span','🏆','bracket-trophy');

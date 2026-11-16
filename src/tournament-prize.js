@@ -17,23 +17,38 @@ async function showAttachment(item,container){
     media.src=result.url.toString();container.replaceChildren(media);
   }catch{if(container.classList.contains('prize-feature-media'))container.remove();else container.textContent='No pudimos cargar este adjunto. Actualizá para reintentar.';}
 }
+function featuredAttachment(t,attachments){
+  return t.prizeImagePath?null:attachments.find(item=>item.kind==='image' &&
+    item.path?.startsWith(`prize-media/${t.id}/`));
+}
+const featuredUrls=new WeakMap();
+export function prizePhoto(t,{decorative=false}={}){
+  const attachment=featuredAttachment(t,parse(t.prizeAttachments));
+  if(!t.prizeTitle || (!t.prizeImagePath && !attachment))return null;
+  if(!featuredUrls.has(t)){
+    const url=t.prizeImagePath
+      ? communityAction('PRIZE_IMAGE_URL',{tournamentId:t.id}).then(result=>result.url)
+      : import('aws-amplify/storage').then(({getUrl})=>getUrl({path:attachment.path,options:{expiresIn:3600}})).then(result=>result.url.href);
+    featuredUrls.set(t,url);
+  }
+  const photo=el('img');
+  photo.alt=decorative?'':'Foto del premio';
+  photo.loading=decorative?'eager':'lazy';
+  photo.decoding='async';
+  return {photo,url:featuredUrls.get(t)};
+}
 export function prizePanel(t,{canEdit,onSaved}){
   const section=el('section','','prize-showcase');
   const card=el('div','','prize-feature');
   const copy=el('div','','prize-feature-copy');
   const attachments=parse(t.prizeAttachments),links=parse(t.prizeLinks);
-  const featured=!t.prizeImagePath && attachments.find(item=>item.kind==='image');
-  if(t.prizeTitle && (t.prizeImagePath || featured)){
+  const featured=featuredAttachment(t,attachments);
+  const media=prizePhoto(t);
+  if(media){
     const frame=el('div','','prize-feature-media');
-    card.append(frame);
-    if(t.prizeImagePath){
-      const photo=el('img');photo.alt='Foto del premio';photo.loading='lazy';photo.decoding='async';
-      photo.addEventListener('error',()=>frame.remove(),{once:true});
-      frame.append(photo);
-      void communityAction('PRIZE_IMAGE_URL',{tournamentId:t.id}).then(result=>{photo.src=result.url;}).catch(()=>frame.remove());
-    }else{
-      void showAttachment(featured,frame);
-    }
+    media.photo.addEventListener('error',()=>frame.remove(),{once:true});
+    frame.append(media.photo);card.append(frame);
+    void media.url.then(url=>{media.photo.src=url;}).catch(()=>frame.remove());
   }
   const glyph=prizeIcon(t.prizeType);glyph.classList.add('prize-category-icon');
   const kicker=el('p','','prize-kicker');

@@ -59,10 +59,7 @@ html[data-theme] body.proveit-theme .prize-feature .prize-kicker,.prize-feature 
 .bracket-stage-preview,.tournament-bracket-stage>.competition-actions{margin:16px}
 .bracket-stage-preview{min-width:0}
 .tournament-bracket-stage #tournamentDraw{border:0;margin:0;box-shadow:none}
-.draw-inspect{padding:5px 8px;border:1px solid var(--site-line);border-radius:7px;background:var(--site-raised);color:var(--site-text);cursor:pointer}
-.draw-match:has(.draw-inspect[aria-pressed=true]){outline:2px solid var(--site-accent);outline-offset:-2px}
 .draw-self{margin-inline-start:6px;color:var(--site-muted)}
-.draw-selection{min-height:1.5em}
 
 #tournamentDraw{position:relative;padding:clamp(16px,3vw,28px);border-radius:16px}
 #tournamentDraw::before{content:'';position:absolute;inset:12px;border:1px solid var(--site-line);border-radius:12px;pointer-events:none}
@@ -78,7 +75,6 @@ html[data-theme] body.proveit-theme #tournamentDraw .draw-match{background:trans
 #tournamentDraw .draw-player[data-winner=true] :is(.winner-tag,.participant-trigger){color:var(--site-text)}
 #tournamentDraw .participant-trigger{min-width:0;flex:1;padding:4px 0}
 #tournamentDraw .participant-name{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#tournamentDraw .draw-inspect{justify-self:start;font-size:11px}
 #tournamentDraw .bracket-connections path{stroke:var(--site-muted)}
 #tournamentDraw .bracket-connections path[data-active=true]{stroke:var(--site-accent)}
 #tournamentDraw[data-revealing=true] .bracket-connections{visibility:hidden}

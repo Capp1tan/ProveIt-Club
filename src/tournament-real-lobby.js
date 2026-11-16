@@ -1,3 +1,4 @@
+import {prizePhoto} from './tournament-prize.js';
 import {usesCompetition,competitionStart} from '../shared/competition.ts';
 import {roomDeadline,tournamentIsLive,allEntriesPaid} from '../shared/tournament-room.ts';
 import { pendingRoomInvitations, respondInvitation } from './tournaments-api.js';
@@ -59,6 +60,14 @@ export function createRealLobby({ profilePreview, getUser, getConnection, getNow
     prizeCopy.append(el('small',announced?'ESTO ESTÁ EN JUEGO':'PREMIO POR DEFINIR'),el('strong',announced?t.prizeTitle:t.prizeExpected?'Pendiente de definición':'Sin premio anunciado'));
     if(announced)prizeCopy.append(el('span','Entrega: '+(t.prizeHolder || 'Sin declarar')));
     prize.classList.toggle('prize-confirmed',announced);prize.append(prizeCopy);if(announced || t.prizeExpected===true)top.append(prize);
+    const media=prizePhoto(t,{decorative:true});
+    if(media){
+      media.photo.className='rl-prize-photo';
+      media.photo.addEventListener('load',()=>prize.classList.add('rl-prize-with-photo'),{once:true});
+      media.photo.addEventListener('error',()=>media.photo.remove(),{once:true});
+      prize.prepend(media.photo);
+      void media.url.then(url=>{media.photo.src=url;}).catch(()=>media.photo.remove());
+    }
     top.classList.toggle('rl-overview-single',top.childElementCount===1);
     const judge=el('section','','rl-card');judge.append(el('small',t.arbitrationMode==='ORGANIZER'?'ARBITRAJE':'JUECES Y RESPONSABLES DEL PREMIO'));
     if(t.arbitrationMode==='ORGANIZER')judge.append(el('strong','Decide el organizador'),el('span','Condición aceptada al confirmar'));
