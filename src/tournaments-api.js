@@ -35,15 +35,24 @@ export async function getClubTournament(id) {
 
 
 // La autorización del modelo limita estas lecturas al destinatario de Cognito.
-export async function pendingInvitations() {
+async function readPendingInvitations(tournament) {
   const client = await tournamentClient();
   const user = await getCurrentUser();
   const invitations = [];
   let nextToken;
   do {
-    const result = await client.models.TournamentInvitation.invitationsByRecipient({recipientSub:user.userId,status:{eq:'PENDING'}},{limit:100,nextToken});
+    const result = await client.models.TournamentInvitation.invitationsByRecipient({recipientSub:user.userId,status:{eq:'PENDING'}},{limit:100,nextToken,...(tournament && {filter:{tournamentId:{eq:tournament.id}}})});
     invitations.push(...(resultData(result) || [])); nextToken = result.nextToken;
   } while (nextToken);
+  return invitations;
+}
+export async function pendingRoomInvitations(tournament) {
+  return (await readPendingInvitations(tournament)).filter(i=>i.tournamentId===tournament.id &&
+    (i.termsVersion || 0)===(tournament.termsVersion || 0) &&
+    (!tournament.rosterStatuses || tournament.rosterStatuses[i.rosterIndex]==='PENDING'));
+}
+export async function pendingInvitations() {
+  const invitations=await readPendingInvitations();
   // No mostrar invitaciones de torneos retirados aunque la campana estuviera abierta.
   const live=new Map(await Promise.all([...new Set(invitations.map(i=>i.tournamentId))].map(async id=>[id,await getClubTournament(id)])));
   return invitations.filter(i=>{const t=live.get(i.tournamentId);return t && (i.termsVersion || 0)===(t.termsVersion || 0) && (!t.rosterStatuses || t.rosterStatuses[i.rosterIndex]==='PENDING');}).sort((a,b) => b.createdAt.localeCompare(a.createdAt));
