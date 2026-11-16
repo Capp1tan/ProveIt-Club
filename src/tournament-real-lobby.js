@@ -55,11 +55,10 @@ export function createRealLobby({ profilePreview, getUser, getConnection, getNow
     const timing=el('section','','rl-card');const caption=el('small','INICIO PREVISTO');caption.dataset.clockCaption='';timing.append(caption);const digits=el('strong');digits.dataset.realClock='';digits.setAttribute('role','timer');digits.setAttribute('aria-live','off');timing.append(digits,el('span',scheduleLabel(t.startsAt,t.timeZone)));top.append(timing);
     const prize=el('section','','rl-card rl-prize');prize.append(prizeIcon(t.prizeType));
     const prizeCopy=el('div');
-    const announced=Boolean(t.prizeTitle),confirmed=announced && t.prizeFundingStatus==='CONFIRMED';
-    prizeCopy.append(el('small',confirmed?'ESTO ESTÁ EN JUEGO':announced?'PREMIO PROPUESTO':t.prizeExpected?'PREMIO POR DEFINIR':'POR EL DESAFÍO'),el('strong',announced?t.prizeTitle:t.prizeExpected?'Pendiente de definición':'Sin premio anunciado'));
-    prizeCopy.append(el('span',confirmed?'Confirmado por el responsable · gestión externa':announced?'Pendiente de confirmación · no disponible':'No hay un premio confirmado'));
+    const announced=Boolean(t.prizeTitle);
+    prizeCopy.append(el('small',announced?'ESTO ESTÁ EN JUEGO':'PREMIO POR DEFINIR'),el('strong',announced?t.prizeTitle:t.prizeExpected?'Pendiente de definición':'Sin premio anunciado'));
     if(announced)prizeCopy.append(el('span','Entrega: '+(t.prizeHolder || 'Sin declarar')));
-    prize.classList.toggle('prize-confirmed',confirmed);prize.append(prizeCopy);if(announced || t.prizeExpected===true)top.append(prize);
+    prize.classList.toggle('prize-confirmed',announced);prize.append(prizeCopy);if(announced || t.prizeExpected===true)top.append(prize);
     top.classList.toggle('rl-overview-single',top.childElementCount===1);
     const judge=el('section','','rl-card');judge.append(el('small',t.arbitrationMode==='ORGANIZER'?'ARBITRAJE':'JUECES Y RESPONSABLES DEL PREMIO'));
     if(t.arbitrationMode==='ORGANIZER')judge.append(el('strong','Decide el organizador'),el('span','Condición aceptada al confirmar'));
@@ -102,7 +101,7 @@ export function createRealLobby({ profilePreview, getUser, getConnection, getNow
       }
       rules.append(el('summary','Leer reglas y condiciones'),el('p',t.description || 'Sin reglas adicionales'));
       if(t.conflicts)rules.append(el('p','Conflictos declarados: '+t.conflicts));
-      if(announced || t.prizeExpected===true)rules.append(el('p','Premio: '+(t.prizeTitle || 'Por definir')+' · '+(confirmed?'Confirmado por el responsable':'No disponible / pendiente de confirmación')));
+      if(announced || t.prizeExpected===true)rules.append(el('p','Premio: '+(t.prizeTitle || 'Por definir')));
       if(t.prizeDescription)rules.append(el('p',t.prizeDescription));
       if(announced)rules.append(el('p','Entrega: '+(t.prizeHolder || 'Sin declarar')+' · Gestión externa a ProveIt.'));
       form.append(rules);

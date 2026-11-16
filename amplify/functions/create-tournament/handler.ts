@@ -102,7 +102,7 @@ export const handler = async (event: { arguments: Arguments; identity?: { sub?: 
   const item = {
     id: args.tournamentId,competitionVersion:4,competitionState:JSON.stringify({attendance:{},revision:0,changes:[],affected:[],approvals:[],startAt:null}),entryFeeCents:pricing.participantAmountCents,entryPaymentStatuses:participantIds.map(()=> 'PENDING'), termsVersion:1,conflicts:declaration,clubRewards:false,name, activity, description, format: args.format,
     overview,coverPath,prizeImagePath,participantLimit,prizeExpected:args.prizeExpected ?? false,
-    prizeType,prizeTitle,prizeDescription,prizeHolder,prizeFunder,prizeFundingStatus:'PENDING',prizeRevision:0,
+    prizeType,prizeTitle,prizeDescription,prizeHolder,prizeFunder,prizeFundingStatus:prizeTitle?'CONFIRMED':'PENDING',prizeRevision:0,
     participantIds, participantNames: participantIds.map(id => names.get(id)),
     judgeIds, judgeNames: judgeIds.map(id => names.get(id)),
     treasurerId, treasurerName: treasurerId ? names.get(treasurerId) : null,
@@ -119,7 +119,7 @@ export const handler = async (event: { arguments: Arguments; identity?: { sub?: 
       role: index < participantIds.length ? 'PARTICIPANT' : index < participantIds.length + judgeIds.length ? 'JUDGE' : 'TREASURER',
       status:'PENDING',entryFeeCents:index<participantIds.length?pricing.participantAmountCents:0,
       arbitrationMode: args.arbitrationMode, startsAt: args.startsAt, timeZone: args.timeZone,
-      rulesSnapshot: description+(args.prizeExpected?'\nPremio propuesto: '+(prizeTitle || 'Por definir')+(prizeDescription?' · '+prizeDescription:'')+' · Tipo: '+prizeType+' · Entrega: '+(prizeHolder || 'Sin declarar')+' · Financia: '+(prizeFunder || 'Sin declarar')+' · Pendiente de confirmación, no disponible.':''), consentVersion: noJudge ? 'NO_JUDGE_V1' : null,
+      rulesSnapshot: description+(args.prizeExpected?'\nPremio: '+(prizeTitle || 'Por definir')+(prizeDescription?' · '+prizeDescription:'')+' · Tipo: '+prizeType+' · Entrega: '+(prizeHolder || 'Sin declarar')+' · Financia: '+(prizeFunder || 'Sin declarar'):''), consentVersion: noJudge ? 'NO_JUDGE_V1' : null,
       consentAcceptedAt:null,
       invitedBySub: sub, createdAt: now, updatedAt: now, __typename: 'TournamentInvitation',
     }));
