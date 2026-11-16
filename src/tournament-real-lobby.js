@@ -120,10 +120,12 @@ export function createRealLobby({ profilePreview, getUser, getConnection, getNow
     root.append(list);
     if(t.judgeIds?.length){const judgeDetails=el('details','','rl-judge-details');judgeDetails.append(el('summary','Jurado y responsables'),judge);root.append(judgeDetails);}
     people.forEach(p=>previousStatuses.set(p.id,p.status));
-    const next=el('section','','rl-card rl-next');
-    const allAccepted=statuses.every(s=>s==='ACCEPTED') && allEntriesPaid(t);
-    next.append(el('p',t.draw && allAccepted?'Las llaves ya están disponibles.':statuses.includes('REJECTED')?'Hay una invitación rechazada. El sorteo permanece detenido.':`El sorteo requiere todos los cargos aceptados y las inscripciones acreditadas. Cargos aceptados (${statuses.filter(s=>s==='ACCEPTED').length}/${statuses.length} cargos).`));
-    if(t.draw && allAccepted){const link=el('a','Ver llaves →','format-choice');link.href='#tournamentDraw';next.append(link);}root.append(next);clock();return root;
+    if(t.draw && statuses.every(s=>s==='ACCEPTED') && allEntriesPaid(t)){
+      const next=el('section','','rl-card rl-next');
+      const link=el('a','Ver llaves →','format-choice');link.href='#tournamentDraw';
+      next.append(el('p','Las llaves ya están disponibles.'),link);root.append(next);
+    }
+    clock();return root;
   }
   return {render,clock,destroy(){cancelAnimationFrame(frame);actionId++;root.replaceChildren();headerStats?.remove();}};
 }

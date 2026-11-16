@@ -4,10 +4,9 @@ import {tournamentCompetition} from './tournaments-api.js';
 const el=(tag,text='',cls='')=>{const n=document.createElement(tag);n.textContent=text;n.className=cls;return n;};
 export function attendancePanel(t,{sub,profiles,onChanged,now=Date.now()}){
  if(!usesCompetition(t) || t.winnerProfileId)return null;
+ if(!allEntriesPaid(t) || !t.rosterStatuses?.every(v=>v==='ACCEPTED'))return null;
  const s=competitionState(t),root=el('section','','competition-actions rl-card'),mine=t.participantIds.find(id=>profiles.get(id)?.owner?.split('::')[0]===sub),start=competitionStart(t);
  if(Number.isFinite(start) && now>=start)return null;
- const accepted=allEntriesPaid(t) && t.rosterStatuses?.every(v=>v==='ACCEPTED');
- if(!accepted){root.append(el('p','Esperando las confirmaciones y las inscripciones pendientes.'));return root;}
  const message=el('p','','field-help');message.setAttribute('role','status');
  async function act(action,values){root.dataset.competitionBusy='true';root.querySelectorAll('button').forEach(b=>b.disabled=true);message.textContent='Guardando…';try{await tournamentCompetition(t.id,action,values);document.activeElement?.blur();await onChanged();}catch(e){delete root.dataset.competitionBusy;message.textContent=e.message;root.querySelectorAll('button').forEach(b=>b.disabled=false);}}
  if(!t.draw){
