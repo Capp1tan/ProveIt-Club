@@ -17,6 +17,16 @@ export function connectBracket(canvas, links) {
       const top=first?first.top+first.height/2-base.top:undefined;
       const bottom=second?second.top+second.height/2-base.top:undefined;
       const pair=top!==undefined && bottom!==undefined;
+      if(link.orientation==='ranking'){
+        const entrants=[...from.querySelectorAll('.draw-player[data-slot]')];
+        if(!entrants.length){link.path.setAttribute('d','');continue;}
+        const points=entrants.map(node=>{const r=node.getBoundingClientRect();return {x:r.left+r.width/2-base.left,y:r.bottom-base.top};});
+        const center=points.reduce((sum,p)=>sum+p.x,0)/points.length;
+        const joinY=Math.max(...points.map(p=>p.y))+14,targetX=c.left+c.width/2-base.left,targetY=c.top-base.top;
+        const branches=points.map(p=>`M ${p.x} ${p.y} V ${joinY}`).join(' ');
+        link.path.setAttribute('d',`${branches} M ${Math.min(...points.map(p=>p.x))} ${joinY} H ${Math.max(...points.map(p=>p.x))} M ${center} ${joinY} V ${targetY-14} H ${targetX} V ${targetY}`);
+        continue;
+      }
       if(link.orientation==='vertical' && pair){
         const left=first.left+first.width/2-base.left,right=second.left+second.width/2-base.left;
         const leftBottom=first.bottom-base.top,rightBottom=second.bottom-base.top;
@@ -46,4 +56,3 @@ export function connectBracket(canvas, links) {
   schedule();document.fonts?.ready.then(()=>{if(canvas.isConnected)schedule();});
   return ()=>{observer.disconnect();cancelAnimationFrame(frame);};
 }
-

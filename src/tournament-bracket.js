@@ -12,7 +12,7 @@ export function drawBoard(draw,{winnerId,playerButton,selfPlayer,preview=false,r
   const board=element('div','','draw-board');
   board.dataset.format=draw.format;
   board.setAttribute('role','region');board.setAttribute('aria-label',preview?'Vista previa desplazable de la llave':'Llave del torneo. Los nombres abren una vista previa de perfil.');board.tabIndex=0;
-  const canvas=element('div','','draw-canvas'+(draw.format==='DUEL'?' draw-canvas-duel':''));board.append(canvas);
+  const canvas=element('div','','draw-canvas'+(draw.format==='DUEL'?' draw-canvas-duel':draw.format==='FREE_FOR_ALL'?' draw-canvas-ffa':''));board.append(canvas);
   const links=[];
   const resolved=draw.format==='DOUBLE_ELIMINATION'?resolveBracket(draw):new Map();
   const slotNode=(slot,matchId,index)=>{
@@ -41,22 +41,30 @@ export function drawBoard(draw,{winnerId,playerButton,selfPlayer,preview=false,r
     const matches=element('div','','round-matches');column.append(matches);
     round.matches.forEach(match=>{
       const card=element('article','','draw-match'+(draw.format==='DUEL'?' draw-duel-match':''));
+      if(match.entrants)card.classList.add('draw-ffa-match');
       card.dataset.matchId=match.id;card.setAttribute('aria-label','Encuentro '+match.id);
       if(draw.format==='DUEL')card.append(slotNode(match.left,match.id,0),element('span','VS','draw-versus'),slotNode(match.right,match.id,1));
       else if(match.entrants) match.entrants.forEach((player,index)=>card.append(slotNode(player,match.id,index)));
-      else card.append(slotNode(match.left,match.id,0),slotNode(match.right,match.id,1));
+      else card.append(slotNode(match.left,match.id,0),element('span','VS','draw-versus'),slotNode(match.right,match.id,1));
       matches.append(card);
     });canvas.append(column);
   });
   const winner=players.get(winnerId);
-  const finalMatch=draw.format==='DUEL' && draw.rounds.length===1 && draw.rounds[0].matches.length===1
-    ? draw.rounds[0].matches[0] : null;
-  if(finalMatch){
-    const column=element('section','','draw-round draw-winner-round'+(draw.format==='DUEL'?' draw-duel-winner-round':''));
-    column.append(element('h3','Ganador del duelo'));
+  const knockout=['DUEL','SINGLE_ELIMINATION','DOUBLE_ELIMINATION'].includes(draw.format);
+  const finalMatch=draw.format==='DUEL'
+    ? draw.rounds[0]?.matches[0]
+    : draw.format==='DOUBLE_ELIMINATION'
+      ? draw.rounds.flatMap(round=>round.matches).find(match=>match.id==='gf-reset') || draw.rounds.flatMap(round=>round.matches).find(match=>match.id==='gf')
+      : draw.format==='SINGLE_ELIMINATION'
+        ? draw.rounds.at(-1)?.matches.at(-1)
+        : null;
+  if(knockout && finalMatch){
+    const duel=draw.format==='DUEL';
+    const column=element('section','','draw-round draw-winner-round'+(duel?' draw-duel-winner-round':''));
+    column.append(element('h3',duel?'Ganador del duelo':'Campeón del torneo'));
     const matches=element('div','','round-matches');
     const card=element('article','','draw-match');
-    card.dataset.matchId='duel-winner';
+    card.dataset.matchId='bracket-champion';
     const result=winner
       ? slotNode({playerId:winner.id},card.dataset.matchId,0)
       : element('div','Por definir','draw-player draw-placeholder');
@@ -69,18 +77,41 @@ export function drawBoard(draw,{winnerId,playerButton,selfPlayer,preview=false,r
     matches.append(card);
     column.append(matches);
     canvas.append(column);
-    links.push({source:finalMatch.id,target:card.dataset.matchId,slot:0,outcome:'winner',joinPlayers:true,...(draw.format==='DUEL'?{orientation:'vertical'}:{})});
+    links.push({source:finalMatch.id,target:card.dataset.matchId,slot:0,outcome:'winner',joinPlayers:true,...(duel?{orientation:'vertical'}:{})});
+  }
+  if(preview && draw.format==='SWISS'){
+    const column=element('section','','draw-round draw-upcoming-round');
+    column.append(element('h3','Próxima ronda · por definir'));
+    const matches=element('div','','round-matches');
+    for(let index=0;index<Math.floor(draw.order.length/2);index++){
+      const card=element('article','','draw-match draw-upcoming-match');
+      card.append(element('div','Rival por definir','draw-player draw-placeholder'),element('span','VS','draw-versus'),element('div','Rival por definir','draw-player draw-placeholder'));
+      matches.append(card);
+    }
+    column.append(matches);canvas.append(column);
+  }
+  if(preview && ['ROUND_ROBIN','FREE_FOR_ALL'].includes(draw.format)){
+    const column=element('section','','draw-round draw-ranking-round');
+    column.append(element('h3',draw.format==='ROUND_ROBIN'?'Tabla de posiciones':'Clasificación final'));
+    const matches=element('div','','round-matches'),card=element('article','','draw-match draw-ranking-match');
+    card.dataset.matchId='preview-ranking';
+    const places=Math.min(draw.order.length,draw.format==='ROUND_ROBIN'?4:3);
+    for(let index=0;index<places;index++){
+      const row=element('div',`${index+1}.º puesto · Por definir`,'draw-player draw-placeholder');
+      row.dataset.slot=String(index);card.append(row);
+      if(draw.format==='FREE_FOR_ALL')links.push({source:draw.rounds[0]?.matches[0]?.id,target:card.dataset.matchId,slot:index,outcome:'winner',orientation:'ranking'});
+    }
+    matches.append(card);column.append(matches);canvas.append(column);
   }
   section.append(board);
-  if(winner && !finalMatch){
+  if(winner && !knockout){
     const champion=element('p','','bracket-champion');
     const trophy=element('span','🏆','bracket-trophy');
     trophy.setAttribute('aria-hidden','true');
     champion.append(trophy,element('strong','Ganador: '+winner.name));
     section.append(champion);
   }
-  if(draw.format==='SWISS')section.append(element('p','Se sorteó la primera ronda. Las siguientes requieren resultados y emparejamientos por puntaje, que todavía no están implementados.','tournament-notice'));
+  if(draw.format==='SWISS')section.append(element('p','La próxima ronda debería definirse según los resultados. La cantidad de rondas y las reglas de emparejamiento todavía están pendientes de definir.','tournament-notice'));
   if(draw.format==='DOUBLE_ELIMINATION' && winnerId && !draw.results)section.append(element('p','Este torneo guardó solo el resultado general.','field-help'));
   return {section,cleanup:connectBracket(canvas,links)};
 }
-

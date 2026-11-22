@@ -125,7 +125,7 @@ function selectFormat(id) {
   $('formatPreview').replaceChildren(description); updateSummary(); updateModel();
 }
 for (const format of formats) {
-  const b = document.createElement('button'); b.type = 'button'; b.className = 'format-choice'; b.dataset.id = format.id; const image=document.createElement('span');image.className='format-thumbnail';image.innerHTML=formatImage(format.id);const label=document.createElement('span');label.textContent=format.name;b.append(image,label);
+  const b = document.createElement('button'); b.type = 'button'; b.className = 'format-choice'; b.dataset.id = format.id; const image=document.createElement('span');image.className='format-thumbnail';image.innerHTML=formatImage(format.id);const label=document.createElement('span');label.textContent=format.name;b.append(image,label);if(format.comingSoon){const status=document.createElement('small');status.className='format-status';status.textContent='En definición';b.append(status);}
   b.addEventListener('click', () => { selectFormat(format.id); saveDraft(); }); $('formatOptions').append(b);
 }
 
@@ -389,6 +389,8 @@ form.addEventListener('submit', async event => {
   if (step === 1) { if (validateStepOne()) setStep(2); return; }
   if (!pricingReady) return show('Reintentá la conexión antes de publicar.', true);
   if (!pendingRequest && !validateStepOne()) { setStep(1); return; }
+  if (!pendingRequest && selectedFormat === 'SWISS') return show('El sistema suizo sigue en definición y no se puede publicar todavía. Falta acordar rondas, emparejamientos, desempates y cierre.', true);
+  if (!pendingRequest && selectedFormat === 'DOUBLE_ELIMINATION' && capacity() < 3) return show('La doble eliminación necesita al menos 3 participantes. Aumentá los cupos o elegí otro formato.', true);
   let startsAt = pendingRequest?.startsAt;
   if (!pendingRequest) {
   if (participants.size !== capacity()) { $('participantsList').closest('details').open = true; return show(`Elegí exactamente ${capacity()} participantes. Por ahora seleccionaste ${participants.size}.`, true); }
@@ -440,4 +442,3 @@ Hub.listen('auth', ({ payload }) => {
 });
 syncPoster(); updateSchedule(); selectFormat(selectedFormat);
 void connectAccount().finally(() => window.proveitLoadingDone?.('page'));
-
