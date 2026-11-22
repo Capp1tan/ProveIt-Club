@@ -28,7 +28,9 @@ export function connectBracket(canvas, links) {
     }
   }
   const schedule=()=>{cancelAnimationFrame(frame);frame=requestAnimationFrame(paint);};
-  const observer=new ResizeObserver(schedule);observer.observe(canvas);canvas.querySelectorAll('.draw-match').forEach(card=>observer.observe(card));
+  const observer=new ResizeObserver(schedule);
+  observer.observe(canvas);
+  canvas.querySelectorAll('.draw-match,[data-slot]').forEach(node=>observer.observe(node));
   function highlight(event) {const card=event.target.closest?.('[data-match-id]');for(const link of paths)link.path.dataset.active=String(Boolean(card && (link.source===card.dataset.matchId || link.target===card.dataset.matchId)));}
   canvas.addEventListener('pointerover',highlight);canvas.addEventListener('focusin',highlight);
   canvas.addEventListener('pointerleave',()=>{for(const link of paths)link.path.dataset.active='false';});
