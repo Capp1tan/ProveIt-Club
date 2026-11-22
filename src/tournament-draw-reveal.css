@@ -1,0 +1,43 @@
+body.draw-cinematic header.topbar,
+body.draw-cinematic #tournamentDetail > :not(#tournamentDraw):not(:has(#tournamentDraw)),
+body.draw-cinematic .bracket-stage-heading,
+body.draw-cinematic #tournamentChat{
+  opacity:var(--draw-room-opacity,1);
+  filter:blur(var(--draw-room-blur,0px));
+  pointer-events:none;
+}
+#tournamentDraw[data-draw-phase]{
+  position:relative;
+  isolation:isolate;
+  transform:translateY(var(--draw-focus-rise,0px));
+  box-shadow:0 0 65px color-mix(in srgb,var(--site-accent) calc(var(--draw-focus-glow,0) * 100%),transparent);
+}
+#tournamentDraw[data-draw-phase] .draw-board{min-height:220px}
+#tournamentDraw[data-draw-phase=anticipation] .draw-canvas{opacity:0}
+#tournamentDraw[data-draw-phase=shuffle] .draw-canvas{opacity:1}
+#tournamentDraw .draw-slot-outline{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;z-index:2}
+#tournamentDraw .draw-slot-outline rect{fill:none;stroke:color-mix(in srgb,var(--site-accent) 65%,var(--site-line));stroke-width:1.2;stroke-dasharray:1;stroke-dashoffset:var(--draw-outline,1);vector-effect:non-scaling-stroke}
+#tournamentDraw[data-draw-phase=shuffle] .draw-player{
+  position:relative;
+  opacity:var(--draw-slot-opacity,0);
+  border-color:transparent;
+  background:color-mix(in srgb,var(--site-raised) calc(var(--draw-slot-fill,0) * 100%),transparent);
+  transform:translateY(var(--draw-slot-y,8px)) scale(var(--draw-slot-scale,.96));
+  transform-origin:left center;
+  transition:none;
+}
+#tournamentDraw[data-draw-phase=shuffle] .draw-player > :not(.draw-slot-outline){opacity:var(--draw-name-opacity,0)}
+#tournamentDraw[data-draw-phase=shuffle] :is(.person-avatar,.club-badges,.verified-icon,.draw-self,.winner-tag){visibility:hidden}
+#tournamentDraw[data-draw-phase=shuffle] .participant-name{animation:draw-roulette 120ms linear infinite;filter:blur(.55px)}
+#tournamentDraw[data-draw-phase=shuffle] .bracket-connections{visibility:visible}
+#tournamentDraw[data-draw-phase=shuffle] .bracket-connections path{stroke-dasharray:1;stroke-dashoffset:var(--draw-line-dash,1);opacity:var(--draw-line-opacity,0);stroke:var(--site-muted)}
+#tournamentDraw[data-draw-phase=locked] .draw-player{animation:draw-lock-impact 520ms ease-out;position:relative}
+#tournamentDraw[data-draw-phase=locked] .draw-slot-outline{visibility:hidden}
+#tournamentDraw[data-draw-phase=locked] .bracket-connections{visibility:visible}
+#tournamentDraw[data-draw-phase=locked] .draw-self-slot,#tournamentDraw .draw-self-slot{border-color:var(--site-accent);background:var(--site-tint)}
+.draw-reveal-sound{font-size:12px;padding:8px 12px}
+.draw-reveal-sound[hidden]{display:none}
+#tournamentDraw.draw-reveal-paused *{animation-play-state:paused!important}
+@keyframes draw-roulette{0%{transform:translateY(-2px);opacity:.65}50%{transform:none;opacity:1}100%{transform:translateY(2px);opacity:.65}}
+@keyframes draw-lock-impact{0%{transform:scale(.97);border-color:var(--site-accent);background:color-mix(in srgb,var(--site-accent) 35%,var(--site-raised));box-shadow:0 0 18px color-mix(in srgb,var(--site-accent) 35%,transparent)}70%{transform:scale(1.012)}100%{transform:scale(1)}}
+@media(prefers-reduced-motion:reduce){#tournamentDraw[data-draw-phase]{transform:none}#tournamentDraw .draw-player{animation:none!important}body.draw-cinematic header.topbar,body.draw-cinematic #tournamentDetail>*{filter:none}}

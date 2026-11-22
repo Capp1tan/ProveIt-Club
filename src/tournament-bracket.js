@@ -28,7 +28,7 @@ export function drawBoard(draw,{winnerId,playerButton,selfPlayer,preview=false,r
       row.dataset.playerLabel=player.name;
       row.dataset.playerId=player.id;
       row.append(playerButton?.(player.id,player.name) || element('span',player.name));
-      if(selfPlayer?.(player.id))row.append(element('small','Vos','draw-self'));
+      if(selfPlayer?.(player.id)){row.classList.add('draw-self-slot');row.append(element('small','Vos','draw-self'));}
       if((draw.format==='DOUBLE_ELIMINATION'?draw.results?.[matchId]?.winnerId:winnerId)===player.id) { row.dataset.winner='true'; row.append(element('strong','Ganador','winner-tag')); }
     }
     else {row.append(element('span',(slot.outcome==='loser'?'Perdedor de ':'Ganador de ')+slot.source,'draw-placeholder'));}
