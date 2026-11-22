@@ -29,11 +29,12 @@ body.draw-cinematic #tournamentChat{
 #tournamentDraw[data-draw-phase=shuffle] .draw-player > :not(.draw-slot-outline){opacity:var(--draw-name-opacity,0)}
 #tournamentDraw[data-draw-phase=shuffle] :is(.person-avatar,.club-badges,.verified-icon,.draw-self,.winner-tag){visibility:hidden}
 #tournamentDraw[data-draw-phase=shuffle] .participant-name{animation:draw-roulette 120ms linear infinite;filter:blur(.55px)}
-#tournamentDraw[data-draw-phase=shuffle] .bracket-connections{visibility:visible}
-#tournamentDraw[data-draw-phase=shuffle] .bracket-connections path{stroke-dasharray:1;stroke-dashoffset:var(--draw-line-dash,1);opacity:var(--draw-line-opacity,0);stroke:var(--site-muted)}
+#tournamentDraw[data-revealing=true][data-draw-phase=anticipation] .bracket-connections{visibility:hidden}
+#tournamentDraw[data-revealing=true][data-draw-phase=shuffle] .bracket-connections{visibility:visible}
+#tournamentDraw[data-revealing=true][data-draw-phase=shuffle] .bracket-connections path{stroke-dasharray:1;stroke-dashoffset:var(--draw-line-dash,1);opacity:var(--draw-line-opacity,0);stroke:var(--site-muted)}
 #tournamentDraw[data-draw-phase=locked] .draw-player{animation:draw-lock-impact 520ms ease-out;position:relative}
 #tournamentDraw[data-draw-phase=locked] .draw-slot-outline{visibility:hidden}
-#tournamentDraw[data-draw-phase=locked] .bracket-connections{visibility:visible}
+#tournamentDraw[data-revealing=true][data-draw-phase=locked] .bracket-connections{visibility:visible}
 #tournamentDraw[data-draw-phase=locked] .draw-self-slot,#tournamentDraw .draw-self-slot{border-color:var(--site-accent);background:var(--site-tint)}
 .draw-reveal-sound{font-size:12px;padding:8px 12px}
 .draw-reveal-sound[hidden]{display:none}
