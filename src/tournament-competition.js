@@ -69,7 +69,7 @@ function celebrateWinner(target){
    {transform:'translate(0,0) rotate(0)',opacity:1},
    {transform:`translate(${x*.7}px,${-lift}px) rotate(${spin*.45}deg)`,opacity:1,offset:.42},
    {transform:`translate(${x}px,${40+Math.random()*115}px) rotate(${spin}deg)`,opacity:0}
-  ],{duration:750+Math.random()*450,fill:'both',easing:'ease-out'}).finished);
+  ],{duration:1450+Math.random()*700,fill:'both',easing:'cubic-bezier(.16,.75,.35,1)'}).finished);
  }
  void Promise.allSettled(animations).then(()=>burst.remove());
 }
@@ -80,16 +80,22 @@ export function animateWinner(section,winnerId){
  if(!target)return;
  const source=[...section.querySelectorAll('.draw-player[data-player-id]')]
   .findLast(slot=>slot!==target && slot.dataset.playerId===winnerId);
- const end=target.getBoundingClientRect();
- const start=source?.getBoundingClientRect();
- const x=start?start.left-end.left:0;
- const y=start?start.top-end.top:8;
- const movement=target.animate([
-  {opacity:0,transform:`translate(${x}px,${y}px)`},
-  {opacity:1,transform:'none'}
- ],{duration:500,easing:'cubic-bezier(.23,1,.32,1)'});
- void movement.finished.then(()=>{
-  if(target.isConnected && !document.hidden && !matchMedia('(prefers-reduced-motion: reduce)').matches)celebrateWinner(target);
- },()=>{});
+ const end=target.getBoundingClientRect(),start=source?.getBoundingClientRect();
+ if(!source || !start?.width || !start?.height){celebrateWinner(target);return;}
 
-}
+ // Fly a decorative copy so the real winner slot and SVG connector stay still.
+ const flight=source.cloneNode(true);
+ flight.classList.add('winner-flight');flight.setAttribute('aria-hidden','true');flight.inert=true;
+ Object.assign(flight.style,{position:'fixed',zIndex:'1900',left:start.left+'px',top:start.top+'px',width:start.width+'px',height:start.height+'px',margin:'0',boxSizing:'border-box',transformOrigin:'top left',pointerEvents:'none'});
+ const priorOpacity=target.style.opacity;target.style.opacity='0';section.append(flight);
+ const movement=flight.animate([
+  {opacity:1,transform:'translate(0,0) scale(1)'},
+  {opacity:1,transform:`translate(${end.left-start.left}px,${end.top-start.top}px) scale(${end.width/start.width},${end.height/start.height})`}
+ ],{duration:720,easing:'cubic-bezier(.22,1,.36,1)',fill:'both'});
+ const finish=()=>{target.style.opacity=priorOpacity;flight.remove();};
+ void movement.finished.then(()=>{
+  finish();
+  if(target.isConnected && !document.hidden && !matchMedia('(prefers-reduced-motion: reduce)').matches)celebrateWinner(target);
+ },finish);
+
+}}
