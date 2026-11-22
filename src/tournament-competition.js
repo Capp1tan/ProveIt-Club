@@ -98,4 +98,4 @@ export function animateWinner(section,winnerId){
   if(target.isConnected && !document.hidden && !matchMedia('(prefers-reduced-motion: reduce)').matches)celebrateWinner(target);
  },finish);
 
-}}
+}
