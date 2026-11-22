@@ -83,7 +83,7 @@ function syncPoster() {
 }
 function syncArbitration() {
   if (noJudge()) judges.clear();
-  $('judgesSection').hidden = noJudge();
+  $('judgesSection').hidden = noJudge(); $('judgeSetupSection').hidden = noJudge();
   $('judgeModeHelp').textContent = noJudge() ? 'Sin juez: el organizador decide el resultado y coordina el dinero. Los invitados deberán aceptarlo.' : 'El juez también coordina el dinero del torneo.';
   syncPoster();
 }
@@ -440,3 +440,4 @@ Hub.listen('auth', ({ payload }) => {
 });
 syncPoster(); updateSchedule(); selectFormat(selectedFormat);
 void connectAccount().finally(() => window.proveitLoadingDone?.('page'));
+

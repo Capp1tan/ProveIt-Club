@@ -10,8 +10,9 @@ export function drawBoard(draw,{winnerId,playerButton,selfPlayer,preview=false,r
   section.append(header);
   const players=new Map(draw.order.map(player=>[player.id,player]));
   const board=element('div','','draw-board');
+  board.dataset.format=draw.format;
   board.setAttribute('role','region');board.setAttribute('aria-label',preview?'Vista previa desplazable de la llave':'Llave del torneo. Los nombres abren una vista previa de perfil.');board.tabIndex=0;
-  const canvas=element('div','','draw-canvas');board.append(canvas);
+  const canvas=element('div','','draw-canvas'+(draw.format==='DUEL'?' draw-canvas-duel':''));board.append(canvas);
   const links=[];
   const resolved=draw.format==='DOUBLE_ELIMINATION'?resolveBracket(draw):new Map();
   const slotNode=(slot,matchId,index)=>{
@@ -39,9 +40,10 @@ export function drawBoard(draw,{winnerId,playerButton,selfPlayer,preview=false,r
     column.append(element('h3',round.group==='Perdedores' || round.group==='Ganadores'?'Llave de '+round.group.toLowerCase()+' · '+round.name:round.name));
     const matches=element('div','','round-matches');column.append(matches);
     round.matches.forEach(match=>{
-      const card=element('article','','draw-match');
+      const card=element('article','','draw-match'+(draw.format==='DUEL'?' draw-duel-match':''));
       card.dataset.matchId=match.id;card.setAttribute('aria-label','Encuentro '+match.id);
-      if(match.entrants) match.entrants.forEach((player,index)=>card.append(slotNode(player,match.id,index)));
+      if(draw.format==='DUEL')card.append(slotNode(match.left,match.id,0),element('span','VS','draw-versus'),slotNode(match.right,match.id,1));
+      else if(match.entrants) match.entrants.forEach((player,index)=>card.append(slotNode(player,match.id,index)));
       else card.append(slotNode(match.left,match.id,0),slotNode(match.right,match.id,1));
       matches.append(card);
     });canvas.append(column);
@@ -50,7 +52,7 @@ export function drawBoard(draw,{winnerId,playerButton,selfPlayer,preview=false,r
   const finalMatch=draw.format==='DUEL' && draw.rounds.length===1 && draw.rounds[0].matches.length===1
     ? draw.rounds[0].matches[0] : null;
   if(finalMatch){
-    const column=element('section','','draw-round draw-winner-round');
+    const column=element('section','','draw-round draw-winner-round'+(draw.format==='DUEL'?' draw-duel-winner-round':''));
     column.append(element('h3','Ganador del duelo'));
     const matches=element('div','','round-matches');
     const card=element('article','','draw-match');
@@ -67,7 +69,7 @@ export function drawBoard(draw,{winnerId,playerButton,selfPlayer,preview=false,r
     matches.append(card);
     column.append(matches);
     canvas.append(column);
-    links.push({source:finalMatch.id,target:card.dataset.matchId,slot:0,outcome:'winner',joinPlayers:true});
+    links.push({source:finalMatch.id,target:card.dataset.matchId,slot:0,outcome:'winner',joinPlayers:true,...(draw.format==='DUEL'?{orientation:'vertical'}:{})});
   }
   section.append(board);
   if(winner && !finalMatch){
@@ -81,3 +83,4 @@ export function drawBoard(draw,{winnerId,playerButton,selfPlayer,preview=false,r
   if(draw.format==='DOUBLE_ELIMINATION' && winnerId && !draw.results)section.append(element('p','Este torneo guardó solo el resultado general.','field-help'));
   return {section,cleanup:connectBracket(canvas,links)};
 }
+

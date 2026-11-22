@@ -17,6 +17,14 @@ export function connectBracket(canvas, links) {
       const top=first?first.top+first.height/2-base.top:undefined;
       const bottom=second?second.top+second.height/2-base.top:undefined;
       const pair=top!==undefined && bottom!==undefined;
+      if(link.orientation==='vertical' && pair){
+        const left=first.left+first.width/2-base.left,right=second.left+second.width/2-base.left;
+        const leftBottom=first.bottom-base.top,rightBottom=second.bottom-base.top;
+        const center=(left+right)/2,targetX=c.left+c.width/2-base.left,targetY=c.top-base.top;
+        const joinY=Math.max(leftBottom,rightBottom)+14;
+        link.path.setAttribute('d',`M ${left} ${leftBottom} V ${joinY} H ${right} V ${rightBottom} M ${center} ${joinY} V ${targetY-14} H ${targetX} V ${targetY}`);
+        continue;
+      }
       const x1=a.right-base.left,x2=b.left-base.left,y2=c.top+c.height/2-base.top;
       const y1=pair?(top+bottom)/2:a.top+a.height/2-base.top;
       const mid=x1+Math.max(12,(x2-x1)/2);
@@ -38,3 +46,4 @@ export function connectBracket(canvas, links) {
   schedule();document.fonts?.ready.then(()=>{if(canvas.isConnected)schedule();});
   return ()=>{observer.disconnect();cancelAnimationFrame(frame);};
 }
+

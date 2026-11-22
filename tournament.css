@@ -107,3 +107,19 @@ html[data-theme] body.proveit-theme #tournamentDraw .draw-match{background:trans
 #tournamentDraw .participant-trigger .participant-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #tournamentDraw .participant-trigger .club-badges{grid-column:2;padding:0;flex-wrap:nowrap;overflow:hidden;min-width:0}
 #tournamentDraw .draw-player :is(.winner-tag,.draw-self){flex-shrink:0;padding-left:0}
+
+/* A 1v1 keeps the vertical structure shown in the format thumbnail: rivals above, winner below. */
+.draw-canvas-duel{flex-direction:column;align-items:center;gap:28px;width:min(100%,720px);min-width:0;margin-inline:auto}
+.draw-canvas-duel>.draw-round{flex:0 0 auto;width:100%;min-width:0}
+.draw-canvas-duel .round-matches{display:block;flex:none;padding-top:8px}
+.draw-canvas-duel .draw-duel-match{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:clamp(8px,2vw,20px);padding:12px}
+.draw-canvas-duel .draw-duel-match>.draw-player{height:auto;min-height:64px}
+.draw-canvas-duel .draw-versus{margin:0;color:var(--site-muted);font-size:11px;font-weight:700;letter-spacing:.12em}
+.draw-canvas-duel .draw-duel-winner-round{width:min(74%,480px)}
+.draw-canvas-duel .draw-duel-winner-round>.round-matches{padding-top:8px}
+.draw-canvas-duel .draw-duel-winner-round .draw-match{max-width:none}
+.draw-canvas-duel .draw-duel-winner-round .draw-player{height:auto;min-height:64px}
+#tournamentDraw .draw-canvas-duel .draw-duel-match{gap:clamp(8px,2vw,20px);padding:12px}
+#tournamentDraw .draw-canvas-duel .draw-duel-match>.draw-player,#tournamentDraw .draw-canvas-duel .draw-duel-winner-round .draw-player{height:auto;min-height:64px}
+@media(max-width:520px){.draw-canvas-duel .draw-duel-match,#tournamentDraw .draw-canvas-duel .draw-duel-match{grid-template-columns:minmax(0,1fr);text-align:center}.draw-canvas-duel .draw-versus{padding-block:0}.draw-canvas-duel .draw-duel-winner-round{width:100%}}
+
