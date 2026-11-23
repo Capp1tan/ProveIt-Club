@@ -18,6 +18,7 @@ function NotificationAvatar({ item }) {
 function routeFor(item) {
   const href = item.href;
   if (!href) return null;
+  if (href === '/react') return '/';
   if (href.startsWith('/react/')) return href.slice('/react'.length);
   if (href.startsWith('/torneo.html')) return href.replace('/torneo.html', '/torneo');
   if (href.startsWith('/torneos.html')) return '/torneos';
