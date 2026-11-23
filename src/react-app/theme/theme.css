@@ -13,14 +13,22 @@
 .react-theme-toggle:hover { border-color: #8287ff; color: #fff; }
 .react-theme-transition::view-transition-group(root) { animation-duration: 340ms; animation-timing-function: ease-in-out; }
 
-/* Keep the global React header in normal document flow so it scrolls away with the page. */
-.react-app > .react-topbar { position: static; }
-
+/* Keep the global header visible while the page scrolls. */
+.react-app > .react-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: color-mix(in srgb, #111521 90%, transparent);
+  backdrop-filter: blur(16px);
+}
 html[data-theme="light"] body {
   background: radial-gradient(ellipse at 78% 10%, #d1d8e8 0, transparent 42%), #dde2e9;
   color: #192743;
 }
 html[data-theme="light"] .react-app { color: #192743; }
+html[data-theme="light"] .react-app > .react-topbar {
+  background: color-mix(in srgb, #dde2e9 92%, transparent);
+}
 html[data-theme="light"] .react-topbar,
 html[data-theme="light"] .react-footer { border-color: #19274320; }
 html[data-theme="light"] .react-brand,
