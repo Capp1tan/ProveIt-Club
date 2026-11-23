@@ -110,6 +110,17 @@ html[data-theme="light"] .react-create-footer>a,html[data-theme="light"] .react-
 @media(max-width:600px) { .react-create-shell { width: calc(100% - 24px); margin: 24px auto 46px; } .react-create-surface { padding: 18px 14px; border-radius: 15px; } .react-create-steps { gap: 12px; } .react-create-steps li { font-size: 11px; } .react-create-steps li>span { width: 25px; height: 25px; } .react-create-formats { grid-template-columns: repeat(2,minmax(0,1fr)); } .react-create-footer .react-primary { padding: 10px 12px; font-size: 12px; } }
 @media(prefers-reduced-motion:reduce) { .react-create-stage { animation: none; } .react-create-disclosure>summary::before { transition: none; } }
 .react-create-bracket { max-height: min(48vh, 420px); overflow: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+.react-create-bracket .tournament-panel { margin: 0; padding: 18px; border-color: #424d63; border-radius: 14px; background: #191f2e; color: #edf1f8; }
+.react-create-bracket .tournament-panel p { color: #aeb7ca; }
+.react-create-bracket .draw-board { scrollbar-color: #737cff #121722; }
+.react-create-bracket .draw-match { border-color: #424d63; background: #242b3a; color: #edf1f8; }
+.react-create-bracket .bracket-connections path { stroke: #737cff; }
+.react-create-bracket .bracket-connections path[data-active=true] { stroke: #a8adff; }
+html[data-theme="light"] .react-create-bracket .tournament-panel { border-color: #bcc7d7; background: #eef1f7; color: #192743; }
+html[data-theme="light"] .react-create-bracket .tournament-panel p { color: #52637e; }
+html[data-theme="light"] .react-create-bracket .draw-match { border-color: #c4cede; background: #f5f7fb; color: #192743; }
+html[data-theme="light"] .react-create-bracket .bracket-connections path { stroke: #6775d7; }
+html[data-theme="light"] .react-create-bracket .bracket-connections path[data-active=true] { stroke: #4b59cc; }
 .react-create-stage:has(.react-create-setup) .react-create-footer { position: sticky; bottom: 0; z-index: 5; margin: 22px calc(-1 * clamp(20px, 4vw, 44px)) calc(-1 * clamp(20px, 4vw, 44px)); padding: 16px clamp(20px, 4vw, 44px); border-top: 1px solid var(--line); background: color-mix(in srgb, #191f2e 94%, transparent); backdrop-filter: blur(12px); }
 html[data-theme="light"] .react-create-stage:has(.react-create-setup) .react-create-footer { background: color-mix(in srgb, #e9edf2 94%, transparent); }
 @media(max-width:600px) { .react-create-stage:has(.react-create-setup) .react-create-footer { margin-inline: -14px; margin-bottom: -18px; padding-inline: 14px; } }

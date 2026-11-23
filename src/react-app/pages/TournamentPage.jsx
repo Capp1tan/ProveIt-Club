@@ -25,7 +25,7 @@ const owner = (profile) => profile?.owner?.split('::')[0] || '';
 function playerLink(id, name, profiles) {
   const profile = profiles.get(id); const link = node('a', '', 'participant-trigger');
   link.href = `/react/perfil/${encodeURIComponent(id)}`; link.setAttribute('aria-label', `Ver perfil de ${name}`);
-  const avatar = node('span', Array.from(name.trim())[0]?.toUpperCase() || '?', 'participant-avatar');
+  const avatar = node('span', Array.from(name.trim())[0]?.toUpperCase() || '?', 'person-avatar participant-avatar');
   if (profile?.avatarPath) void avatarUrl(profile.avatarPath, { profileId: id }).then((url) => { if (url && avatar.isConnected) { const image = node('img'); image.src = url; image.alt = ''; image.loading = 'lazy'; avatar.replaceChildren(image); } }).catch(() => {});
   const nameLine = node('span', '', 'participant-name-line'); nameLine.append(node('span', name, 'participant-name'));
   const badges = badgeElements(owner(profile)); const verified = badges.querySelector('[data-code="VERIFIED"]'); if (verified) nameLine.append(verified.cloneNode(true));
