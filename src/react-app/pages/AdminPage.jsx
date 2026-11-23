@@ -16,6 +16,7 @@ const sections = [
   ['CLAIMS', 'Reservas y accesos'], ['AUDIT', 'Registro de actividad'],
 ];
 const collections = new Set(sections.map(([key]) => key).filter((key) => !['USERS', 'BADGES', 'SETTINGS', 'REPORTS'].includes(key)));
+const canLoadSection = (key) => key === 'USERS' || collections.has(key);
 const titles = { id: 'Identificador', name: 'Nombre', nickname: 'Nick', status: 'Estado', activity: 'Actividad', format: 'Formato', createdAt: 'Creado', updatedAt: 'Actualizado', startsAt: 'Inicio', timeZone: 'Zona horaria', createdBySub: 'Cuenta organizadora', accountSub: 'Cuenta', phoneNumber: 'Teléfono', phoneVerified: 'Teléfono verificado por SMS', code: 'Insignia', reason: 'Motivo', reviewReason: 'Motivo de revisión', prizeTitle: 'Premio', prizeHolder: 'Responsable del premio', prizeFunder: 'Financia el premio', prizeFundingStatus: 'Confirmación del premio', deletedAt: 'Eliminado', visibility: 'Privacidad', judgeEnabled: 'Disponible como juez', currency: 'Moneda', paymentMode: 'Modo de pago', amountCents: 'Importe en centavos', tournamentName: 'Torneo', role: 'Rol', consentAcceptedAt: 'Aceptación', requestedAt: 'Consulta solicitada', actorSub: 'Administrador', action: 'Acción', target: 'Registro consultado' };
 const date = (value) => { if (!value) return 'Sin fecha'; const d = new Date(value); return Number.isNaN(d.valueOf()) ? String(value) : d.toLocaleString('es-AR'); };
 const unwrap = (result) => { if (result.errors?.length) throw new Error(result.errors.map((e) => e.message).join(' ')); return result.data; };
@@ -75,13 +76,13 @@ function AdminPage() {
   }, [active, authStatus]);
 
   const load = useCallback(async (nextCursor = null, stack = [], chosen = section, search = appliedQuery) => {
-    if (!allowed || !collections.has(chosen)) return;
+    if (!allowed || !canLoadSection(chosen)) return;
     setBusy(true); setDetail(null); setNotice('Consultando datos…');
     try { const result = await adminRequest(chosen === 'USERS' ? 'USERS' : 'RECORDS', { ...(chosen === 'USERS' ? {} : { collection: chosen }), search, cursor: nextCursor }); setRows(result.rows || []); setCursor(result.cursor || null); setCurrentCursor(nextCursor); setPages(stack); setNotice(`Consulta administrativa registrada. ${result.rows?.length || 0} registros en esta página${result.cursor ? ' · hay más' : ''}.`); }
     catch (e) { setRows([]); setCursor(null); setNotice(e.message); }
     finally { setBusy(false); }
   }, [allowed, appliedQuery, section]);
-  useEffect(() => { setRows([]); setCursor(null); setPages([]); setDetail(null); setMessages([]); setMessageCursor(null); if (allowed && collections.has(section)) void load(null, [], section, appliedQuery); }, [allowed, section, appliedQuery]);
+  useEffect(() => { setRows([]); setCursor(null); setPages([]); setDetail(null); setMessages([]); setMessageCursor(null); if (allowed && canLoadSection(section)) void load(null, [], section, appliedQuery); }, [allowed, section, appliedQuery]);
 
   async function search(event) { event?.preventDefault(); const next = query.trim(); setAppliedQuery(next); setPages([]); setCursor(null); }
   async function showAccount(row) { setBusy(true); setAvatar(''); setNotice('Cargando ficha de la cuenta…'); try { const result = await adminRequest('USER', { targetId: row.id }); setDetail({ type: 'USER', value: result }); setNotice('Ficha administrativa consultada. El acceso quedó registrado.'); } catch (e) { setNotice(e.message); } finally { setBusy(false); } }
