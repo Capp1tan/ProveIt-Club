@@ -1,6 +1,6 @@
-# Migración gradual a React
+# Migración a React
 
-La aplicación React está aislada bajo `/react/`. Las rutas `.html` existentes siguen siendo las páginas actuales y no se cambian mientras se porta y valida cada flujo. La rama de trabajo es `codex/react-router-migration`; el respaldo y `main` quedan separados.
+La SPA React Router se encuentra publicada como sitio principal en `proveitclub.win`. Las rutas públicas heredadas más usadas redirigen a sus páginas React; el acceso al HTML antiguo queda como respaldo técnico de build. La rama de trabajo para mejoras es `codex/react-router-migration`. Existe una rama de respaldo anterior a la migración: `backup/main-before-react-migration-2026-11-22`.
 
 ## Primera etapa incluida
 
@@ -11,7 +11,7 @@ La aplicación React está aislada bajo `/react/`. Las rutas `.html` existentes 
 - El inicio React reproduce el carrusel difuminado, el salón de la fama, la actividad pública, las ligas y los patrocinadores.
 - El cambio claro/oscuro React comparte `proveit:theme` con el sitio actual y respeta movimiento reducido.
 - El directorio React consulta torneos y pagos de inscripción pendientes desde las APIs existentes; ya ofrece búsqueda, estados, orden y filtro de participación con caché en memoria y actualización periódica.
-- `public/_redirects` permite abrir rutas internas de React directamente en Amplify Hosting.
+- Las reglas de Amplify envían las rutas públicas antiguas a sus rutas React y hacen rewrite de las rutas internas de la SPA.
 - La creación React ya cubre las dos etapas, selección de participantes y jueces, formatos existentes, fecha, premio, portada con recorte, tarifa, borrador por cuenta y reintento idempotente.
 - El perfil React permite editar nick, biografía, país, teléfono privado, privacidad, redes y foto; los perfiles públicos y su progreso consultan la API con sus reglas de privacidad. El perfil React aún enlaza a amistades y al historial legado.
 - La ruta de acceso React implementa email/contraseña, alta con nick/país/teléfono, verificación de email, reenvío de código y recuperación de contraseña. Falta confirmar y ajustar el retorno OAuth de Google para que Cognito vuelva a una ruta React sin perder compatibilidad con el sitio publicado.
@@ -20,17 +20,18 @@ La aplicación React está aislada bajo `/react/`. Las rutas `.html` existentes 
 - Se integraron la búsqueda global y las notificaciones en componentes React, conectados a las APIs actuales y con preferencias de lectura/sonido.
 - El panel de administración se migró a componentes React para las 14 áreas. Las operaciones siguen validadas por el servidor.
 - El perfil, la sala y los chats se sirven bajo rutas React, pero algunos elementos internos todavía se montan con módulos DOM existentes (progreso y redes del perfil, bracket/lobby/chat de la sala y motor de chat). La lógica de servicio de esos módulos se conserva mientras se reemplaza gradualmente la presentación.
-- El resto de las URLs HTML sigue disponible como versión previa. Esto permite comparar y volver atrás sin modificar el origen publicado.
+- `simular-torneo.html` es una herramienta local/noindex para probar formatos; no crea torneos reales, cuentas ni cobros. Sigue fuera de las rutas de la SPA.
+- Las páginas HTML originales siguen incluidas en el build para compatibilidad y recuperación, pero las rutas públicas principales ya redirigen a React.
 
-## Orden de migración y condición para reemplazar cada página
+## Pendientes de consolidación
 
 1. Verificar el retorno OAuth de Google y configurar callbacks Cognito para el entorno independiente React.
 2. Reemplazar los montajes DOM que quedan en perfil, sala y chats por componentes React, conservando las APIs y permisos del servidor.
 3. Completar revisión manual con cuentas de prueba para pagos (sin producir cobros), privacidad y autorización del torneo.
 4. Auditar deep links, OAuth y retorno desde Mercado Pago bajo `/react/`.
-5. Medir LCP, transferencia inicial, peticiones por sesión y navegación contra la versión actual antes de considerar el corte.
+5. Medir LCP, transferencia inicial, peticiones por sesión y navegación de la SPA publicada.
 
-Una ruta se cambia en el sitio principal únicamente después de validar sus permisos y operaciones con Amplify, sus interacciones en teléfono y escritorio, y los enlaces directos. Las rutas principales —inicio, directorio, creación, perfil, acceso, amistades, pagos, sala, administración, búsqueda y notificaciones— ya existen en React. La migración integral todavía no está completa: faltan presentaciones internas de perfil/sala/chat, revisión manual de flujos sensibles y validación de OAuth/deep links. La SPA no está lista para publicarse como reemplazo.
+Las rutas principales —inicio, directorio, creación, perfil, acceso, amistades, pagos, sala, administración, búsqueda y notificaciones— están activas en React. La compilación y verificaciones automatizadas cubren pagos simulados, torneo/sala, permisos, actividad, privacidad, portadas y avisos. Queda consolidar algunos módulos DOM heredados y terminar la validación manual en móvil/escritorio de OAuth, deep links y retornos de Mercado Pago. No usar pagos reales como prueba.
 
 ## Verificación local
 
@@ -39,4 +40,4 @@ npm run build
 npm run dev
 ```
 
-Abrir `http://localhost:5173/react/` para la base React. El `build` conserva todas las páginas `.html` actuales y agrega `dist/react/index.html`; por ahora no se modifica el origen publicado.
+Abrir `http://localhost:5173/react/` para la SPA. El build conserva páginas `.html` de compatibilidad y genera `dist/react/index.html`.
