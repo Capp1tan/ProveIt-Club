@@ -1,6 +1,9 @@
 import {preSignUp} from './pre-sign-up/resource';
 import { defineAuth, secret } from '@aws-amplify/backend';
 
+// La vista previa usa registro por email. No reutilizamos las credenciales OAuth de producción.
+const isPreviewBranch = Boolean(process.env.AWS_BRANCH && process.env.AWS_BRANCH !== 'main');
+
 /**
  * Cognito maneja el registro, el inicio de sesión y la verificación del correo.
  * Las credenciales de Google se cargarán como secretos en Amplify; nunca van aquí.
@@ -9,7 +12,7 @@ export const auth = defineAuth({
   triggers:{preSignUp},
   loginWith: {
     email: true,
-    externalProviders: {
+    ...(!isPreviewBranch ? { externalProviders: {
       google: {
         clientId: secret('GOOGLE_CLIENT_ID'),
         clientSecret: secret('GOOGLE_CLIENT_SECRET'),
@@ -33,7 +36,7 @@ export const auth = defineAuth({
         'https://www.proveitclub.win/',
         'https://www.proveitclub.win/react/',
       ],
-    },
+    } } : {}),
   },
 });
 

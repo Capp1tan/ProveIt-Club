@@ -6,8 +6,9 @@ import {participationPricing} from '../../../shared/tournament-pricing';
 export const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 export const table = (key: string) => process.env[key]!;
 export const read = async (key: string, id: string): Promise<any> => (await db.send(new GetCommand({TableName:table(key),Key:{id},ConsistentRead:true}))).Item;
-export const mode = () => process.env.MERCADOPAGO_MODE === 'live' ? 'LIVE' : 'TEST';
+export const mode = () => process.env.MERCADOPAGO_MODE === 'preview' ? 'PREVIEW' : process.env.MERCADOPAGO_MODE === 'live' ? 'LIVE' : 'TEST';
 export async function mp(path: string, body?: any, method?:string): Promise<any> {
+  if(mode()==='PREVIEW') throw new Error('Los pagos están desactivados en esta vista previa.');
   const token=process.env.MERCADOPAGO_ACCESS_TOKEN;
   if(!token) throw new Error('Los pagos todavía no están configurados.');
   const response=await fetch('https://api.mercadopago.com'+path,{method:method || (body?'POST':'GET'),headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(8000)});
@@ -27,9 +28,11 @@ export async function creationExemption(sub:string) {
 }
 export async function fee() {
   const settings=await read('BILLING_SETTINGS_TABLE_NAME','participation');
+  if(mode()==='PREVIEW')return participationPricing({...settings,enabled:true,freeEntries:true},mode());
   return participationPricing(settings,mode());
 }
 export async function assertBillingAccess(sub:string) {
+  if(mode()==='PREVIEW')return;
   if(mode()==='TEST' && !(await fee()).freeEntries && !(await creationExemption(sub)).enabled)throw new Error('Los pagos están en preparación. Por ahora sólo el Creador puede probar el proceso.');
 }
 export function publicCheckout(row:any) {

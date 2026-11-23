@@ -79,8 +79,8 @@ export default function AuthPage() {
     <p className="react-eyebrow">PROVEIT CLUB · TU CUENTA</p>
     <h1>{step === 'credentials' ? mode === 'signup' ? 'Sumate al club.' : 'Entrá al club.' : step === 'confirm-signup' ? 'Confirmá tu email.' : step === 'reset-request' ? 'Recuperá tu cuenta.' : 'Elegí otra contraseña.'}</h1>
     <p className="react-auth-intro">{mode === 'signup' && step === 'credentials' ? 'Tu nick y teléfono se registran desde el inicio. El correo debe ser único.' : 'Tus competencias, amistades y perfil están vinculados a tu cuenta.'}</p>
-    {step === 'credentials' && <button type="button" className="react-auth-google" onClick={() => void google()} disabled={busy}><b>G</b> Continuar con Google</button>}
-    {step === 'credentials' && <div className="react-auth-divider"><span>o con tu email</span></div>}
+      {step === 'credentials' && !location.hostname.endsWith('.amplifyapp.com') && <button type="button" className="react-auth-google" onClick={() => void google()} disabled={busy}><b>G</b> Continuar con Google</button>}
+      {step === 'credentials' && !location.hostname.endsWith('.amplifyapp.com') && <div className="react-auth-divider"><span>o con tu email</span></div>}
     <form className="react-auth-form" onSubmit={submit}>
       {(step === 'credentials' || step === 'confirm-signup' || step.startsWith('reset')) && <label>Correo electrónico<input required type="email" autoComplete="email" maxLength={254} value={email} onChange={(event) => setEmail(event.target.value)} disabled={busy || step === 'reset-confirm' || step === 'confirm-signup'} placeholder="vos@ejemplo.com" /></label>}
       {step === 'credentials' && <>

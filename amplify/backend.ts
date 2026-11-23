@@ -185,7 +185,7 @@ photoBucket.versioningConfiguration={status:'Enabled'};
 
 // Inscripciones: no se agregan tablas ni secretos. El recibo nunca es editable por el cliente.
 backend.respondInvitation.addEnvironment('PAYMENT_TABLE_NAME',backend.data.resources.tables['TournamentPayment'].tableName);
-backend.respondInvitation.addEnvironment('MERCADOPAGO_MODE','live');
+backend.respondInvitation.addEnvironment('MERCADOPAGO_MODE',process.env.AWS_BRANCH && process.env.AWS_BRANCH !== 'main' ? 'preview' : 'live');
 backend.data.resources.tables['TournamentPayment'].grant(backend.respondInvitation.resources.lambda,'dynamodb:GetItem','dynamodb:ConditionCheckItem');
 for(const fn of [backend.billing,backend.paymentWebhook]){
  backend.data.resources.tables['PrivateAccount'].grant(fn.resources.lambda,'dynamodb:GetItem');
