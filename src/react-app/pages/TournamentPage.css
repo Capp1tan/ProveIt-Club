@@ -22,6 +22,8 @@
 .react-tournament-content .react-tournament-info>p{white-space:pre-wrap;line-height:1.7;color:var(--site-muted)}
 .react-tournament-content .react-tournament-chat{margin:24px 0;padding:20px;border:1px solid var(--site-line);border-radius:16px;background:var(--site-panel);color:var(--site-text)}
 .react-tournament-content .react-result-panel{margin-top:24px}
+.react-tournament-content .participant-avatar{display:inline-grid;place-items:center;flex:0 0 36px;width:36px;height:36px;min-width:36px;min-height:36px;overflow:hidden;border-radius:50%}
+.react-tournament-content .participant-avatar img{display:block;width:100%;height:100%;max-width:100%;max-height:100%;object-fit:cover;border-radius:inherit}
 .react-tournament-content .duel-result-form{display:grid;gap:14px;max-width:680px}
 .react-tournament-content .duel-result-form label{display:grid;gap:7px;color:var(--site-muted)}
 .react-tournament-content .duel-result-form input,.react-tournament-content .duel-result-form select,.react-tournament-content .duel-result-form textarea{width:100%;padding:11px;border:1px solid var(--site-line);border-radius:9px;background:var(--site-raised);color:var(--site-text);font:inherit}

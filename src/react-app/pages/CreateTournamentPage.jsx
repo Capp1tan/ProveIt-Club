@@ -8,6 +8,7 @@ import { editCover } from '../../cover-editor.js';
 import { money, tournamentFee } from '../../billing-api.js';
 import { localToUtc, scheduleLabel, zoneLabel } from '../../tournament-schedule.js';
 import { useAuth } from '../auth/AuthProvider.jsx';
+import '../../../tournament.css';
 import './CreateTournamentPage.css';
 
 const MAX_PLAYERS = 64;
@@ -65,6 +66,7 @@ export default function CreateTournamentPage() {
   const coverAbort = useRef(null);
   const stageOne = useRef(null);
   const stageTwo = useRef(null);
+  const bracketPreview = useRef(null);
   const cache = useRef(null);
 
   const noJudge = fields.arbitrationMode === 'ORGANIZER';
@@ -296,7 +298,8 @@ export default function CreateTournamentPage() {
   };
 
   useEffect(() => {
-    const node = document.querySelector('[data-react-bracket-preview]');
+    if (step !== 2) return undefined;
+    const node = bracketPreview.current;
     if (!node) return undefined;
     let live = true;
     let cleanup;
@@ -304,7 +307,7 @@ export default function CreateTournamentPage() {
       if (live) cleanup = renderTournamentPreview(node, { format: selectedFormat, count: Math.max(2, Math.min(MAX_PLAYERS, capacity || 2)), names: selectedPeople.map((item) => item.nickname) });
     });
     return () => { live = false; cleanup?.(); };
-  }, [selectedFormat, capacity, selectedPeople]);
+  }, [step, selectedFormat, capacity, selectedPeople]);
 
   if (authStatus === 'checking') return <main className="react-create-shell"><div className="react-create-surface"><p role="status">Comprobando tu cuenta…</p></div></main>;
   if (authStatus !== 'signed-in') return <main className="react-create-shell"><div className="react-create-surface"><p className="react-eyebrow">PROVEIT CLUB</p><h1>Entrá para crear tu torneo</h1><p>Tu sesión se verifica con el servicio del club antes de publicar.</p><Link className="react-primary" to="/ingresar">Ir a ingresar ↗</Link></div></main>;
@@ -341,7 +344,7 @@ export default function CreateTournamentPage() {
           <div className="react-create-setup">
             <div className="react-create-main-options">
               <details open className="react-create-disclosure"><summary>01 · Participantes <span>{participants.length} / {capacity}</span></summary><div className="react-create-disclosure-body"><label>Buscar cuentas del club<input type="search" value={peopleQuery} onChange={(event) => setPeopleQuery(event.target.value)} placeholder="Buscar por nick…" /></label><p className="react-create-help" role="status">{peopleLoading ? 'Cargando cuentas del club…' : `${profiles.length} cuentas disponibles. Cada invitado debe tener el perfil completo.`}</p><div className="react-create-selected">{selectedPeople.map((person) => <button type="button" key={person.id} onClick={() => toggleSelection('participant', person.id)} disabled={Boolean(retryRequest)} aria-label={`Quitar a ${person.nickname}`}><ProfileAvatar profile={person} />{person.nickname} <span aria-hidden="true">×</span></button>)}</div><div className="react-create-person-list">{filteredPeople.map((person) => <label key={person.id} className={participants.includes(person.id) ? 'is-selected' : ''}><input type="checkbox" checked={participants.includes(person.id)} onChange={() => toggleSelection('participant', person.id)} disabled={Boolean(retryRequest) || (!participants.includes(person.id) && participants.length >= capacity) || profiles.some((item) => item.id !== person.id && participants.includes(item.id) && owner(item) === owner(person))} /><ProfileAvatar profile={person} /><span>{person.nickname}</span><small>{participants.includes(person.id) ? '✓ Seleccionado' : 'Elegir'}</small></label>)}{!peopleLoading && !filteredPeople.length && <p>No hay perfiles para esa búsqueda.</p>}</div><button type="button" className="react-create-text-button" onClick={() => { setPeopleLoading(true); registeredProfiles().then((items) => setProfiles(items.filter((item) => item.accountComplete))).catch((cause) => showNotice(statusError(cause), true)).finally(() => setPeopleLoading(false)); }}>Actualizar lista ↻</button></div></details>
-              <details open className="react-create-disclosure"><summary>02 · Formato de competencia</summary><div className="react-create-disclosure-body"><div className="react-create-formats">{formats.map((format) => <button type="button" key={format.id} className="react-create-format" aria-pressed={selectedFormat === format.id} disabled={Boolean(retryRequest) || format.comingSoon || (format.minParticipants && capacity < format.minParticipants)} onClick={() => setSelectedFormat(format.id)}><span dangerouslySetInnerHTML={{ __html: formatImage(format.id) }} /><b>{format.name}</b>{format.comingSoon && <small>En definición</small>}</button>)}</div><p className="react-create-help">{formats.find((item) => item.id === selectedFormat)?.description}</p><div data-react-bracket-preview className="react-create-bracket" /></div></details>
+              <details open className="react-create-disclosure"><summary>02 · Formato de competencia</summary><div className="react-create-disclosure-body"><div className="react-create-formats">{formats.map((format) => <button type="button" key={format.id} className="react-create-format" aria-pressed={selectedFormat === format.id} disabled={Boolean(retryRequest) || format.comingSoon || (format.minParticipants && capacity < format.minParticipants)} onClick={() => setSelectedFormat(format.id)}><span dangerouslySetInnerHTML={{ __html: formatImage(format.id) }} /><b>{format.name}</b>{format.comingSoon && <small>En definición</small>}</button>)}</div><p className="react-create-help">{formats.find((item) => item.id === selectedFormat)?.description}</p><div ref={bracketPreview} data-react-bracket-preview className="react-create-bracket" /></div></details>
             </div>
             <aside className="react-create-side-options">
               {!noJudge && <details open className="react-create-disclosure"><summary>03 · Jurado y condiciones <span>{judges.length} elegidos</span></summary><div className="react-create-disclosure-body"><p className="react-create-help">Elegí jueces. Cada persona debe aceptar el cargo y sus condiciones.</p><div className="react-create-person-list react-create-judge-list">{filteredPeople.map((person) => <label key={person.id} className={judges.includes(person.id) ? 'is-selected' : ''}><input type="checkbox" checked={judges.includes(person.id)} onChange={() => toggleSelection('judge', person.id)} disabled={Boolean(retryRequest) || (!judges.includes(person.id) && judges.length >= MAX_JUDGES) || profiles.some((item) => item.id !== person.id && judges.includes(item.id) && owner(item) === owner(person))} /><ProfileAvatar profile={person} /><span>{person.nickname}</span><small>{judges.includes(person.id) ? '✓ Seleccionado' : 'Elegir'}</small></label>)}</div></div></details>}
