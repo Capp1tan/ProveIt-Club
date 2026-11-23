@@ -1,5 +1,5 @@
 .react-home { width: 100%; }
-.react-hero { --hero-blend: #111521; position: relative; isolation: isolate; min-height: 700px; display: block; margin: 0 calc(-1 * 5.2vw); overflow: hidden; border: 0; }
+.react-hero { --hero-blend: #111521; position: relative; isolation: isolate; min-height: 700px; display: block; margin: 0 calc(-1 * 5.2vw); overflow: visible; border: 0; }
 .react-hero::after { content: none; }
 .react-hero-images { position: absolute; z-index: 0; inset: 0 calc(50% - 50vw) 0 30%; width: auto; height: 100%; overflow: hidden; pointer-events: none; }
 .react-hero-images::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, #111521 0%, #111521ed 12%, #111521a6 31%, #11152148 52%, transparent 75%), linear-gradient(0deg, #111521 0%, #11152185 13%, transparent 43%), linear-gradient(180deg, #111521 0%, #11152155 10%, transparent 27%); }
