@@ -75,3 +75,10 @@
 @media(prefers-reduced-motion:reduce) { .react-hero-images img { transition: none; } .react-activity-track { animation: none; } .react-activity ul[aria-hidden=true] { display: none; } }
 html[data-theme="light"] .react-hero { --hero-blend: #dde2e9; }
 html[data-theme="light"] .react-hero-copy h1 { color: #192743; }
+html[data-theme="light"] .react-champion-card { background: linear-gradient(155deg, #fff9e9, #f7f8fb 76%); }
+html[data-theme="light"] .react-champion-label { color: #765710; }
+html[data-theme="light"] .react-champion-name span { background: #fff; color: #765710; }
+html[data-theme="light"] .react-champion-card > p { color: #52637e; }
+html[data-theme="light"] .react-champion-card.is-empty h3 { color: #192743; }
+html[data-theme="light"] .react-champion-card.is-empty > p { color: #52637e; }
+html[data-theme="light"] .react-champion-card .react-secondary { background: #fff; color: #263c5b; border-color: #aebbd0; }

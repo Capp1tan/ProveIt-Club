@@ -61,6 +61,14 @@ html[data-theme="light"] .react-hero:after {
 html[data-theme="light"] .react-hero h1 span { color: #4355ff; }
 html[data-theme="light"] .react-theme-toggle { background: #e9edf2; color: #192743; }
 html[data-theme="light"] .react-secondary { color: #192743; border-color: #bcc7d7; }
+html[data-theme="light"] .react-header-actions .club-search-toggle,
+html[data-theme="light"] .notification-bell,
+html[data-theme="light"] .react-header-actions .react-account-link { color: #334561; }
+html[data-theme="light"] .react-header-actions .club-search-toggle,
+html[data-theme="light"] .notification-bell { background: #f2f4f7; border-color: #aebbd0; }
+html[data-theme="light"] .react-header-actions .club-search-toggle:hover,
+html[data-theme="light"] .notification-bell:hover,
+html[data-theme="light"] .react-theme-toggle:hover { color: #263c5b; background: #e5eaf2; border-color: #4355ff; }
 html[data-theme="light"] .react-route-loading,
 html[data-theme="light"] .react-migration-note { color: #52637e; }
 html[data-theme="light"] .react-directory-controls { background: #dde2e9ed; }
@@ -98,3 +106,36 @@ html[data-theme="light"] .react-payment-reminder { background: #fff7e8; }
 .react-header-actions .react-account-link{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:13px;text-decoration:none}
 @media(max-width:800px){.react-topbar nav .react-nav-directory,.react-topbar nav .react-nav-friends{display:none}}
 @media(max-width:520px){.react-topbar{gap:10px}.react-brand{flex:none;gap:8px;font-size:18px}.react-brand .react-mark{width:34px;height:34px}.react-topbar nav{display:none}.react-header-actions{gap:7px}.react-header-actions .react-nav-admin{padding:7px 8px;font-size:11px}.react-header-actions .admin-long{display:none}.react-header-actions .admin-short{display:inline}.react-header-actions .club-search-toggle{width:38px;min-width:38px;padding:8px;flex:none}.react-header-actions .club-search-toggle span{display:none}.react-theme-toggle{width:36px;height:36px;flex:none}.react-profile-nav{flex-basis:36px;width:36px;height:36px}}
+/* Give shared controls and page styles a consistent palette in both themes. */
+html[data-theme="dark"] {
+  --text: #edf1f8;
+  --background: #121722;
+  --surface: #1c2331;
+  --site-bg: #121722;
+  --site-panel: #1c2331;
+  --site-raised: #252e3e;
+  --site-line: #3c4960;
+  --site-text: #edf1f8;
+  --site-muted: #adb9ce;
+  --site-accent: #6171ff;
+  --site-tint: #28345b;
+  color-scheme: dark;
+}
+html[data-theme="light"] {
+  --text: #192743;
+  --background: #dde2e9;
+  --surface: #f8fafd;
+  --muted: #52637e;
+  --line: #bcc7d7;
+  --accent: #4355ff;
+  --accent-soft: #dce2ff;
+  --site-bg: #dde2e9;
+  --site-panel: #e9edf2;
+  --site-raised: #f2f4f7;
+  --site-line: #bcc7d7;
+  --site-text: #192743;
+  --site-muted: #52637e;
+  --site-accent: #4355ff;
+  --site-tint: #dce2ff;
+  color-scheme: light;
+}
