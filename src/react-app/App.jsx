@@ -1,9 +1,10 @@
-import { lazy, Suspense, useEffect } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Link, Navigate, Route, Routes } from 'react-router-dom';
 import { useAuth } from './auth/AuthProvider.jsx';
 import ThemeToggle from './theme/ThemeToggle.jsx';
 import GlobalSearch from './components/GlobalSearch.jsx';
 import NotificationsPanel from './components/NotificationsPanel.jsx';
+import { avatarUrl } from '../auth-client.js';
 
 const HomePage = lazy(() => import('./pages/HomePage.jsx'));
 const DirectoryPage = lazy(() => import('./pages/DirectoryPage.jsx'));
@@ -15,6 +16,18 @@ const PaymentPage = lazy(() => import('./pages/PaymentPage.jsx'));
 const TournamentPage = lazy(() => import('./pages/TournamentPage.jsx'));
 const MigrationPage = lazy(() => import('./pages/MigrationPage.jsx'));
 const AdminPage = lazy(() => import('./pages/AdminPage.jsx'));
+
+function ProfileNavLink({ profile }) {
+  const [image, setImage] = useState('');
+  useEffect(() => {
+    let active = true;
+    setImage('');
+    if (profile?.id && profile.avatarPath) void avatarUrl(profile.avatarPath, { profileId: profile.id }).then((url) => { if (active) setImage(url || ''); }).catch(() => {});
+    return () => { active = false; };
+  }, [profile?.id, profile?.avatarPath]);
+  const label = profile?.nickname ? `Mi perfil: ${profile.nickname}` : 'Mi perfil';
+  return <Link className="react-profile-nav" to="/perfil" aria-label={label} title={label}>{image ? <img src={image} alt="" /> : <span aria-hidden="true">{Array.from(profile?.nickname || 'P')[0]?.toUpperCase()}</span>}</Link>;
+}
 
 function AppLayout() {
   const { status, profile } = useAuth();
@@ -53,14 +66,13 @@ function AppLayout() {
         <nav aria-label="Navegación principal">
           <Link className="react-nav-directory" to="/torneos">Torneos</Link>
           <Link className="react-nav-friends" to="/amigos">Amigos</Link>
-          <Link className="react-nav-cta" to="/crear-torneo">Crear torneo <span aria-hidden="true">↗</span></Link>
-          {status === 'signed-in'
-            ? <Link className="react-account-link" to="/perfil" title="Mi perfil">{profile?.nickname || 'Mi perfil'}</Link>
-            : <Link className="react-account-link" to="/ingresar">{status === 'checking' ? 'Cuenta…' : 'Ingresar'}</Link>}
-          <NotificationsPanel />
-          <GlobalSearch />
         </nav>
-        <ThemeToggle />
+        <div className="react-header-actions">
+          <GlobalSearch />
+          <NotificationsPanel />
+          <ThemeToggle />
+          {status === 'signed-in' ? <ProfileNavLink profile={profile} /> : <Link className="react-account-link" to="/ingresar">{status === 'checking' ? 'Cuenta…' : 'Ingresar'}</Link>}
+        </div>
       </header>
       <Suspense fallback={<div className="react-route-loading" role="status">Abriendo ProveIt…</div>}>
         <Routes>
