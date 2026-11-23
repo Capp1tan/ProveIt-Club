@@ -114,7 +114,7 @@ export default function DirectoryPage() {
   }
 
   if (authStatus === 'checking' || authStatus === 'refreshing') return <main className="react-content-page"><p className="react-eyebrow">PROVEIT CLUB</p><h1>Torneos</h1><p role="status">Comprobando tu sesión…</p></main>;
-  if (authStatus !== 'signed-in') return <main className="react-content-page"><p className="react-eyebrow">PROVEIT CLUB</p><h1>Ingresá para ver los torneos</h1><p>{authStatus === 'unavailable' ? 'No se pudo conectar con el servicio de cuentas.' : 'El directorio requiere una sesión del club.'}</p><a className="react-primary" href="/react/ingresar">Ir a iniciar sesión <span aria-hidden="true">↗</span></a></main>;
+  if (authStatus !== 'signed-in') return <main className="react-content-page"><p className="react-eyebrow">PROVEIT CLUB</p><h1>Ingresá para ver los torneos</h1><p>{authStatus === 'unavailable' ? 'No se pudo conectar con el servicio de cuentas.' : 'El directorio requiere una sesión del club.'}</p><Link className="react-primary" to="/ingresar">Ir a iniciar sesión <span aria-hidden="true">↗</span></Link></main>;
 
   return (
     <main className="react-directory">

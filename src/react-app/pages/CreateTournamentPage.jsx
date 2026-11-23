@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { formats, formatImage } from '../../tournament-formats.js';
 import { avatarUrl } from '../../auth-client.js';
 import { registeredProfiles, createClubTournament, tournamentClient } from '../../tournaments-api.js';
@@ -307,7 +307,7 @@ export default function CreateTournamentPage() {
   }, [selectedFormat, capacity, selectedPeople]);
 
   if (authStatus === 'checking') return <main className="react-create-shell"><div className="react-create-surface"><p role="status">Comprobando tu cuenta…</p></div></main>;
-  if (authStatus !== 'signed-in') return <main className="react-create-shell"><div className="react-create-surface"><p className="react-eyebrow">PROVEIT CLUB</p><h1>Entrá para crear tu torneo</h1><p>Tu sesión se verifica con el servicio del club antes de publicar.</p><a className="react-primary" href="/react/ingresar">Ir a ingresar ↗</a></div></main>;
+  if (authStatus !== 'signed-in') return <main className="react-create-shell"><div className="react-create-surface"><p className="react-eyebrow">PROVEIT CLUB</p><h1>Entrá para crear tu torneo</h1><p>Tu sesión se verifica con el servicio del club antes de publicar.</p><Link className="react-primary" to="/ingresar">Ir a ingresar ↗</Link></div></main>;
 
   return (
     <main className="react-create-shell">
@@ -334,7 +334,7 @@ export default function CreateTournamentPage() {
               </button><input ref={coverInput} type="file" className="react-create-file-hidden" accept="image/jpeg,image/png,image/webp" onChange={(event) => void chooseCover(event.target.files?.[0])} /><div className="react-create-image-tools"><button type="button" onClick={() => coverInput.current?.click()} disabled={Boolean(retryRequest) || coverWorking}>{coverWorking ? 'Preparando…' : cover ? 'Cambiar imagen' : 'Agregar imagen'}</button>{cover && <button type="button" onClick={() => setCover(null)} disabled={Boolean(retryRequest)}>Quitar</button>}</div><p>Recomendado: <b>1080 × 1920 px · 9:16</b>, como una historia de Instagram. También podés adaptar fotos horizontales o cuadradas.</p><p>JPG, PNG o WebP · hasta 5 MB. Podés mover y ajustar el encuadre.</p>
             </aside>
           </div>
-          <footer className="react-create-footer"><a href="/react/torneos">Cancelar</a><button type="button" className="react-primary" onClick={() => { if (validateFirstStep()) { setStep(2); setNotice(''); } }}>Siguiente etapa <span aria-hidden="true">↗</span></button></footer>
+          <footer className="react-create-footer"><Link to="/torneos">Cancelar</Link><button type="button" className="react-primary" onClick={() => { if (validateFirstStep()) { setStep(2); setNotice(''); } }}>Siguiente etapa <span aria-hidden="true">↗</span></button></footer>
         </section> : <section className="react-create-stage" aria-labelledby="react-create-stage-two">
           <div className="react-create-stage-intro"><p className="react-eyebrow">PREPARAR EL ENCUENTRO</p><h2 ref={stageTwo} id="react-create-stage-two" tabIndex={-1}>Elegí con quién y cómo competir.</h2><p>Las invitaciones se enviarán al publicar.</p></div>
           {retryRequest && <div className="react-create-hint">Esta solicitud ya fue preparada. El reintento conserva su contenido para evitar crear o cobrar un duplicado. <button type="button" onClick={clearDraft}>Crear un torneo nuevo</button></div>}
