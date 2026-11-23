@@ -1,3 +1,7 @@
+// Amplify v6 separa el listener que intercambia el `code` OAuth por una sesión.
+// Tiene que cargarse en la entrada de la SPA para procesar el retorno de Google
+// antes de que AuthProvider consulte el estado de la cuenta.
+import 'aws-amplify/auth/enable-oauth-listener';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';

@@ -9,7 +9,7 @@ const countries = [['AR','Argentina','+549'],['CL','Chile','+56'],['PY','Paragua
 function phoneValue(country, value) { const raw = value.trim(); if (!raw) return ''; if (raw.startsWith('+')) return `+${raw.replace(/\D/g, '')}`; return (countries.find(([id]) => id === country)?.[2] || '') + raw.replace(/\D/g, '').replace(/^0+/, ''); }
 
 export default function AuthPage() {
-  const { status, refresh } = useAuth();
+  const { status, refresh, error: sessionError } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [mode, setMode] = useState('signin');
@@ -83,7 +83,7 @@ export default function AuthPage() {
         return;
       }
       if (!await configureAmplify()) throw new Error('No pudimos conectar con el servicio de cuentas. Intentá más tarde.');
-      await signInWithRedirect({ provider: 'Google', options: { prompt: 'SELECT_ACCOUNT' } });
+      await signInWithRedirect({ provider: 'Google', options: { prompt: 'select_account' } });
     }
     catch (cause) { say(authErrorMessage(cause), true); setBusy(false); }
   }
@@ -101,6 +101,7 @@ export default function AuthPage() {
     <p className="react-eyebrow">PROVEIT CLUB · TU CUENTA</p>
     <h1>{step === 'credentials' ? mode === 'signup' ? 'Sumate al club.' : 'Entrá al club.' : step === 'confirm-signup' ? 'Confirmá tu email.' : step === 'reset-request' ? 'Recuperá tu cuenta.' : 'Elegí otra contraseña.'}</h1>
     <p className="react-auth-intro">{mode === 'signup' && step === 'credentials' ? 'Tu nick y teléfono se registran desde el inicio. El correo debe ser único.' : 'Tus competencias, amistades y perfil están vinculados a tu cuenta.'}</p>
+      {sessionError && <p className="react-auth-message is-error" role="alert">{sessionError}</p>}
       {step === 'credentials' && !window.location.hostname.endsWith('.amplifyapp.com') && <button type="button" className="react-auth-google" onClick={() => void google()} disabled={busy}><b>G</b> Continuar con Google</button>}
       {step === 'credentials' && !window.location.hostname.endsWith('.amplifyapp.com') && <div className="react-auth-divider"><span>o con tu email</span></div>}
     <form className="react-auth-form" onSubmit={submit}>

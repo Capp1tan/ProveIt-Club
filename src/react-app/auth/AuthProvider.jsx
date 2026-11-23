@@ -57,7 +57,15 @@ export function AuthProvider({ children }) {
         ++refreshGeneration.current;
         refreshPromise.current = null;
         if (alive) setAccount({ status: 'signed-out', user: null, profile: null, error: null });
-      } else if (payload.event === 'signedIn') run();
+      } else if (payload.event === 'signedIn' || payload.event === 'signInWithRedirect') run();
+      else if (payload.event === 'signInWithRedirect_failure') {
+        ++refreshGeneration.current;
+        refreshPromise.current = null;
+        if (alive) setAccount({
+          status: 'signed-out', user: null, profile: null,
+          error: 'No se pudo completar el acceso con Google. Volvé a intentarlo.',
+        });
+      }
     });
     const onProfileUpdated = () => run();
     window.addEventListener('proveit:profile-updated', onProfileUpdated);
