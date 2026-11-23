@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { homeActivity, latestChampion } from '../../../shared/home-activity.ts';
 import { listClubTournaments } from '../../tournaments-api.js';
 import { useAuth } from '../auth/AuthProvider.jsx';
+import { avatarUrl } from '../../auth-client.js';
+import { viewClubProfile } from '../../community-api.js';
 import './HomePage.css';
 
 const slides = [
@@ -34,11 +36,25 @@ export default function HomePage() {
   const [slide, setSlide] = useState(0);
   const [rows, setRows] = useState([]);
   const [activityState, setActivityState] = useState('loading');
+  const [championAvatar, setChampionAvatar] = useState('');
   const [paused, setPaused] = useState(false);
   const [visible, setVisible] = useState(true);
   const [reducedMotion, setReducedMotion] = useState(() => matchMedia('(prefers-reduced-motion: reduce)').matches);
   const activities = useMemo(() => homeActivity(rows), [rows]);
   const champion = useMemo(() => latestChampion(rows), [rows]);
+
+  useEffect(() => {
+    let alive = true;
+    setChampionAvatar('');
+    if (!champion?.winnerProfileId) return () => { alive = false; };
+    void viewClubProfile(champion.winnerProfileId)
+      .then((result) => result?.avatarPath
+        ? avatarUrl(result.avatarPath, { profileId: result.id })
+        : '')
+      .then((url) => { if (alive) setChampionAvatar(url || ''); })
+      .catch(() => { if (alive) setChampionAvatar(''); });
+    return () => { alive = false; };
+  }, [champion?.winnerProfileId]);
 
   useEffect(() => {
     const media = matchMedia('(prefers-reduced-motion: reduce)');
@@ -104,7 +120,7 @@ export default function HomePage() {
           {[false, true].map((copy) => <ul key={String(copy)} aria-hidden={copy || undefined} inert={copy || undefined}>{activities.map((item) => <li key={item.id} data-tone={item.tone}>{item.tone === 'gold' ? <Trophy /> : <i aria-hidden="true" />}<Link to={activityRoute(item.href)} tabIndex={copy ? -1 : undefined}>{item.text}</Link></li>)}</ul>)}
         </div></div>}
         <h2 className="react-hall-heading"><Trophy /> Salón de la fama</h2>
-        {champion ? <article className="react-champion-card"><div className="react-champion-label">Último campeón <Trophy /></div><Link className="react-champion-name" to={`/perfil/${encodeURIComponent(champion.winnerProfileId)}`}><span>{Array.from(champion.winnerName)[0]}</span><strong>{champion.winnerName}</strong></Link><p>Ganó <b>{champion.name}</b>{champion.decidedAt && <> · {new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(champion.decidedAt))}</>}</p></article>
+        {champion ? <article className="react-champion-card"><div className="react-champion-label">Último campeón <Trophy /></div><Link className="react-champion-name" to={`/perfil/${encodeURIComponent(champion.winnerProfileId)}`}><span className={championAvatar ? 'has-photo' : ''}>{championAvatar ? <img src={championAvatar} alt="" /> : Array.from(champion.winnerName)[0]}</span><strong>{champion.winnerName}</strong></Link><p>Ganó <b>{champion.name}</b>{champion.decidedAt && <> · {new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(champion.decidedAt))}</>}</p></article>
           : <article className="react-champion-card is-empty"><Trophy /><h3>{activityState === 'guest' ? 'Tu próxima victoria puede quedar acá' : activityState === 'error' ? 'No pudimos cargar al último campeón' : 'El salón está vacío'}</h3><p>{activityState === 'guest' ? 'Ingresá para conocer a los campeones del club.' : activityState === 'error' ? 'Intentá nuevamente en unos momentos.' : 'El primero que gane un torneo queda acá. ¿Vas a ser vos?'}</p>{activityState === 'guest' ? <Link className="react-secondary" to="/ingresar">Ingresar ↗</Link> : <Link className="react-secondary" to="/crear-torneo">Crear torneo ↗</Link>}</article>}
       </section>
 
