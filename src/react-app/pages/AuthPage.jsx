@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { confirmResetPassword, confirmSignUp, configureAmplify, resendSignUpCode, resetPassword, signIn, signInWithRedirect, signUp } from '../../auth-client.js';
 import { useAuth } from '../auth/AuthProvider.jsx';
+import { authErrorMessage, isValidAccountEmail } from '../../auth-errors.js';
 import './AuthPage.css';
 
 const countries = [['AR','Argentina','+549'],['CL','Chile','+56'],['PY','Paraguay','+595'],['UY','Uruguay','+598'],['PE','Perú','+51'],['BR','Brasil','+55']];
@@ -30,6 +31,7 @@ export default function AuthPage() {
 
   async function submit(event) {
     event.preventDefault(); if (busy) return;
+    if (!isValidAccountEmail(email)) { say('Revisá el correo: escribí una dirección válida, por ejemplo nombre@gmail.com.', true); return; }
     setBusy(true); say('');
     const username = email.trim().toLowerCase();
     try {
@@ -51,25 +53,25 @@ export default function AuthPage() {
         await confirmSignUp({ username, confirmationCode: code.trim() }); changeMode('signin'); say('Email verificado. Ya podés ingresar.');
       } else if (step === 'reset-request') {
         const result = await resetPassword({ username });
-        if (result.nextStep.resetPasswordStep === 'CONFIRM_RESET_PASSWORD_WITH_CODE') { setStep('reset-confirm'); say('Te enviamos un código para cambiar la contraseña.'); }
-        else say('Seguí las instrucciones que aparecen en pantalla.');
+        if (result.nextStep.resetPasswordStep === 'CONFIRM_RESET_PASSWORD_WITH_CODE') { setStep('reset-confirm'); say('Si existe una cuenta con ese correo y puede recuperarse por email, Cognito enviará un código. Revisá también spam y promociones.'); }
+        else say('Si existe una cuenta con ese correo y puede recuperarse por email, Cognito enviará un código. Revisá también spam y promociones.');
       } else {
         await confirmResetPassword({ username, confirmationCode: code.trim(), newPassword }); changeMode('signin'); say('Contraseña actualizada. Ya podés ingresar.');
       }
-    } catch (cause) { say(cause?.message || 'No pudimos completar el acceso. Intentá otra vez.', true); }
+    } catch (cause) { say(authErrorMessage(cause, step === 'reset-request' ? 'reset-request' : mode === 'signup' ? 'signup' : step), true); }
     finally { setBusy(false); }
   }
 
   async function google() {
     if (busy) return; setBusy(true); say('');
     try { if (!await configureAmplify()) throw new Error('No pudimos conectar con el servicio de cuentas. Intentá más tarde.'); await signInWithRedirect({ provider: 'Google' }); }
-    catch (cause) { say(cause?.message || 'No se pudo iniciar sesión con Google.', true); setBusy(false); }
+    catch (cause) { say(authErrorMessage(cause), true); setBusy(false); }
   }
 
   async function resend() {
     setBusy(true);
     try { await resendSignUpCode({ username: email.trim().toLowerCase() }); say('Si el registro está pendiente, te llegará un nuevo código por correo.'); }
-    catch (cause) { say(cause?.message || 'No pudimos reenviar el código.', true); }
+    catch (cause) { say(authErrorMessage(cause, 'signup'), true); }
     finally { setBusy(false); }
   }
 
@@ -82,7 +84,7 @@ export default function AuthPage() {
       {step === 'credentials' && !window.location.hostname.endsWith('.amplifyapp.com') && <button type="button" className="react-auth-google" onClick={() => void google()} disabled={busy}><b>G</b> Continuar con Google</button>}
       {step === 'credentials' && !window.location.hostname.endsWith('.amplifyapp.com') && <div className="react-auth-divider"><span>o con tu email</span></div>}
     <form className="react-auth-form" onSubmit={submit}>
-      {(step === 'credentials' || step === 'confirm-signup' || step.startsWith('reset')) && <label>Correo electrónico<input required type="email" autoComplete="email" maxLength={254} value={email} onChange={(event) => setEmail(event.target.value)} disabled={busy || step === 'reset-confirm' || step === 'confirm-signup'} placeholder="vos@ejemplo.com" /></label>}
+      {(step === 'credentials' || step === 'confirm-signup' || step.startsWith('reset')) && <label>Correo electrónico<input required type="email" autoComplete="email" maxLength={254} value={email} onInvalid={(event) => event.currentTarget.setCustomValidity(!event.currentTarget.value.trim() ? 'Ingresá tu correo electrónico.' : isValidAccountEmail(event.currentTarget.value) ? '' : 'Revisá el correo: escribí una dirección válida, por ejemplo nombre@gmail.com.')} onChange={(event) => { event.currentTarget.setCustomValidity(''); setEmail(event.target.value); }} disabled={busy || step === 'reset-confirm' || step === 'confirm-signup'} placeholder="vos@ejemplo.com" /><small>Revisá bien el dominio: te enviaremos allí el código de verificación o recuperación.</small></label>}
       {step === 'credentials' && <>
         {mode === 'signup' && <>
           <label>Nick único<input required minLength={3} maxLength={24} autoComplete="nickname" value={nickname} onChange={(event) => setNickname(event.target.value)} disabled={busy} placeholder="Entre 3 y 24 caracteres" /></label>
@@ -90,10 +92,10 @@ export default function AuthPage() {
           <label>País del teléfono<select required value={phoneCountry} onChange={(event) => setPhoneCountry(event.target.value)} disabled={busy}>{countries.map(([id,name,prefix]) => <option key={id} value={id}>{name} ({prefix})</option>)}</select></label>
           <label>Teléfono privado<input required type="tel" autoComplete="tel-national" maxLength={24} value={phone} onChange={(event) => setPhone(event.target.value)} disabled={busy} placeholder="Código de área y número" /></label>
         </>}
-        <label>Contraseña<input required type="password" minLength={8} autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} value={password} onChange={(event) => setPassword(event.target.value)} disabled={busy} placeholder="Mínimo 8 caracteres" /></label>
+        <label>Contraseña<input required type="password" minLength={8} autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} value={password} onInvalid={(event) => { if (event.currentTarget.validity.tooShort) event.currentTarget.setCustomValidity('Usá al menos 8 caracteres. No hacen falta mayúsculas, números ni símbolos.'); }} onChange={(event) => { event.currentTarget.setCustomValidity(''); setPassword(event.target.value); }} disabled={busy} placeholder="Mínimo 8 caracteres" /></label>
       </>}
       {step === 'confirm-signup' && <label>Código de verificación<input required inputMode="numeric" autoComplete="one-time-code" value={code} onChange={(event) => setCode(event.target.value)} disabled={busy} /></label>}
-      {step === 'reset-confirm' && <><label>Código de recuperación<input required inputMode="numeric" autoComplete="one-time-code" value={code} onChange={(event) => setCode(event.target.value)} disabled={busy} /></label><label>Nueva contraseña<input required type="password" minLength={8} autoComplete="new-password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} disabled={busy} /></label></>}
+      {step === 'reset-confirm' && <><label>Código de recuperación<input required inputMode="numeric" autoComplete="one-time-code" value={code} onChange={(event) => setCode(event.target.value)} disabled={busy} /></label><label>Nueva contraseña<input required type="password" minLength={8} autoComplete="new-password" value={newPassword} onInvalid={(event) => { if (event.currentTarget.validity.tooShort) event.currentTarget.setCustomValidity('Usá al menos 8 caracteres. No hacen falta mayúsculas, números ni símbolos.'); }} onChange={(event) => { event.currentTarget.setCustomValidity(''); setNewPassword(event.target.value); }} disabled={busy} placeholder="Mínimo 8 caracteres" /></label></>}
       <button className="react-primary" type="submit" disabled={busy}>{busy ? 'Un momento…' : step === 'credentials' ? mode === 'signup' ? 'Crear cuenta' : 'Ingresar' : step === 'confirm-signup' ? 'Verificar cuenta' : step === 'reset-request' ? 'Enviar código' : 'Guardar contraseña'} <span aria-hidden="true">↗</span></button>
       {message && <p className={`react-auth-message${isError ? ' is-error' : ''}`} role={isError ? 'alert' : 'status'}>{message}</p>}
     </form>
