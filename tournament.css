@@ -142,3 +142,16 @@ html[data-theme] body.proveit-theme #tournamentDraw .draw-match{background:trans
 #tournamentDraw .draw-canvas-duel .draw-duel-match>.draw-player{padding:10px 14px}
 #tournamentDraw .draw-canvas-duel .draw-duel-match>.draw-versus{border:0;padding:4px}
 @media(max-width:520px){.draw-canvas-duel .draw-duel-match,#tournamentDraw .draw-canvas-duel .draw-duel-match{grid-template-columns:minmax(0,1fr);text-align:center}.draw-canvas-duel .draw-versus{padding-block:0}.draw-canvas-duel .draw-duel-winner-round{width:100%}}
+
+/* Cards de nombre: nombres limpios, verificación junto al nombre y fundador
+   alineado debajo sin cambiar el alto de la tarjeta del participante. */
+#tournamentDraw a.participant-trigger,#tournamentDraw a.participant-trigger :is(.participant-name,.participant-name-line){text-decoration:none}
+#tournamentDraw .draw-player>.participant-trigger .club-badges{grid-column:2;grid-row:2;align-self:start;justify-self:start;display:flex;flex-wrap:nowrap;gap:5px;min-width:0;max-width:100%;padding:0;overflow:hidden}
+#tournamentDraw .draw-player>.participant-trigger .club-badges .club-badge{max-width:100%;overflow:hidden;text-overflow:ellipsis}
+#tournamentDraw .draw-player.bracket-champion{display:grid;grid-template-columns:32px minmax(0,1fr) auto;grid-template-rows:minmax(38px,auto) minmax(20px,auto);align-items:center;gap:0 8px;height:auto;min-height:76px;padding:7px 10px}
+#tournamentDraw .draw-player.bracket-champion>.bracket-trophy{grid-column:1;grid-row:1 / span 2;width:32px;height:32px}
+#tournamentDraw .draw-player.bracket-champion>.participant-trigger{grid-column:2;grid-row:1 / span 2;display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:32px 21px;align-content:center;gap:2px 8px;min-width:0;padding:0}
+#tournamentDraw .draw-player.bracket-champion>.winner-tag{grid-column:3;grid-row:1 / span 2;white-space:nowrap}
+#tournamentDraw .draw-ranking-round{flex:0 0 clamp(220px,35vw,315px)}
+#tournamentDraw .draw-ranking-round .draw-ranking-match{padding-top:8px}
+@media(max-width:520px){#tournamentDraw .draw-player.bracket-champion{grid-template-columns:28px minmax(0,1fr);grid-template-rows:auto auto;min-height:72px}#tournamentDraw .draw-player.bracket-champion>.bracket-trophy{grid-column:1;grid-row:1 / span 2;width:28px;height:28px}#tournamentDraw .draw-player.bracket-champion>.participant-trigger{grid-column:2;grid-row:1 / span 2}#tournamentDraw .draw-player.bracket-champion>.winner-tag{grid-column:2;grid-row:3;justify-self:start}}
