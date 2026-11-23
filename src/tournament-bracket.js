@@ -90,21 +90,29 @@ export function drawBoard(draw,{winnerId,playerButton,selfPlayer,preview=false,r
     }
     column.append(matches);canvas.append(column);
   }
-  if(preview && ['ROUND_ROBIN','FREE_FOR_ALL'].includes(draw.format)){
+  // En una prueba compartida también mostramos el destino del resultado en la
+  // llave real. Antes solo existía en la vista previa y el ganador quedaba
+  // como un texto suelto debajo del tablero.
+  if((preview && draw.format==='ROUND_ROBIN') || draw.format==='FREE_FOR_ALL'){
     const column=element('section','','draw-round draw-ranking-round');
-    column.append(element('h3',draw.format==='ROUND_ROBIN'?'Tabla de posiciones':'Clasificación final'));
+    const isFfa=draw.format==='FREE_FOR_ALL';
+    column.append(element('h3',isFfa?'Ganador del torneo':'Tabla de posiciones'));
     const matches=element('div','','round-matches'),card=element('article','','draw-match draw-ranking-match');
-    card.dataset.matchId='preview-ranking';
-    const places=Math.min(draw.order.length,draw.format==='ROUND_ROBIN'?4:3);
+    card.dataset.matchId=isFfa?'bracket-champion':'preview-ranking';
+    const places=isFfa?1:Math.min(draw.order.length,4);
     for(let index=0;index<places;index++){
-      const row=element('div',`${index+1}.º puesto · Por definir`,'draw-player draw-placeholder');
+      const champion=isFfa && winner;
+      const row=champion
+        ? slotNode({playerId:winner.id},card.dataset.matchId,index)
+        : element('div',isFfa?'Por definir':`${index+1}.º puesto · Por definir`,'draw-player draw-placeholder');
       row.dataset.slot=String(index);card.append(row);
-      if(draw.format==='FREE_FOR_ALL')links.push({source:draw.rounds[0]?.matches[0]?.id,target:card.dataset.matchId,slot:index,outcome:'winner',orientation:'ranking'});
+      if(champion){row.classList.add('bracket-champion');row.querySelector('.draw-self')?.remove();row.prepend(element('span','🏆','bracket-trophy'));}
+      if(isFfa)links.push({source:draw.rounds[0]?.matches[0]?.id,target:card.dataset.matchId,slot:index,outcome:'winner',orientation:'ranking'});
     }
     matches.append(card);column.append(matches);canvas.append(column);
   }
   section.append(board);
-  if(winner && !knockout){
+  if(winner && !knockout && draw.format!=='FREE_FOR_ALL'){
     const champion=element('p','','bracket-champion');
     const trophy=element('span','🏆','bracket-trophy');
     trophy.setAttribute('aria-hidden','true');

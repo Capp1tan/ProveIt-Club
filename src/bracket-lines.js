@@ -1,12 +1,13 @@
 // Conexiones entre los cruces realmente guardados, sin inventar resultados.
 export function connectBracket(canvas, links) {
   const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg');
-  svg.classList.add('bracket-connections');svg.setAttribute('aria-hidden','true');canvas.prepend(svg);
+  svg.classList.add('bracket-connections');svg.setAttribute('aria-hidden','true');svg.setAttribute('preserveAspectRatio','none');canvas.prepend(svg);
   const paths=links.map(link=>{const path=document.createElementNS(ns,'path');path.setAttribute('pathLength','1');path.dataset.source=link.source;path.dataset.target=link.target;path.dataset.outcome=link.outcome;svg.append(path);return {...link,path};});
   let frame;
   function paint() {
     if(!canvas.isConnected)return;
-    const base=canvas.getBoundingClientRect();svg.setAttribute('width',String(Math.ceil(base.width)));svg.setAttribute('height',String(Math.ceil(base.height)));
+    const base=canvas.getBoundingClientRect(),width=Math.max(1,Math.ceil(base.width)),height=Math.max(1,Math.ceil(base.height));
+    svg.setAttribute('width',String(width));svg.setAttribute('height',String(height));svg.setAttribute('viewBox',`0 0 ${width} ${height}`);
     const cards=new Map([...canvas.querySelectorAll('[data-match-id]')].map(card=>[card.dataset.matchId,card]));
     for(const link of paths) {
       const from=cards.get(link.source),to=cards.get(link.target),slot=to?.querySelector('[data-slot="'+link.slot+'"]');
