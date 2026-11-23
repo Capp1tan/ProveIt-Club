@@ -28,7 +28,7 @@ function playerLink(id, name, profiles) {
   const avatar = node('span', Array.from(name.trim())[0]?.toUpperCase() || '?', 'person-avatar participant-avatar');
   if (profile?.avatarPath) void avatarUrl(profile.avatarPath, { profileId: id }).then((url) => { if (url && avatar.isConnected) { const image = node('img'); image.src = url; image.alt = ''; image.loading = 'lazy'; avatar.replaceChildren(image); } }).catch(() => {});
   const nameLine = node('span', '', 'participant-name-line'); nameLine.append(node('span', name, 'participant-name'));
-  const badges = badgeElements(owner(profile)); const verified = badges.querySelector('[data-code="VERIFIED"]'); if (verified) nameLine.append(verified.cloneNode(true));
+  const badges = badgeElements(owner(profile)); const verified = badges.querySelector('[data-code="VERIFIED"]'); if (verified) { nameLine.append(verified.cloneNode(true)); verified.remove(); }
   link.append(avatar, nameLine, badges); return link;
 }
 
@@ -135,15 +135,15 @@ export default function TournamentPage() {
         if (savedDraw) {
           let parsed; try { parsed = JSON.parse(t.draw); } catch {}
           if (parsed) { const board = drawBoard(parsed, { winnerId: t.winnerProfileId, playerButton: peopleButton, selfPlayer: (profileId) => owner(profiles.get(profileId)) === currentUser?.userId }); boardCleanup = board.cleanup; boardNode = board.section; stage.append(board.section); }
+          if (lobby.childElementCount) container.append(lobby);
           container.append(stage);
           if (boardNode && winnerJustRecorded) animateWinner(boardNode, t.winnerProfileId);
           else if (boardNode && !previousWinner) void animateDraw(t, boardNode, currentUser?.userId);
-          if (lobby.childElementCount) container.append(lobby);
           if (controls) container.append(controls);
           if (parsed && t.winnerProfileId) { /* winner animation is only played on the result transition above */ }
         } else {
           const preview = node('div', '', 'bracket-stage-preview'); preview.append(node('h3', 'Llave por sortear'));
-          const model = node('div'); const dispose = renderTournamentPreview(model, { format: t.format, count: t.participantIds.length, awaitingDraw: true }); boardCleanup = dispose; preview.append(model); stage.append(preview); container.append(stage); if (lobby.childElementCount) container.append(lobby);
+          const model = node('div'); const dispose = renderTournamentPreview(model, { format: t.format, count: t.participantIds.length, awaitingDraw: true }); boardCleanup = dispose; preview.append(model); stage.append(preview); if (lobby.childElementCount) container.append(lobby); container.append(stage);
         }
       } else { container.append(lobby); if (controls) container.append(controls); }
       if (t.prizeTitle || t.prizeExpected === true) {
@@ -162,10 +162,10 @@ export default function TournamentPage() {
         const canEditRules = currentUser?.userId === t.createdBySub || t.judgeIds?.some((judgeId, index) => owner(profiles.get(judgeId)) === currentUser?.userId && statuses[t.participantIds.length + index] === 'ACCEPTED');
         const conditions = node('details', '', 'tournament-panel react-tournament-conditions'); conditions.append(node('summary', t.judgeIds?.length ? 'Jurado y condiciones' : 'Condiciones del torneo'), judgePanel(t, { canEditRules, onChanged: () => refresh(true) })); container.append(conditions);
       }
+      if (chatRoomId === t.id && chatNode) container.append(chatNode);
       if (accessRef.current?.isCreator || currentUser?.userId === t.createdBySub) {
         const remove = node('button', 'Eliminar torneo', 'danger-button'); remove.type = 'button'; remove.addEventListener('click', async () => { remove.disabled = true; try { if (await deleteTournament(t.id, { name: t.name })) navigateRef.current('/torneos', { replace: true }); else remove.disabled = false; } catch (cause) { setError(cause.message); remove.disabled = false; } }); container.append(remove);
       }
-      if (chatRoomId === t.id && chatNode) container.append(chatNode);
       const scheduledDraw = container.querySelector('[data-draw-schedule]');
       if (scheduledDraw) scheduledDraw.disabled = Date.now() < Date.parse(t.startsAt);
       previousWinner = t.winnerProfileId || '';

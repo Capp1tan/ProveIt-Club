@@ -60,9 +60,14 @@ html[data-theme="light"] .react-event-art { background: #dce2ff; }
 html[data-theme="light"] .react-payment-reminder { background: #fff7e8; }
 
 .react-topbar nav .react-nav-directory,.react-topbar nav .react-nav-friends{display:inline-flex}
-.react-topbar .club-search-toggle{display:inline-flex;align-items:center;justify-content:center;gap:8px;width:auto;min-width:42px;height:42px;padding:0 12px;border:1px solid var(--line);border-radius:10px;background:transparent;color:var(--muted);font:inherit;font-size:13px;white-space:nowrap}
+.react-header-actions{display:flex;align-items:center;justify-content:flex-end;gap:12px;margin-left:auto}
+.react-header-actions .club-search-toggle{display:inline-flex;align-items:center;justify-content:center;gap:8px;width:auto;min-width:42px;height:42px;padding:0 12px;border:1px solid var(--line);border-radius:10px;background:transparent;color:var(--muted);font:inherit;font-size:13px;white-space:nowrap}
+.react-header-actions .club-search-toggle:hover{border-color:var(--accent);color:var(--text)}
+.react-profile-nav{display:grid;place-items:center;flex:0 0 42px;width:42px;height:42px;overflow:hidden;border:1px solid var(--accent);border-radius:50%;background:var(--accent-soft);color:var(--text);font-size:14px;font-weight:700;text-decoration:none}
+.react-profile-nav img{display:block;width:100%;height:100%;object-fit:cover;border-radius:inherit}
+.react-profile-nav:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 .react-topbar .club-search-toggle:hover{border-color:var(--accent);color:var(--text)}
-.react-topbar nav{min-width:0;gap:clamp(12px,1.8vw,24px)}
-.react-topbar nav .react-account-link{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.react-topbar nav{min-width:0;gap:clamp(12px,1.8vw,24px);margin-left:clamp(18px,4vw,56px)}
+.react-header-actions .react-account-link{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:13px;text-decoration:none}
 @media(max-width:800px){.react-topbar nav .react-nav-directory,.react-topbar nav .react-nav-friends{display:none}}
-@media(max-width:520px){.react-topbar{gap:10px}.react-brand{flex:none;gap:8px;font-size:18px}.react-brand .react-mark{width:34px;height:34px}.react-topbar nav{flex:1;justify-content:flex-end;gap:8px}.react-topbar nav .react-account-link{display:none}.react-topbar nav .react-nav-cta{flex:none;padding:10px 11px;font-size:0;white-space:nowrap}.react-topbar nav .react-nav-cta span{font-size:17px}.react-topbar .club-search-toggle{width:40px;min-width:40px;padding:8px;flex:none}.react-topbar .club-search-toggle span{display:none}.react-theme-toggle{width:36px;height:36px;flex:none}}
+@media(max-width:520px){.react-topbar{gap:10px}.react-brand{flex:none;gap:8px;font-size:18px}.react-brand .react-mark{width:34px;height:34px}.react-topbar nav{display:none}.react-header-actions{gap:7px}.react-header-actions .club-search-toggle{width:38px;min-width:38px;padding:8px;flex:none}.react-header-actions .club-search-toggle span{display:none}.react-theme-toggle{width:36px;height:36px;flex:none}.react-profile-nav{flex-basis:36px;width:36px;height:36px}}
