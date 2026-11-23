@@ -13,6 +13,9 @@
 .react-theme-toggle:hover { border-color: #8287ff; color: #fff; }
 .react-theme-transition::view-transition-group(root) { animation-duration: 340ms; animation-timing-function: ease-in-out; }
 
+/* Keep the global React header in normal document flow so it scrolls away with the page. */
+.react-app > .react-topbar { position: static; }
+
 html[data-theme="light"] body {
   background: radial-gradient(ellipse at 78% 10%, #d1d8e8 0, transparent 42%), #dde2e9;
   color: #192743;
