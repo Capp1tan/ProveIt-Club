@@ -61,7 +61,10 @@ export async function configureAmplify() {
         if (!response.ok) return false;
         const outputs = await response.json();
         // Dominio propio de Cognito; AWS sigue generando los demás identificadores.
-        if (outputs.auth?.oauth) outputs.auth.oauth.domain = 'auth.proveitclub.win';
+        if (outputs.auth?.oauth) {
+          const oauth = outputs.auth.oauth;
+          oauth.domain = 'auth.proveitclub.win';
+        }
         Amplify.configure(outputs);
         configured = true;
         return true;

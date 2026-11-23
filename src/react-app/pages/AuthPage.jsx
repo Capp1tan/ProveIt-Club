@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { confirmResetPassword, confirmSignUp, configureAmplify, resendSignUpCode, resetPassword, signIn, signInWithRedirect, signUp } from '../../auth-client.js';
 import { useAuth } from '../auth/AuthProvider.jsx';
@@ -25,6 +25,14 @@ export default function AuthPage() {
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get('proveit-google-auth') !== '1') return;
+    url.searchParams.delete('proveit-google-auth');
+    window.history.replaceState(null, '', url);
+    void google();
+  }, []);
 
   function say(text, error = false) { setMessage(text); setIsError(error); }
   function changeMode(value) { setMode(value); setStep('credentials'); say(''); }
@@ -64,7 +72,19 @@ export default function AuthPage() {
 
   async function google() {
     if (busy) return; setBusy(true); say('');
-    try { if (!await configureAmplify()) throw new Error('No pudimos conectar con el servicio de cuentas. Intentá más tarde.'); await signInWithRedirect({ provider: 'Google' }); }
+    try {
+      // El callback local permitido por Cognito usa localhost. Canonizamos
+      // 127.0.0.1 antes del OAuth para conservar el mismo origen y su estado.
+      if (location.hostname === '127.0.0.1' && location.port === '5173') {
+        const localUrl = new URL(location.href);
+        localUrl.hostname = 'localhost';
+        localUrl.searchParams.set('proveit-google-auth', '1');
+        location.replace(localUrl.toString());
+        return;
+      }
+      if (!await configureAmplify()) throw new Error('No pudimos conectar con el servicio de cuentas. Intentá más tarde.');
+      await signInWithRedirect({ provider: 'Google', options: { prompt: 'SELECT_ACCOUNT' } });
+    }
     catch (cause) { say(authErrorMessage(cause), true); setBusy(false); }
   }
 

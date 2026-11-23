@@ -20,7 +20,7 @@ createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <AppErrorBoundary>
       <AuthProvider>
-        <BrowserRouter basename="/react">
+        <BrowserRouter>
           <App />
         </BrowserRouter>
       </AuthProvider>

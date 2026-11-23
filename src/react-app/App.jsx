@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { Link, Navigate, Route, Routes } from 'react-router-dom';
+import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { useAuth } from './auth/AuthProvider.jsx';
 import ThemeToggle from './theme/ThemeToggle.jsx';
 import GlobalSearch from './components/GlobalSearch.jsx';
@@ -15,8 +15,25 @@ const AuthPage = lazy(() => import('./pages/AuthPage.jsx'));
 const FriendsPage = lazy(() => import('./pages/FriendsPage.jsx'));
 const PaymentPage = lazy(() => import('./pages/PaymentPage.jsx'));
 const TournamentPage = lazy(() => import('./pages/TournamentPage.jsx'));
-const MigrationPage = lazy(() => import('./pages/MigrationPage.jsx'));
 const AdminPage = lazy(() => import('./pages/AdminPage.jsx'));
+
+function LegacyRedirect({ to }) {
+  const location = useLocation();
+  return <Navigate to={`${to}${location.search}${location.hash}`} replace />;
+}
+
+function LegacyProfileRedirect() {
+  const location = useLocation();
+  const profileId = new URLSearchParams(location.search).get('id');
+  const target = profileId ? `/perfil/${encodeURIComponent(profileId)}` : '/perfil';
+  return <Navigate to={`${target}${location.hash}`} replace />;
+}
+
+function ReactPathRedirect() {
+  const location = useLocation();
+  const target = location.pathname.replace(/^\/react(?=\/|$)/, '') || '/';
+  return <Navigate to={`${target}${location.search}${location.hash}`} replace />;
+}
 
 function ProfileNavLink({ profile }) {
   const [image, setImage] = useState('');
@@ -47,13 +64,13 @@ function AppLayout() {
   }, [status]);
   useEffect(() => {
     document.body.classList.add('proveit-theme');
-    let alive = true;
     const routeClick = (event) => {
       if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-      const anchor = event.target.closest?.('a[href^="/react/"]');
+      const anchor = event.target.closest?.('a.participant-trigger, a.react-history-link');
       if (!anchor || anchor.target || anchor.hasAttribute('download')) return;
       event.preventDefault();
       const url = new URL(anchor.href, location.href);
+      if (url.origin !== location.origin) return;
       window.history.pushState({}, '', url);
       window.dispatchEvent(new PopStateEvent('popstate'));
       document.querySelectorAll('.club-search-dialog[open]').forEach((dialog) => dialog.close());
@@ -62,7 +79,7 @@ function AppLayout() {
       window.scrollTo({ top: 0, behavior: 'auto' });
     };
     document.addEventListener('click', routeClick);
-    return () => { alive = false; document.removeEventListener('click', routeClick); document.body.classList.remove('proveit-theme'); };
+    return () => { document.removeEventListener('click', routeClick); document.body.classList.remove('proveit-theme'); };
   }, []);
   useEffect(() => {
     if (status !== 'signed-in') return;
@@ -100,8 +117,18 @@ function AppLayout() {
           <Route path="/amigos" element={<FriendsPage />} />
           <Route path="/pago" element={<PaymentPage />} />
           <Route path="/torneo" element={<TournamentPage />} />
-          <Route path="/migracion" element={<MigrationPage />} />
           <Route path="/admin" element={<AdminPage />} />
+          <Route path="/index.html" element={<LegacyRedirect to="/" />} />
+          <Route path="/crear-torneo.html" element={<LegacyRedirect to="/crear-torneo" />} />
+          <Route path="/simular-torneo.html" element={<LegacyRedirect to="/crear-torneo" />} />
+          <Route path="/perfil.html" element={<LegacyProfileRedirect />} />
+          <Route path="/torneo.html" element={<LegacyRedirect to="/torneo" />} />
+          <Route path="/torneos.html" element={<LegacyRedirect to="/torneos" />} />
+          <Route path="/pago.html" element={<LegacyRedirect to="/pago" />} />
+          <Route path="/amigos.html" element={<LegacyRedirect to="/amigos" />} />
+          <Route path="/admin.html" element={<LegacyRedirect to="/admin" />} />
+          <Route path="/react" element={<ReactPathRedirect />} />
+          <Route path="/react/*" element={<ReactPathRedirect />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>

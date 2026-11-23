@@ -24,7 +24,7 @@ const owner = (profile) => profile?.owner?.split('::')[0] || '';
 
 function playerLink(id, name, profiles) {
   const profile = profiles.get(id); const link = node('a', '', 'participant-trigger');
-  link.href = `/react/perfil/${encodeURIComponent(id)}`; link.setAttribute('aria-label', `Ver perfil de ${name}`);
+  link.href = `/perfil/${encodeURIComponent(id)}`; link.setAttribute('aria-label', `Ver perfil de ${name}`);
   const avatar = node('span', Array.from(name.trim())[0]?.toUpperCase() || '?', 'person-avatar participant-avatar');
   if (profile?.avatarPath) void avatarUrl(profile.avatarPath, { profileId: id }).then((url) => { if (url && avatar.isConnected) { const image = node('img'); image.src = url; image.alt = ''; image.loading = 'lazy'; avatar.replaceChildren(image); } }).catch(() => {});
   const nameLine = node('span', '', 'participant-name-line'); nameLine.append(node('span', name, 'participant-name'));
@@ -110,7 +110,7 @@ export default function TournamentPage() {
       if (t.roomClosed || roomIsClosed(t)) {
         closeChat(); container.replaceChildren(); const closed = node('section', '', 'tournament-panel room-closed');
         closed.append(node('h1', 'La sala está cerrada'), node('p', t.name || 'Torneo finalizado'), node('p', 'Pasaron los cinco minutos posteriores al resultado. La sala y el chat ya no están disponibles. Tu participación se conserva en el historial.'));
-        const history = node('a', 'Ir a mi historial ↗', 'primary-button'); history.href = '/react/perfil'; closed.append(history); container.append(closed); setPhase('closed'); return;
+        const history = node('a', 'Ir a mi historial ↗', 'primary-button react-history-link'); history.href = '/perfil'; closed.append(history); container.append(closed); setPhase('closed'); return;
       }
       const winnerJustRecorded = Boolean(t.winnerProfileId && currentTournament?.id === t.id && !currentTournament.winnerProfileId);
       currentTournament = t;

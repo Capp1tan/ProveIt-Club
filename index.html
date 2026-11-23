@@ -1,164 +1,29 @@
 <!doctype html>
 <html lang="es">
-<head>
-  <script src="/theme-init.js"></script>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#101310">
-  <meta name="description" content="Organizá torneos de videojuegos, deportes y juegos de mesa. Invitá a tus rivales, armá desafíos y seguí tus ligas y logros en ProveIt Club.">
-  <meta name="robots" content="index, follow, max-image-preview:large">
-  <link rel="canonical" href="https://proveitclub.win/">
-  <meta property="og:site_name" content="ProveIt Club">
-  <meta property="og:type" content="website">
-  <meta property="og:locale" content="es_AR">
-  <meta property="og:url" content="https://proveitclub.win/">
-  <meta property="og:title" content="ProveIt Club | Torneos y desafíos entre amigos">
-  <meta property="og:description" content="Poné las reglas, invitá a tus rivales y armá el desafío. Torneos de videojuegos, deportes y juegos de mesa.">
-  <meta property="og:image" content="https://proveitclub.win/carousel/padel-1600.webp">
-  <meta property="og:image:alt" content="Un partido de pádel entre amigos en una cancha bajo techo">
-  <meta name="twitter:card" content="summary_large_image">
-  <script type="application/ld+json">
-    {"@context":"https://schema.org","@type":"WebSite","@id":"https://proveitclub.win/#website","url":"https://proveitclub.win/","name":"ProveIt Club","alternateName":["ProveIt","Prove.it Club","prove.it"],"description":"Torneos y desafíos de videojuegos, deportes y juegos de mesa entre amigos.","inLanguage":"es-AR"}
-  </script>
-  <title>ProveIt Club | Torneos y desafíos entre amigos</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <!-- Las fuentes no bloquean el primer dibujo; el texto aparece con la fuente de respaldo. -->
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
-  <noscript><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet"></noscript>
-  <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="visual-theme.css">
-  <link rel="stylesheet" href="profile.css">
-
-  <!-- Carga inicial: independiente de Amplify; nunca bloquea indefinidamente. -->
-  <style>
-    #siteLoader{display:none}html[data-site-loading] #siteLoader{display:grid}
-    html[data-site-loading]{overflow:hidden}html[data-site-loading] :is(body>header,body>main,body>footer){visibility:hidden}
-    #siteLoader{position:fixed;inset:0;z-index:10000;place-items:center;background:#101310;color:#edf2e8;font:14px system-ui,sans-serif;transition:opacity .18s ease}
-    #siteLoader.leaving{opacity:0;pointer-events:none}.loader-content{text-align:center;padding:24px}.loader-brand{font-size:30px;font-weight:700;letter-spacing:-1px}.loader-brand span{color:#c1f36b}.loader-brand small{display:block;font-size:10px;letter-spacing:4px;color:#a1aa99;margin-top:5px}
-    .loader-track{width:120px;height:2px;background:#293021;margin:25px auto 18px;overflow:hidden;border-radius:4px}.loader-track:after{content:'';display:block;width:45%;height:100%;background:#c1f36b;animation:loaderSweep 1.3s ease-in-out infinite}.loader-copy{color:#a1aa99;font-size:12px;letter-spacing:.3px}.loader-skip{margin-top:18px;border:1px solid #445039;border-radius:20px;background:transparent;color:#dce6d2;padding:9px 15px;cursor:pointer}.loader-skip:focus-visible{outline:2px solid #c1f36b;outline-offset:4px}
-    @keyframes loaderSweep{from{transform:translateX(-110%)}to{transform:translateX(330%)}}
-    @media(prefers-reduced-motion:reduce){#siteLoader{transition:none}.loader-track:after{animation:none;width:100%;opacity:.6}}
-  </style>
-  <script>
-    // Se oculta al terminar sesión + contenido; 10 s es el límite de seguridad.
-    (()=>{
-      const root=document.documentElement;
-      // El inicio es público: no ocultar su contenido esperando Cognito.
-      if(['/','/index.html'].includes(location.pathname)){window.proveitLoadingDone=()=>{};return;}
-      const pending=new Set(['account']);
-      if(!['/','/index.html'].includes(location.pathname))pending.add('page');
-      root.setAttribute('data-site-loading','');
-      let finished=false,slowTimer,deadline;
-      const finish=()=>{
-        if(finished)return;finished=true;clearTimeout(slowTimer);clearTimeout(deadline);
-        const overlay=document.getElementById('siteLoader');
-        // Mantener la capa durante el fundido mientras aparece el contenido.
-        if(overlay){overlay.style.display='grid';overlay.classList.add('leaving');}
-        root.removeAttribute('data-site-loading');
-        document.querySelector('main')?.removeAttribute('aria-busy');
-        setTimeout(()=>overlay?.remove(),200);
-      };
-      window.proveitLoadingDone=part=>{pending.delete(part);if(!pending.size)finish();};
-      document.addEventListener('DOMContentLoaded',()=>{
-        if(finished){document.getElementById('siteLoader')?.remove();return;}
-        document.querySelector('main')?.setAttribute('aria-busy','true');
-        const skip=document.getElementById('loaderSkip');skip?.addEventListener('click',finish);
-        slowTimer=setTimeout(()=>{if(skip)skip.hidden=false;const text=document.getElementById('loaderCopy');if(text)text.textContent='La conexión está tardando un poco…';},4000);
-      },{once:true});
-      deadline=setTimeout(finish,10000);
-      window.addEventListener('pageshow',event=>{if(event.persisted)finish();});
-    })();
-  </script>
-  <link rel="stylesheet" href="site-theme.css">
-</head>
-<body class="proveit-theme home-integrated">
-  <div id="siteLoader" role="status" aria-live="polite" aria-label="Cargando Prove.it Club"><div class="loader-content"><div class="loader-brand" aria-hidden="true">prove<span>.</span>it<small>CLUB</small></div><div class="loader-track" aria-hidden="true"></div><div class="loader-copy" id="loaderCopy">Preparando el desafío…</div><button class="loader-skip" id="loaderSkip" type="button" hidden>Entrar ahora</button></div></div>
-  <!-- Barra superior: logo vuelve al inicio; lupa abre el buscador; el botón muestra el acceso de demostración. -->
-  <header class="topbar">
-    <a class="brand" href="index.html" aria-label="Prove.it Club, inicio"><span>prove<span class="brand-dot">.</span>it<span class="brand-club">CLUB</span></span></a>
-    <nav class="top-actions" aria-label="Navegación principal"><a class="back-link" href="torneos.html">Torneos</a>
-      <button class="icon-button" id="searchToggle" aria-label="Buscar torneos" title="Buscar torneos">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 5 5"></path></svg>
-      </button>
-      <a class="profile-avatar-link" data-profile-link href="/perfil.html" aria-label="Ir a mi perfil" title="Mi perfil" hidden></a>
-      <button class="login-button" data-login hidden>Ingresar <span aria-hidden="true">↗</span></button>
-    </nav>
-  </header>
-
-  <!-- Buscador desplegable. La demo filtra torneos de ejemplo definidos en app.js. -->
-  <section class="search-panel" id="searchPanel" hidden>
-    <label for="tournamentSearch">BUSCAR TORNEOS</label>
-    <div class="search-input-wrap"><span aria-hidden="true">⌕</span><input id="tournamentSearch" type="search" autocomplete="off" placeholder="Probá con LoL, fútbol, trivia…"><button id="closeSearch" aria-label="Cerrar búsqueda">×</button></div>
-    <div class="search-history-actions"><button type="button" id="clearRecentSearches">Borrar búsquedas recientes</button><button type="button" id="resetSearchSuggestions">Restablecer sugerencias ocultas</button></div>
-    <div id="recentSearches" class="search-recent"></div>
-    <div id="searchResults" class="search-results"><p class="muted">Escribí para explorar los torneos.</p></div>
-  </section>
-
-  <main>
-    <!-- Inicio integrado: texto aquí, fotos en public/carousel; difuminado adaptable al tema en home-carousel.css. -->
-    <section class="home-carousel" id="explore" data-home-carousel aria-label="Desafíos entre amigos" aria-roledescription="carrusel">
-      <div class="home-carousel-stage">
-        <div class="home-carousel-copy">
-          <h1>Decirlo es fácil,<br><span>demostralo.</span></h1>
-          <p>Poné las reglas, invitá a tus rivales y armá el desafío.</p>
-          <a class="primary-button" href="crear-torneo.html">Crear torneo <span aria-hidden="true">↗</span></a>
-        </div>
-        <div class="home-carousel-visual">
-          <picture class="home-carousel-slide is-active" data-carousel-slide="Pádel" aria-hidden="false"><img src="/carousel/padel-1600.webp" srcset="/carousel/padel-800.webp 800w, /carousel/padel-1600.webp 1600w" sizes="(max-width:760px) 100vw, 74vw" width="1600" height="900" alt="Cuatro adultos jugando un partido de pádel en una cancha de vidrio bajo techo." fetchpriority="high" loading="eager" decoding="async"></picture>
-          <picture class="home-carousel-slide" data-carousel-slide="Videojuegos" aria-hidden="true"><img src="/carousel/shooter-1600.webp" srcset="/carousel/shooter-800.webp 800w, /carousel/shooter-1600.webp 1600w" sizes="(max-width:760px) 100vw, 74vw" width="1600" height="900" alt="Un jugador disfrutando un shooter en su computadora desde casa." loading="lazy" decoding="async"></picture>
-          <picture class="home-carousel-slide" data-carousel-slide="Cartas entre amigos" aria-hidden="true"><img src="/carousel/cartas-1600.webp" srcset="/carousel/cartas-800.webp 800w, /carousel/cartas-1600.webp 1600w" sizes="(max-width:760px) 100vw, 74vw" width="1600" height="900" alt="Cuatro amigos jugando cartas en casa con un mate pequeño sobre la mesa." loading="lazy" decoding="async"></picture>
-        </div>
-
-      </div>
-      <p class="home-carousel-status" data-carousel-status role="status" aria-live="polite"></p>
-    </section>
-    <section class="home-community" data-home-community aria-label="Actividad y campeones del club">
-      <section class="community-ticker" data-activity-ticker aria-label="Últimas novedades" hidden></section>
-      <section aria-labelledby="hallTitle">
-        <h2 class="hall-heading" id="hallTitle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M8 3h8v7a4 4 0 0 1-8 0ZM8 5H4v3a4 4 0 0 0 4 4m8-7h4v3a4 4 0 0 1-4 4M12 14v6m-5 1h10"/></svg>Salón de la fama</h2>
-        <div class="hall-champion hall-empty" data-hall-card><p>Cargando al último campeón…</p></div>
-      </section>
-    </section>
-    <!-- Presentación del recorrido. No son premios garantizados ni dinero custodiado. -->
-    <section class="club-reasons" aria-labelledby="reasonsTitle">
-      <div class="reasons-heading"><p class="eyebrow">QUE TU PRÓXIMA VICTORIA CUENTE</p><h2 id="reasonsTitle">Competí por algo.<br><span>Ganate tu lugar.</span></h2><p>Un premio que te motive. Rivales que te exijan. Un recorrido que se vea en tu perfil.</p></div>
-      <div class="reasons-grid"><article><span class="reason-number">01 / EL DESAFÍO</span><h3>Algo está en juego.</h3><p>Una cena, un regalo, dinero o lo que acuerden. Cada torneo muestra su premio confirmado y quién lo entrega.</p><a href="crear-torneo.html">Armá tu desafío ↗</a></article><article><span class="reason-number">02 / TU RECORRIDO</span><h3>No alcanza con decirlo.</h3><p>Empezás sin liga. Completá competencias válidas, sumá experiencia y desbloqueá logros. Los primeros pasos son accesibles; llegar arriba exige constancia.</p><a href="perfil.html">Ver mi progreso ↗</a></article><article><span class="reason-number">03 / EL CLUB</span><h3>Que se reconozca.</h3><p>Tus participaciones, victorias y logros quedan en tu perfil. Las recompensas especiales del club se anunciarán con sus metas y disponibilidad cuando estén confirmadas.</p></article></div>
-      <div class="home-leagues"><div><p class="eyebrow">DE PRINCIPIANTE A LEYENDA</p><h3>Subir cuesta.<br>Llegar se nota.</h3><p>Ocho ligas. Un recorrido que se gana compitiendo.</p></div><div class="league-teasers"><figure><span class="home-league-symbol" style="--x:0%;--y:0%"></span><figcaption>Pañal con caca<small>El primer paso · 25 XP</small></figcaption></figure><figure><span class="home-league-symbol" style="--x:100%;--y:0%"></span><figcaption>Cobre<small>350 XP</small></figcaption></figure><figure><span class="home-league-symbol" style="--x:66.666%;--y:100%"></span><figcaption>Obsidiana<small>6.000 XP</small></figcaption></figure><figure><span class="home-league-symbol" style="--x:100%;--y:100%"></span><figcaption>Leyenda<small>15.000 XP</small></figcaption></figure></div></div>
-    </section>
-    <section class="club-sponsors" aria-labelledby="sponsorsTitle"><p class="eyebrow" id="sponsorsTitle">MARCAS QUE ACOMPAÑAN AL CLUB</p><div class="sponsor-pair"><figure><img src="/sponsors/black-line.png" alt="Black Line" loading="lazy" width="350" height="220"></figure><figure><img src="/sponsors/mila-express.png" alt="Mila Express" loading="lazy" width="350" height="220"></figure></div></section>
-  </main>
-
-  <footer class="club-footer"><a class="brand" href="/index.html" aria-label="ProveIt Club, inicio">prove<span class="brand-dot">.</span>it <small>CLUB</small></a><p>Decirlo es fácil, demostralo.</p><div><a href="mailto:leorivero744@gmail.com">Contacto ↗</a><a href="mailto:leorivero744@gmail.com?subject=Sugerencia%20para%20ProveIt">Sugerir un cambio ↗</a><span>Redes del club · próximamente</span></div><small>ProveIt Club · Competencias entre personas. Los premios y sus responsables se informan en cada torneo.</small></footer>
-  <!-- Modal de acceso. Los controles de auth-ui.js se conectan con Cognito cuando Amplify está configurado. -->
-  <div class="modal-backdrop" id="loginModal" hidden>
-    <section class="login-modal" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
-      <button class="modal-close" id="closeLogin" aria-label="Cerrar">×</button>
-      <div class="modal-brand"><span class="brand-mark"><i></i><i></i><i></i></span><span>prove<span class="brand-dot">.</span>it</span></div>
-      <p class="eyebrow">TU PRÓXIMO PIQUE TE ESPERA</p>
-      <h2 id="loginTitle">Entrá al club.</h2>
-      <p class="modal-copy">Guardá tus torneos, anotate a desafíos y seguí tus resultados.</p>
-      <button class="auth-option" data-auth-google><span class="google-g">G</span> Continuar con Google</button>
-      <button class="auth-option email-option" data-auth-email>✉ <span>Continuar con email</span></button>
-      <form class="auth-form" data-auth-form hidden>
-        <div class="auth-tabs"><button type="button" data-auth-mode="signin" class="active">Ingresar</button><button type="button" data-auth-mode="signup">Crear cuenta</button></div>
-        <label>Email<input name="email" type="email" autocomplete="email" required maxlength="254" placeholder="vos@ejemplo.com"></label>
-        <label data-password-label>Contraseña<input name="password" type="password" autocomplete="current-password" minlength="8" required placeholder="Mínimo 8 caracteres"></label>
-        <label data-code-label hidden>Código de verificación<input name="code" inputmode="numeric" autocomplete="one-time-code" placeholder="El código que te llegó por email"></label>
-        <label data-new-password-label hidden>Nueva contraseña<input name="newPassword" type="password" minlength="8" autocomplete="new-password" placeholder="Mínimo 8 caracteres"></label>
-        <button class="auth-option auth-submit" type="submit">Ingresar con email</button>
-        <button class="auth-text-button" type="button" data-auth-reset>Olvidé mi contraseña</button>
-      </form>
-      <p class="auth-message" data-auth-message role="status" aria-live="polite" hidden></p>
-      <p class="fine-print" data-auth-hint>El backend todavía debe conectarse desde AWS Amplify.</p>
-    </section>
-  </div>
-  <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script type="module" src="/app.js"></script>
-  <script type="module" src="/src/home-carousel.js"></script>
-  <script type="module" src="/src/home-activity.js"></script>
-  <script type="module" src="/src/auth-ui.js"></script>
-</body>
+  <head>
+    <script src="/theme-init.js"></script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#111521" />
+    <meta name="description" content="Organizá torneos de videojuegos, deportes y juegos de mesa. Invitá a tus rivales, armá desafíos y seguí tus ligas y logros en ProveIt Club." />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <link rel="canonical" href="https://proveitclub.win/" />
+    <meta property="og:site_name" content="ProveIt Club" />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="es_AR" />
+    <meta property="og:url" content="https://proveitclub.win/" />
+    <meta property="og:title" content="ProveIt Club | Torneos y desafíos entre amigos" />
+    <meta property="og:description" content="Poné las reglas, invitá a tus rivales y armá el desafío. Torneos de videojuegos, deportes y juegos de mesa." />
+    <meta property="og:image" content="https://proveitclub.win/carousel/padel-1600.webp" />
+    <meta property="og:image:alt" content="Un partido de pádel entre amigos en una cancha bajo techo" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <script type="application/ld+json">
+      {"@context":"https://schema.org","@type":"WebSite","@id":"https://proveitclub.win/#website","url":"https://proveitclub.win/","name":"ProveIt Club","alternateName":["ProveIt","Prove.it Club","prove.it"],"description":"Torneos y desafíos de videojuegos, deportes y juegos de mesa entre amigos.","inLanguage":"es-AR"}
+    </script>
+    <title>ProveIt Club | Torneos y desafíos entre amigos</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/react-app/main.jsx"></script>
+  </body>
 </html>
-
-

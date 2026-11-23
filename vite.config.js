@@ -1,31 +1,51 @@
 import { defineConfig } from 'vite';
 
-function reactRouteFallback() {
-  const rewrite = (req, _res, next) => {
-    if (typeof req.url === 'string') {
-      const parsed = new URL(req.url, 'http://vite.local');
-      if ((parsed.pathname === '/react' || parsed.pathname.startsWith('/react/')) && !/\.[^/]+$/.test(parsed.pathname)) {
-        req.url = `/react/index.html${parsed.search}`;
-      }
+const legacyPaths = new Map([
+  ['/index.html', '/'],
+  ['/crear-torneo.html', '/crear-torneo'],
+  ['/simular-torneo.html', '/crear-torneo'],
+  ['/perfil.html', '/perfil'],
+  ['/torneo.html', '/torneo'],
+  ['/torneos.html', '/torneos'],
+  ['/pago.html', '/pago'],
+  ['/amigos.html', '/amigos'],
+  ['/admin.html', '/admin'],
+]);
+
+function appRouteFallback() {
+  const rewrite = (req, res, next) => {
+    if (typeof req.url !== 'string') return next();
+    const parsed = new URL(req.url, 'http://vite.local');
+    let destination = legacyPaths.get(parsed.pathname);
+    if (parsed.pathname === '/react') destination = '/';
+    else if (parsed.pathname.startsWith('/react/')) destination = parsed.pathname.slice('/react'.length) || '/';
+
+    if (destination) {
+      res.writeHead(301, { Location: `${destination}${parsed.search}` });
+      res.end();
+      return;
+    }
+    if (parsed.pathname !== '/index.html' && !/\.[^/]+$/.test(parsed.pathname)) {
+      req.url = `/index.html${parsed.search}`;
     }
     next();
   };
   return {
-    name: 'react-route-fallback',
+    name: 'app-route-fallback',
     configureServer(server) { server.middlewares.use(rewrite); },
     configurePreviewServer(server) { server.middlewares.use(rewrite); },
   };
 }
 
-// Entradas HTML del sitio: inicio, cuenta y gestión de torneos.
+// Una sola entrada HTML: React vive en la raíz del dominio.
 export default defineConfig({
-  plugins: [reactRouteFallback()],
+  plugins: [appRouteFallback()],
   esbuild: {
     jsx: 'automatic',
   },
   build: {
     rollupOptions: {
-      input: ['index.html', 'crear-torneo.html', 'simular-torneo.html', 'perfil.html', 'torneo.html', 'torneos.html', 'pago.html', 'amigos.html', 'admin.html', 'react/index.html'],
+      input: ['index.html'],
     },
   },
 });
