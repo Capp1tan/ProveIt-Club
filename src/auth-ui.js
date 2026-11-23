@@ -4,6 +4,7 @@ import {mountPhoneCountry} from './phone-country.js';
 import {mountAccountMenu} from './header-ui.js';
 // Acceso y estado de cuenta en la navegación.
 import { Hub } from 'aws-amplify/utils';
+import { authErrorMessage, isValidAccountEmail } from './auth-errors.js';
 import { loadBadges, decorateAvatar } from './badges.js';
 import {
   fetchUserAttributes,
@@ -33,6 +34,8 @@ const message = modal?.querySelector('[data-auth-message]');
 const hint = modal?.querySelector('[data-auth-hint]');
 const submit = form?.querySelector('.auth-submit');
 const email = form?.elements.email;
+email?.addEventListener('input',()=>email.setCustomValidity(''));
+email?.addEventListener('invalid',()=>email.setCustomValidity(!email.value.trim()?'Ingresá tu correo electrónico.':isValidAccountEmail(email.value)?'':'Revisá el correo: escribí una dirección válida, por ejemplo nombre@gmail.com.'));
 // Se pide identidad de club al inicio; la unicidad definitiva se reserva en AWS.
 let signupPhone,signupFields;
 if(form){
@@ -41,7 +44,7 @@ if(form){
  form.querySelector('[data-password-label]').after(signupFields);signupPhone=mountPhoneCountry(signupFields);countrySelect(form.elements.signupCountry);
  const resend=document.createElement('button');resend.type='button';resend.className='auth-text-button';resend.textContent='Reenviar código de verificación';resend.dataset.authResend='';resend.hidden=true;form.append(resend);
  const back=document.createElement('button');back.type='button';back.className='auth-text-button';back.textContent='Volver a ingresar';back.dataset.authBack='';back.hidden=true;back.addEventListener('click',()=>setMode('signin'));form.append(back);
- resend.addEventListener('click',async()=>{resend.disabled=true;try{await resendSignUpCode({username:email.value.trim().toLowerCase()});showMessage('Si el registro está pendiente, te llegará un nuevo código por correo.');}catch(e){showMessage(e.message || 'No pudimos reenviar el código.',true);}finally{resend.disabled=false;}});
+ resend.addEventListener('click',async()=>{resend.disabled=true;try{await resendSignUpCode({username:email.value.trim().toLowerCase()});showMessage('Si el registro está pendiente, te llegará un nuevo código por correo. Revisá también spam y promociones.');}catch(e){showMessage(authErrorMessage(e,'signup'),true);}finally{resend.disabled=false;}});
 }
 let backendReady = false;
 let accountEpoch=0;
@@ -216,7 +219,7 @@ googleButton?.addEventListener('click', async () => {
     }
     await signInWithRedirect({ provider: 'Google' });
   }
-  catch (error) { showMessage(error.message || 'No se pudo iniciar sesión con Google.', true); }
+  catch (error) { showMessage(authErrorMessage(error), true); }
 });
 
 form?.addEventListener('submit', async event => {
@@ -224,6 +227,7 @@ form?.addEventListener('submit', async event => {
   clearMessage();
   if (!await backendInitialization) return showMessage('El sitio todavía no recibió la configuración de Amplify. Primero hay que desplegar el backend en AWS.', true);
   const emailValue = email.value.trim().toLowerCase();
+  if (!isValidAccountEmail(emailValue)) { showMessage('Revisá el correo: escribí una dirección válida, por ejemplo nombre@gmail.com.', true); return; }
   const passwordValue = form.elements.password.value;
   submit.disabled = true;
   try {
@@ -232,7 +236,7 @@ form?.addEventListener('submit', async event => {
       const result = await signUp({ username: emailValue, password: passwordValue, options: { userAttributes: { email: emailValue, nickname:form.elements.signupNickname.value.trim(),phone_number:signupPhone.value() } } });
       if (result.nextStep.signUpStep === 'CONFIRM_SIGN_UP') {
         setStep('confirm-signup');
-        showMessage('Te enviamos un código a tu email. Ingresalo para verificar la cuenta.');
+        showMessage('Te enviamos un código a tu email. Ingresalo para verificar la cuenta y revisá también spam y promociones.');
       } else {
         showMessage('Cuenta creada. Ya podés ingresar con tu email y contraseña.');
         setMode('signin');
@@ -252,16 +256,16 @@ form?.addEventListener('submit', async event => {
       const result = await resetPassword({ username: emailValue });
       if (result.nextStep.resetPasswordStep === 'CONFIRM_RESET_PASSWORD_WITH_CODE') {
         setStep('reset-confirm');
-        showMessage('Te enviamos un código para cambiar la contraseña.');
-      } else showMessage('Seguí las instrucciones que aparecen en pantalla.');
+        showMessage('Si existe una cuenta con ese correo y puede recuperarse por email, Cognito enviará un código. Revisá también spam y promociones.');
+      } else showMessage('Si existe una cuenta con ese correo, seguí las instrucciones que aparecen en pantalla.');
     } else {
       await confirmResetPassword({ username: emailValue, confirmationCode: form.elements.code.value.trim(), newPassword: form.elements.newPassword.value });
       setMode('signin');
       showMessage('Contraseña actualizada. Ya podés ingresar.');
     }
   } catch (error) {
-    if(error.name==='UserNotConfirmedException' || (mode==='signup' && error.name==='UsernameExistsException')){setStep('confirm-signup');showMessage('Este correo ya está registrado o pendiente de verificación. Si ya lo verificaste, volvé a Ingresar; si no, podés reenviar el código.',true);}
-    else showMessage(error.message || 'No se pudo completar la operación.', true);
+    if(error.name==='UserNotConfirmedException'){setStep('confirm-signup');showMessage('La cuenta todavía está pendiente de verificación. Revisá tu correo o pedí que te reenviemos el código.',true);}
+    else showMessage(authErrorMessage(error,step==='reset-request'?'reset-request':mode==='signup'?'signup':step), true);
   } finally { submit.disabled = false; }
 });
 
@@ -269,7 +273,7 @@ form?.querySelector('[data-auth-reset]')?.addEventListener('click', () => {
   clearMessage();
   if (!email.value.trim()) return showMessage('Ingresá tu email primero y volvé a tocar “Olvidé mi contraseña”.', true);
   setStep('reset-request');
-  showMessage('Te vamos a enviar un código para restablecer la contraseña.');
+  showMessage('Si la cuenta existe y el correo está verificado, te enviaremos un código. Revisá que la dirección esté bien escrita.');
   form.requestSubmit();
 });
 

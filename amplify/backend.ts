@@ -16,9 +16,24 @@ import { social } from './functions/social/resource';
 import { Table, CfnTable, AttributeType, BillingMode } from 'aws-cdk-lib/aws-dynamodb';
 import { RemovalPolicy } from 'aws-cdk-lib';
 import { LogRetention, RetentionDays } from 'aws-cdk-lib/aws-logs';
+import { CfnUserPool } from 'aws-cdk-lib/aws-cognito';
 
 /** Recursos AWS que Amplify podrá desplegar cuando habilitemos el backend. */
 const backend = defineBackend({ auth, data, storage, createTournament, respondInvitation, clubAccount, billing, paymentWebhook, maintenance, social, adminConsole, preSignUp });
+// Mantiene un mínimo razonable, sin obligar a combinar mayúsculas, números o símbolos.
+// Amplify aplica una política más estricta por defecto, así que se fija explícitamente.
+const userPoolResource = backend.auth.resources.userPool.node.defaultChild as CfnUserPool;
+userPoolResource.policies = {
+  ...userPoolResource.policies,
+  passwordPolicy: {
+    ...userPoolResource.policies?.passwordPolicy,
+    minimumLength: 8,
+    requireLowercase: false,
+    requireUppercase: false,
+    requireNumbers: false,
+    requireSymbols: false,
+  },
+};
 // Tabla privada sin CRUD público. Sólo la función de amigos puede leerla o escribirla.
 const socialTable=new Table(backend.data.resources.graphqlApi.stack,'ClubSocial',{
   partitionKey:{name:'pk',type:AttributeType.STRING},sortKey:{name:'sk',type:AttributeType.STRING},

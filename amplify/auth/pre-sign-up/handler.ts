@@ -16,10 +16,10 @@ export const handler=async(event:Event)=>{
  do{const page=await cognito.send(new ListUsersCommand({UserPoolId:event.userPoolId,Limit:60,PaginationToken:token}));
   if(page.Users?.some(u=>u.Username!==event.userName && u.Attributes?.find(a=>a.Name==='email')?.Value?.trim().toLowerCase()===email))throw new Error('Este correo ya tiene una cuenta en ProveIt. Usá su método de ingreso original o recuperá la contraseña. Para vincular Google, contactá a administración.');token=page.PaginationToken;
  }while(token);
- // La reserva atómica cubre dos altas simultáneas (email y Google). Expira para no
- // bloquear permanentemente un correo si el alta falla antes de crear la identidad.
+ // La reserva atómica cubre altas simultáneas (email y Google). La expiración breve
+ // permite reintentar pronto si Cognito rechaza el alta después de ejecutar el trigger.
  const now=Math.floor(Date.now()/1000);
- try{await db.send(new PutCommand({TableName:process.env.REGISTRATION_TABLE_NAME!,Item:{id:'email:'+createHash('sha256').update(email).digest('hex'),claimant:event.userName,expiresAt:now+1800},ConditionExpression:'attribute_not_exists(id) OR expiresAt<:now OR claimant=:claimant',ExpressionAttributeValues:{':now':now,':claimant':event.userName}}));}
+ try{await db.send(new PutCommand({TableName:process.env.REGISTRATION_TABLE_NAME!,Item:{id:'email:'+createHash('sha256').update(email).digest('hex'),claimant:event.userName,expiresAt:now+300},ConditionExpression:'attribute_not_exists(id) OR expiresAt<:now OR claimant=:claimant',ExpressionAttributeValues:{':now':now,':claimant':event.userName}}));}
  catch(e){if((e as Error).name!=='ConditionalCheckFailedException')throw e;throw new Error('Ya hay un registro en curso con este correo. Revisá tu email o intentá recuperar el acceso.');}
  return event;
 };
