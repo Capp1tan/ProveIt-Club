@@ -18,6 +18,18 @@
   position: sticky;
   top: 0;
   z-index: 50;
+  isolation: isolate;
+  border-bottom: 0;
+  background: transparent;
+}
+.react-app > .react-topbar::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0 auto 0 50%;
+  width: 100vw;
+  transform: translateX(-50%);
+  border-bottom: 1px solid #ffffff12;
   background: color-mix(in srgb, #111521 90%, transparent);
   backdrop-filter: blur(16px);
 }
@@ -26,8 +38,9 @@ html[data-theme="light"] body {
   color: #192743;
 }
 html[data-theme="light"] .react-app { color: #192743; }
-html[data-theme="light"] .react-app > .react-topbar {
+html[data-theme="light"] .react-app > .react-topbar::before {
   background: color-mix(in srgb, #dde2e9 92%, transparent);
+  border-bottom-color: #19274320;
 }
 html[data-theme="light"] .react-topbar,
 html[data-theme="light"] .react-footer { border-color: #19274320; }
