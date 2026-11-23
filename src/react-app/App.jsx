@@ -5,6 +5,7 @@ import ThemeToggle from './theme/ThemeToggle.jsx';
 import GlobalSearch from './components/GlobalSearch.jsx';
 import NotificationsPanel from './components/NotificationsPanel.jsx';
 import { avatarUrl } from '../auth-client.js';
+import { initializeAccess } from '../badges.js';
 
 const HomePage = lazy(() => import('./pages/HomePage.jsx'));
 const DirectoryPage = lazy(() => import('./pages/DirectoryPage.jsx'));
@@ -31,6 +32,19 @@ function ProfileNavLink({ profile }) {
 
 function AppLayout() {
   const { status, profile } = useAuth();
+  const [isCreator, setIsCreator] = useState(false);
+  useEffect(() => {
+    let active = true;
+    setIsCreator(false);
+    if (status === 'signed-in') {
+      void initializeAccess().then((access) => {
+        if (active) setIsCreator(Boolean(access?.isCreator));
+      }).catch(() => {
+        if (active) setIsCreator(false);
+      });
+    }
+    return () => { active = false; };
+  }, [status]);
   useEffect(() => {
     document.body.classList.add('proveit-theme');
     let alive = true;
@@ -68,6 +82,7 @@ function AppLayout() {
           <Link className="react-nav-friends" to="/amigos">Amigos</Link>
         </nav>
         <div className="react-header-actions">
+          {isCreator && <Link className="react-nav-admin" to="/admin"><span className="admin-long">Administración</span><span className="admin-short">Admin</span></Link>}
           <GlobalSearch />
           <NotificationsPanel />
           <ThemeToggle />
