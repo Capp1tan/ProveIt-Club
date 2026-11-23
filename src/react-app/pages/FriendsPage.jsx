@@ -60,6 +60,8 @@ export default function FriendsPage() {
     return () => { clearInterval(timer); document.removeEventListener('visibilitychange', visible); };
   }, [authStatus, refresh]);
   useEffect(() => { let active = true; void loadBadges().then(() => { if (active) setBadgesVersion((v) => v + 1); }).catch(() => {}); return () => { active = false; }; }, [user?.userId]);
+
+  const peopleById = useMemo(() => new Map(profiles.map((person) => [person.id, person])), [profiles]);
   useEffect(() => {
     const target = params.get('persona');
     if (!target || !state || handledTarget.current === target) return;
@@ -75,8 +77,6 @@ export default function FriendsPage() {
     const q = query.trim().toLocaleLowerCase('es');
     return profiles.filter((person) => person.accountComplete !== false && person.id !== ownProfile?.id && person.owner?.split('::')[0] !== user?.userId && !person.owner?.startsWith(`${user?.userId}::`) && !taken.has(person.id) && q && person.nickname.toLocaleLowerCase('es').includes(q)).slice(0, 20);
   }, [profiles, query, taken, ownProfile?.id, user?.userId]);
-  const peopleById = useMemo(() => new Map(profiles.map((person) => [person.id, person])), [profiles]);
-
   function chooseTab(id) {
     setTab(id);
     const next = new URLSearchParams(params); if (id === 'friends') next.delete('tab'); else next.set('tab', id);

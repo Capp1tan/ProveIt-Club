@@ -59,4 +59,10 @@ html[data-theme="light"] .react-directory-note { color: #52637e; }
 html[data-theme="light"] .react-event-art { background: #dce2ff; }
 html[data-theme="light"] .react-payment-reminder { background: #fff7e8; }
 
-.react-topbar nav:has(.club-search-toggle) .react-nav-directory,.react-topbar nav:has(.club-search-toggle) .react-nav-friends{display:none}.react-topbar .club-search-toggle{margin-inline:4px}
+.react-topbar nav .react-nav-directory,.react-topbar nav .react-nav-friends{display:inline-flex}
+.react-topbar .club-search-toggle{display:inline-flex;align-items:center;justify-content:center;gap:8px;width:auto;min-width:42px;height:42px;padding:0 12px;border:1px solid var(--line);border-radius:10px;background:transparent;color:var(--muted);font:inherit;font-size:13px;white-space:nowrap}
+.react-topbar .club-search-toggle:hover{border-color:var(--accent);color:var(--text)}
+.react-topbar nav{min-width:0;gap:clamp(12px,1.8vw,24px)}
+.react-topbar nav .react-account-link{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:800px){.react-topbar nav .react-nav-directory,.react-topbar nav .react-nav-friends{display:none}}
+@media(max-width:520px){.react-topbar{gap:10px}.react-brand{flex:none;gap:8px;font-size:18px}.react-brand .react-mark{width:34px;height:34px}.react-topbar nav{flex:1;justify-content:flex-end;gap:8px}.react-topbar nav .react-account-link{display:none}.react-topbar nav .react-nav-cta{flex:none;padding:10px 11px;font-size:0;white-space:nowrap}.react-topbar nav .react-nav-cta span{font-size:17px}.react-topbar .club-search-toggle{width:40px;min-width:40px;padding:8px;flex:none}.react-topbar .club-search-toggle span{display:none}.react-theme-toggle{width:36px;height:36px;flex:none}}
