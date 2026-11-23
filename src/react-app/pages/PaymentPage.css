@@ -1,0 +1,17 @@
+.react-payment-page { display: grid; min-height: 68vh; place-items: start center; padding: 48px 20px 82px; }
+.react-payment-card { width: min(100%, 670px); padding: clamp(24px, 4vw, 40px); border: 1px solid var(--line); border-radius: 22px; background: var(--surface); box-shadow: 0 22px 70px #00000018; }
+.react-payment-card h1 { margin: 8px 0; font-size: clamp(30px, 5vw, 42px); letter-spacing: -1.5px; }
+.react-payment-card h2 { margin: 20px 0 6px; }
+.react-payment-card>p:not(.react-eyebrow):not(.react-payment-amount):not(.react-payment-error) { color: var(--muted); line-height: 1.6; }
+.react-payment-amount { margin: 10px 0 20px; color: #aeb3ff; font-size: 27px; font-weight: 700; }
+.react-payment-checkout { display: grid; justify-items: center; gap: 12px; margin: 27px 0 10px; padding: 24px 14px; border: 1px solid var(--line); border-radius: 17px; background: var(--background); text-align: center; }
+.react-payment-qr { display: block; width: 260px; height: 260px; max-width: 100%; border-radius: 10px; background: #fff; }
+.react-payment-checkout>p,.react-payment-card>small { color: var(--muted); font-size: 12px; }
+.react-payment-danger { margin-top: 14px; padding: 10px 13px; border: 1px solid #e4706a80; border-radius: 9px; background: transparent; color: #ed8982; font: inherit; cursor: pointer; }
+.react-payment-danger:disabled { opacity: .6; cursor: progress; }
+.react-payment-error { padding: 11px 13px; border: 1px solid #e4706a66; border-radius: 10px; background: #e4706a0c; color: #f0988f; }
+.react-payment-footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--line); }
+.react-payment-footer a,.react-payment-footer button { border: 0; background: transparent; color: var(--muted); font: inherit; text-decoration: none; cursor: pointer; }
+.react-payment-footer a:hover,.react-payment-footer button:hover { color: var(--text); }
+html[data-theme="light"] .react-payment-card { box-shadow: 0 20px 55px #27375110; }
+@media(max-width:560px) { .react-payment-page { padding: 25px 12px 50px; } .react-payment-card { padding: 21px 15px; border-radius: 17px; } .react-payment-checkout { padding: 17px 10px; } }

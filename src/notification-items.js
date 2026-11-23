@@ -7,5 +7,5 @@ export function notificationItems(invitations=[],feed={}){
  :judge&&player?'Te invitaron a competir y ser juez en «'+i.tournamentName+'».':judge?'Te invitaron como juez a «'+i.tournamentName+'».':'Te invitaron a «'+i.tournamentName+'».',href:'/torneo.html?id='+encodeURIComponent(i.tournamentId),icon:judge?'judge':'tournament'});}
  const requests=new Set();for(const p of feed.friendRequests || []){if(!p.profileId || requests.has(p.profileId))continue;requests.add(p.profileId);items.push({id:'friend:'+p.profileId,text:(p.nickname || 'Una persona')+' te envió una solicitud de amistad.',href:'/amigos.html',profileId:p.profileId,avatarPath:p.avatarPath,icon:'friend'});}
  for(const n of feed.announcements || []){if(!n.id || (!n.title && !n.message))continue;let href=null;try{const u=new URL(n.href,'https://proveitclub.win');if(n.href && u.origin==='https://proveitclub.win' && !u.username && !u.password)href=u.pathname+u.search+u.hash;}catch{}items.push({id:'notice:'+n.id,text:[n.title,n.message].filter(Boolean).join(' · '),href,icon:'site'});}
- return items.slice(0,60);
+ return items.slice(0,60).map(item=>({...item,href:item.href?.replace('/torneo.html','/react/torneo').replace('/amigos.html','/react/amigos')}));
 }

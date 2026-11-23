@@ -65,7 +65,7 @@ export async function respondInvitation(invitationId, accept, acceptOrganizerDec
     const payment=resultData(await client.mutations.prepareTournamentEntryPayment({invitationId,acceptOrganizerDecision,acceptTerms,termsVersion}));
     if(!payment?.id)throw new Error('No pudimos preparar tu inscripción.');
     if(payment.status==='APPROVED')response=await client.mutations.answerTournamentInvitation(values);
-    else{location.href='/pago.html?id='+encodeURIComponent(payment.id);return {id:invitationId,paymentRequired:true,status:'PENDING'};}
+      else{location.href=(location.pathname.startsWith('/react')?'/react/pago':'/pago.html')+'?id='+encodeURIComponent(payment.id);return {id:invitationId,paymentRequired:true,status:'PENDING'};}
   }
   const result=resultData(response);
   if (!result?.id) throw new Error('No se pudo confirmar la respuesta. Actualizá para revisar su estado.');return result;

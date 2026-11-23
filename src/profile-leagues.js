@@ -6,6 +6,7 @@ import '../leagues.css';
 
 const node=(tag,text='',cls='')=>{const el=document.createElement(tag);el.textContent=text;if(cls)el.className=cls;return el;};
 const date=value=>new Intl.DateTimeFormat('es',{day:'numeric',month:'short',year:'numeric'}).format(new Date(value));
+const clubPath=(legacy)=>location.pathname.startsWith('/react')?legacy.replace('/torneos.html','/react/torneos').replace('/torneo.html','/react/torneo'):legacy;
 
 // El encabezado usa exclusivamente el perfil ya filtrado por el servidor.
 export function profileIdentity(profile){
@@ -49,7 +50,7 @@ export function profileProgress(profile,{own=false}={}){
    const experience=node('div','','league-experience');
    if(!data.rank){
     experience.append(node('p','Competí para desbloquear ligas y recompensas.'),node('small','Completá tu primer torneo válido para obtener tu primera liga. Los logros son la primera recompensa; los premios reales se anunciarán por separado.'));
-    const explore=node('a','Buscar torneos ↗','league-action');explore.href='/torneos.html';experience.append(explore);
+    const explore=node('a','Buscar torneos ↗','league-action');explore.href=clubPath('/torneos.html');experience.append(explore);
    }else{
     experience.append(node('h3','Experiencia'));
     const meter=node('progress');meter.max=data.nextMinimum || Math.max(1,data.xp);meter.value=data.xp;meter.setAttribute('aria-label','Experiencia acumulada');
@@ -62,7 +63,7 @@ export function profileProgress(profile,{own=false}={}){
     const labels=node('div','','league-history-labels');labels.setAttribute('aria-hidden','true');labels.append(node('span','TORNEO'),node('span','FECHA'),node('span','RESULTADO'));history.append(labels);
     const list=node('ul','','league-event-list');
     for(const event of data.history){const li=node('li'),closed=event.roomClosed || (event.roomClosesAt && Date.now()>=event.roomClosesAt),link=node(closed?'article':'a','','league-event');
-     if(!closed)link.href='/torneo.html?id='+encodeURIComponent(event.id);
+     if(!closed)link.href=clubPath('/torneo.html')+'?id='+encodeURIComponent(event.id);
      const identity=node('div','','league-event-identity'),image=node('img');image.className='league-event-image';image.loading='lazy';image.decoding='async';image.width=112;image.height=68;
      const fallback='/tournaments/'+(event.status==='COMPLETED'?'trophy':'arena')+'.svg';image.src=event.coverUrl || fallback;image.alt=event.coverUrl?'Portada de '+event.name:'';image.addEventListener('error',()=>{image.src=fallback;image.alt='';},{once:true});
      const copy=node('div');copy.append(node('strong',event.name),node('small',event.activity+' · '+event.role));if(closed)copy.append(node('small','Sala cerrada','league-room-closed'));identity.append(image,copy);
@@ -72,7 +73,7 @@ export function profileProgress(profile,{own=false}={}){
      li.append(link);
      if(own && closed && event.canCommentOnJudge){
       const comment=node('a','Comentar al juez','league-action');
-      comment.href='/torneo.html?id='+encodeURIComponent(event.id);
+      comment.href=clubPath('/torneo.html')+'?id='+encodeURIComponent(event.id);
       li.append(comment);
      }
      list.append(li);

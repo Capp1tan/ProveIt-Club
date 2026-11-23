@@ -1,0 +1,111 @@
+.react-create-shell { width: min(1180px, calc(100% - 48px)); margin: 42px auto 76px; flex: 1; }
+.react-create-surface { padding: clamp(20px, 4vw, 44px); border: 1px solid var(--line); border-radius: 20px; background: #191f2e; color: #edf1f8; box-shadow: 0 18px 60px #0002; }
+.react-create-header { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--line); }
+.react-create-header h1 { margin: 6px 0 0; font-size: clamp(32px, 4vw, 46px); letter-spacing: -1.8px; }
+.react-create-header h1:focus { outline: none; }
+.react-save-state { border: 1px solid var(--line); border-radius: 99px; padding: 7px 11px; color: #aeb7ca; font-size: 11px; }
+.react-create-steps { display: flex; gap: 24px; margin: 0; padding: 22px 0; border-bottom: 1px solid var(--line); list-style: none; }
+.react-create-steps li { display: flex; align-items: center; gap: 9px; color: #8e99af; font-size: 13px; }
+.react-create-steps li>span { display: grid; place-items: center; width: 28px; height: 28px; border: 1px solid var(--line); border-radius: 50%; font-size: 10px; }
+.react-create-steps li[aria-current=step] { color: #aeb3ff; }
+.react-create-steps li[aria-current=step]>span { border-color: #777bff; background: #777bff; color: white; }
+.react-create-steps li[data-complete=true]>span { border-color: #6ecb9a; color: #6ecb9a; }
+.react-create-stage { padding-top: 26px; animation: react-create-in .25s cubic-bezier(.2,.8,.2,1) both; }
+.react-create-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(260px, .8fr); gap: clamp(24px, 5vw, 64px); }
+.react-create-fields,.react-create-disclosure-body { display: flex; flex-direction: column; gap: 13px; }
+.react-create-fields>label,.react-create-disclosure-body>label { display: grid; gap: 7px; color: #dfe4ee; font-size: 13px; font-weight: 600; }
+.react-create-fields label b { color: #989dff; }
+.react-create-fields label small,.react-create-disclosure-body label small { color: #98a3b9; font-size: 11px; font-weight: 400; }
+.react-create-fields input:not([type=radio]),.react-create-fields textarea,.react-create-disclosure-body input:not([type=checkbox]),.react-create-disclosure-body textarea { width: 100%; min-height: 42px; padding: 10px 12px; border: 1px solid #424d63; border-radius: 10px; outline: 0; background: #121722; color: #f1f3fa; font: inherit; font-size: 14px; }
+.react-create-fields textarea { resize: vertical; }
+.react-create-fields :is(input,textarea):focus,.react-create-disclosure-body input:focus { border-color: #8388ff; box-shadow: 0 0 0 3px #777bff25; }
+.react-create-fields :is(input,textarea)::placeholder,.react-create-disclosure-body input::placeholder { color: #7f8aa1; }
+.react-create-choice { margin: 5px 0 0; padding: 0; border: 0; }
+.react-create-choice legend { margin-bottom: 9px; color: #dfe4ee; font-size: 13px; font-weight: 600; }
+.react-create-choice>div { display: flex; gap: 9px; }
+.react-create-choice label { position: relative; display: inline-flex; cursor: pointer; }
+.react-create-choice input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.react-create-choice label>span { min-width: 82px; padding: 10px 15px; border: 1px solid #424d63; border-radius: 10px; color: #bfc8d8; text-align: center; font-size: 12px; }
+.react-create-choice label.is-selected>span { border-color: #8388ff; background: #777bff21; color: #dfe2ff; }
+.react-create-choice input:focus-visible+span { outline: 2px solid #878bff; outline-offset: 3px; }
+.react-create-poster-area { align-self: start; }
+.react-create-poster-area>label { display: block; margin-bottom: 9px; color: #dfe4ee; font-size: 13px; font-weight: 600; }
+.react-create-poster-area>label small { color: #98a3b9; font-weight: 400; }
+.react-create-poster { position: relative; display: block; width: min(100%, 375px); margin: 0 auto; padding: 0; aspect-ratio: 9/16; overflow: hidden; border: 1px solid #424d63; border-radius: 15px; background: linear-gradient(145deg,#242c43,#111521); color: inherit; text-align: left; cursor: pointer; }
+.react-create-poster>img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.react-create-poster-gradient { position: absolute; inset: 0; background: linear-gradient(0deg,#0c1121e8 0%,transparent 60%); }
+.react-create-poster-caption { position: absolute; inset: auto 18px 20px; display: grid; gap: 9px; color: white; }
+.react-create-poster-caption small { width: fit-content; max-width: 100%; overflow: hidden; padding: 5px 8px; border-radius: 5px; background: #6b70f5; text-overflow: ellipsis; white-space: nowrap; font-size: 9px; letter-spacing: .08em; }
+.react-create-poster-caption strong { display: -webkit-box; overflow: hidden; font-size: clamp(20px, 2.3vw, 30px); line-height: 1.1; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
+.react-create-poster-empty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 22px; color: #c4cee4; text-align: center; font-size: 12px; }
+.react-create-poster-empty>b { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid #8188ff88; border-radius: 50%; color: #aeb3ff; font-size: 20px; }
+.react-create-file-hidden { display: none!important; }
+.react-create-image-tools { display: flex; justify-content: space-between; width: min(100%,375px); margin: 10px auto 0; }
+.react-create-image-tools button,.react-create-text-button,.react-create-hint button { border: 0; background: none; color: #aeb3ff; font: inherit; font-size: 12px; cursor: pointer; }
+.react-create-poster-area>p { width: min(100%,375px); margin: 9px auto 0; color: #9ba6bb; font-size: 11px; line-height: 1.5; }
+.react-create-poster-area>p b { color: #c8d0df; }
+.react-create-footer { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-top: 28px; padding-top: 22px; border-top: 1px solid var(--line); }
+.react-create-footer>a,.react-create-back { border: 0; background: transparent; color: #b7c1d2; font: inherit; font-size: 13px; text-decoration: none; cursor: pointer; }
+.react-create-footer .react-primary { margin: 0; border: 0; cursor: pointer; }
+.react-create-stage-intro { margin-bottom: 24px; }
+.react-create-stage-intro h2 { margin: 8px 0; font-size: clamp(24px,3vw,34px); letter-spacing: -1px; }
+.react-create-stage-intro h2:focus { outline: none; }
+.react-create-stage-intro>p:last-child { margin: 0; color: #aab4c7; font-size: 13px; }
+.react-create-setup { display: grid; grid-template-columns: minmax(0,1.1fr) minmax(290px,.8fr); gap: 18px; align-items: start; }
+.react-create-main-options,.react-create-side-options { display: grid; gap: 13px; min-width: 0; }
+.react-create-disclosure { min-width: 0; border: 1px solid var(--line); border-radius: 14px; background: #202638; }
+.react-create-disclosure>summary { display: flex; justify-content: space-between; gap: 14px; padding: 15px 17px; color: #e8ecf4; cursor: pointer; font-size: 13px; font-weight: 700; list-style: none; }
+.react-create-disclosure>summary::-webkit-details-marker { display: none; }
+.react-create-disclosure>summary::before { content: "›"; color: #9298ff; transform: rotate(0); transition: transform .16s ease; }
+.react-create-disclosure[open]>summary::before { transform: rotate(90deg); }
+.react-create-disclosure>summary span { margin-left: auto; color: #a5aec0; font-size: 11px; font-weight: 500; }
+.react-create-disclosure-body { padding: 0 16px 17px; }
+.react-create-disclosure-body>label { font-size: 12px; }
+.react-create-help { margin: 0; color: #9ba6bc; font-size: 11px; line-height: 1.55; }
+.react-create-selected { display: flex; flex-wrap: wrap; gap: 6px; }
+.react-create-selected button { display: inline-flex; align-items: center; gap: 7px; padding: 5px 9px 5px 5px; border: 1px solid #777bff66; border-radius: 99px; background: #777bff19; color: #e1e3ff; cursor: pointer; font: inherit; font-size: 11px; }
+.react-create-avatar { display: grid; place-items: center; flex: none; width: 32px; height: 32px; overflow: hidden; border: 1px solid #6574ff66; border-radius: 50%; background: #28345b; color: #e4e7ff; font-size: 12px; font-weight: 700; }
+.react-create-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.react-create-person-list { display: grid; max-height: 300px; overflow: auto; border-top: 1px solid var(--line); }
+.react-create-person-list>label { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 8px 4px; border-bottom: 1px solid #ffffff0d; color: #dce2ed; font-size: 12px; cursor: pointer; }
+.react-create-person-list>label.is-selected { background: #777bff12; }
+.react-create-person-list input { flex: none; accent-color: #777bff; }
+.react-create-person-list>label>span:nth-of-type(2) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.react-create-person-list>label small { flex: none; margin-left: auto; color: #9298a9; font-size: 10px; }
+.react-create-formats { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; }
+.react-create-format { display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 9px; border: 1px solid #424d63; border-radius: 11px; background: #1a2030; color: #dce2ed; text-align: left; cursor: pointer; }
+.react-create-format[aria-pressed=true] { border-color: #8287ff; background: #777bff20; }
+.react-create-format:disabled { opacity: .46; cursor: not-allowed; }
+.react-create-format>span { display: block; width: 100%; height: 60px; overflow: hidden; }
+.react-create-format .format-diagram { width: 100%; height: 60px; }
+.react-create-format b { font-size: 10px; }
+.react-create-format small { color: #e7c17b; font-size: 9px; }
+.react-create-bracket { max-width: 100%; overflow: auto; }
+.react-create-bracket:empty { display: none; }
+.react-create-side-options .react-create-disclosure[hidden] { display: none; }
+.react-create-review { padding: 16px; border: 1px solid #777bff55; border-radius: 14px; background: #777bff12; }
+.react-create-review h3 { margin: 7px 0; font-size: 18px; }
+.react-create-review>p { color: #b8c2d3; font-size: 11px; line-height: 1.5; }
+.react-create-review>.react-eyebrow { color: #aeb3ff; }
+.react-create-review small { color: #929db1; font-size: 10px; line-height: 1.5; }
+.react-create-hint { padding: 11px 13px; border: 1px solid #c79d4666; border-radius: 10px; background: #c79d4612; color: #e9cc8c; font-size: 12px; line-height: 1.5; }
+.react-create-notice { margin: 16px 0 0; padding: 12px 14px; border-radius: 10px; background: #777bff12; color: #c5c8ff; font-size: 12px; line-height: 1.5; }
+.react-create-notice.is-error { background: #ca60591a; color: #ffb2a8; }
+.react-create-sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; clip-path: inset(50%); }
+@keyframes react-create-in { from { opacity: .75; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+html[data-theme="light"] .react-create-surface { background: #e9edf2; color: #192743; box-shadow: 0 18px 60px #23334c0a; }
+html[data-theme="light"] .react-create-header,html[data-theme="light"] .react-create-steps,html[data-theme="light"] .react-create-footer { border-color: #bcc7d7; }
+html[data-theme="light"] .react-create-steps li { color: #52637e; }
+html[data-theme="light"] .react-create-fields>label,html[data-theme="light"] .react-create-choice legend,html[data-theme="light"] .react-create-poster-area>label,html[data-theme="light"] .react-create-disclosure>summary { color: #192743; }
+html[data-theme="light"] .react-create-fields input:not([type=radio]),html[data-theme="light"] .react-create-fields textarea,html[data-theme="light"] .react-create-disclosure-body input:not([type=checkbox]),html[data-theme="light"] .react-create-disclosure-body textarea { background: #f7f8fa; border-color: #bcc7d7; color: #192743; }
+html[data-theme="light"] .react-create-choice label>span,html[data-theme="light"] .react-create-format { background: #f2f4f7; border-color: #bcc7d7; color: #52637e; }
+html[data-theme="light"] .react-create-choice label.is-selected>span,html[data-theme="light"] .react-create-format[aria-pressed=true] { background: #dce2ff; border-color: #4355ff; color: #192743; }
+html[data-theme="light"] .react-create-disclosure { background: #f2f4f7; }
+html[data-theme="light"] .react-create-person-list>label { color: #192743; border-color: #19274312; }
+html[data-theme="light"] .react-create-stage-intro>p:last-child,html[data-theme="light"] .react-create-help,html[data-theme="light"] .react-create-poster-area>p,html[data-theme="light"] .react-create-review small { color: #52637e; }
+html[data-theme="light"] .react-create-review { background: #dce2ff; border-color: #bcc7d7; }
+html[data-theme="light"] .react-create-review>p { color: #52637e; }
+html[data-theme="light"] .react-create-footer>a,html[data-theme="light"] .react-create-back { color: #52637e; }
+@media(max-width:850px) { .react-create-setup,.react-create-grid { grid-template-columns: 1fr; } .react-create-poster { width: min(100%,340px); } .react-create-side-options { order: 2; } }
+@media(max-width:600px) { .react-create-shell { width: calc(100% - 24px); margin: 24px auto 46px; } .react-create-surface { padding: 18px 14px; border-radius: 15px; } .react-create-steps { gap: 12px; } .react-create-steps li { font-size: 11px; } .react-create-steps li>span { width: 25px; height: 25px; } .react-create-formats { grid-template-columns: repeat(2,minmax(0,1fr)); } .react-create-footer .react-primary { padding: 10px 12px; font-size: 12px; } }
+@media(prefers-reduced-motion:reduce) { .react-create-stage { animation: none; } .react-create-disclosure>summary::before { transition: none; } }

@@ -1,0 +1,22 @@
+.react-auth-page { display: grid; min-height: 70vh; place-items: center; padding: 48px 20px 76px; }
+.react-auth-card { width: min(100%, 490px); padding: clamp(24px, 5vw, 42px); border: 1px solid var(--line); border-radius: 22px; background: var(--surface); box-shadow: 0 24px 75px #00000020; }
+.react-auth-card h1 { margin: 8px 0; font-size: clamp(32px, 5vw, 43px); letter-spacing: -1.8px; }
+.react-auth-intro { margin: 0 0 24px; color: var(--muted); line-height: 1.6; }
+.react-auth-google { display: flex; width: 100%; min-height: 48px; align-items: center; justify-content: center; gap: 11px; border: 1px solid var(--line); border-radius: 11px; background: transparent; color: var(--text); font: inherit; cursor: pointer; }
+.react-auth-google b { color: #4285f4; font-size: 19px; }
+.react-auth-google:disabled { opacity: .65; cursor: progress; }
+.react-auth-divider { display: flex; align-items: center; gap: 12px; margin: 19px 0; color: var(--muted); font-size: 12px; }
+.react-auth-divider::before,.react-auth-divider::after { height: 1px; flex: 1; background: var(--line); content: ''; }
+.react-auth-form { display: grid; gap: 16px; }
+.react-auth-form label { display: grid; gap: 7px; color: var(--text); font-size: 13px; font-weight: 600; }
+.react-auth-form input,.react-auth-form select { width: 100%; min-height: 46px; padding: 11px 13px; border: 1px solid var(--line); border-radius: 10px; background: var(--background); color: var(--text); font: inherit; font-weight: 400; }
+.react-auth-form .react-primary { justify-content: center; width: 100%; }
+.react-auth-message { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.react-auth-message.is-error { color: #ef887d; }
+.react-auth-links { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-top: 19px; }
+.react-auth-links button,.react-auth-back { border: 0; background: transparent; color: #9da6ff; font: inherit; font-size: 13px; text-decoration: none; cursor: pointer; }
+.react-auth-back { display: inline-block; margin-top: 27px; color: var(--muted); }
+.react-auth-links button:disabled { opacity: .55; cursor: default; }
+html[data-theme="light"] .react-auth-card { box-shadow: 0 20px 60px #27375112; }
+html[data-theme="light"] .react-auth-form input,html[data-theme="light"] .react-auth-form select { background: #fff; }
+@media(max-width:500px) { .react-auth-page { min-height: 60vh; padding: 28px 12px 48px; } .react-auth-card { padding: 24px 17px; border-radius: 17px; } }

@@ -30,7 +30,7 @@ function setBusy(value){busy=value;searchButton.disabled=reload.disabled=value;p
 function jsonView(value){const wrapper=el('details'),summary=el('summary','Ver registro completo'),pre=el('pre',JSON.stringify(value,null,2),'admin-json');wrapper.append(summary,pre);return wrapper;}
 function addField(parent,label,value){const row=el('div','','admin-field');row.append(el('dt',label),el('dd',value===undefined || value===null || value===''?'Sin dato':String(value)));parent.append(row);}
 function date(v){if(!v)return 'Sin fecha';const d=new Date(v);return Number.isNaN(d.valueOf())?String(v):d.toLocaleString('es-AR');}
-function link(label,url){const a=el('a',label,'social-button');a.href=url;return a;}
+function link(label,url){const a=el('a',label,'social-button');if(location.pathname.startsWith('/react'))url=url.replace('/perfil.html?id=','/react/perfil/').replace('/torneo.html?id=','/react/torneo?id=');a.href=url;return a;}
 async function account(row){
  if(busy)return;setBusy(true);const current=epoch;detail.hidden=false;detail.replaceChildren(el('p','Cargando ficha de la cuenta…'));
  try{
