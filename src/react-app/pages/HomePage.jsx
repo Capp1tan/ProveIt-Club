@@ -120,7 +120,18 @@ export default function HomePage() {
           {[false, true].map((copy) => <ul key={String(copy)} aria-hidden={copy || undefined} inert={copy || undefined}>{activities.map((item) => <li key={item.id} data-tone={item.tone}>{item.tone === 'gold' ? <Trophy /> : <i aria-hidden="true" />}<Link to={activityRoute(item.href)} tabIndex={copy ? -1 : undefined}>{item.text}</Link></li>)}</ul>)}
         </div></div>}
         <h2 className="react-hall-heading"><Trophy /> Salón de la fama</h2>
-        {champion ? <article className="react-champion-card"><div className="react-champion-label">Último campeón <Trophy /></div><Link className="react-champion-name" to={`/perfil/${encodeURIComponent(champion.winnerProfileId)}`}><span className={championAvatar ? 'has-photo' : ''}>{championAvatar ? <img src={championAvatar} alt="" /> : Array.from(champion.winnerName)[0]}</span><strong>{champion.winnerName}</strong></Link><p>Ganó <b>{champion.name}</b>{champion.decidedAt && <> · {new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(champion.decidedAt))}</>}</p></article>
+        {champion ? <article className="react-champion-card has-feature">
+          <div className="react-champion-copy">
+            <div className="react-champion-label">Último campeón <Trophy /></div>
+            <Link className="react-champion-name" to={`/perfil/${encodeURIComponent(champion.winnerProfileId)}`}><span className={championAvatar ? 'has-photo' : ''}>{championAvatar ? <img src={championAvatar} alt="" /> : Array.from(champion.winnerName)[0]}</span><strong>{champion.winnerName}</strong></Link>
+            <p>Ganó <b>{champion.name}</b>{champion.decidedAt && <> · {new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(champion.decidedAt))}</>}</p>
+          </div>
+          <aside className="react-champion-feature" aria-label={`Foto ilustrativa de entrega de premio. ${champion.winnerName} ganó ${champion.name}`}>
+            <img src="/community/winner-award.jpg" alt="" loading="lazy" />
+            <div className="react-champion-feature-copy"><span>PROVEIT CLUB · SALÓN DE LA FAMA</span><strong>Uno de los ganadores<br />de nuestros torneos</strong><small>Foto ilustrativa · {champion.name}</small></div>
+            <span className="react-champion-feature-trophy"><Trophy /></span>
+          </aside>
+        </article>
           : <article className="react-champion-card is-empty"><Trophy /><h3>{activityState === 'guest' ? 'Tu próxima victoria puede quedar acá' : activityState === 'error' ? 'No pudimos cargar al último campeón' : 'El salón está vacío'}</h3><p>{activityState === 'guest' ? 'Ingresá para conocer a los campeones del club.' : activityState === 'error' ? 'Intentá nuevamente en unos momentos.' : 'El primero que gane un torneo queda acá. ¿Vas a ser vos?'}</p>{activityState === 'guest' ? <Link className="react-secondary" to="/ingresar">Ingresar ↗</Link> : <Link className="react-secondary" to="/crear-torneo">Crear torneo ↗</Link>}</article>}
       </section>
 

@@ -82,3 +82,40 @@ html[data-theme="light"] .react-champion-card > p { color: #52637e; }
 html[data-theme="light"] .react-champion-card.is-empty h3 { color: #192743; }
 html[data-theme="light"] .react-champion-card.is-empty > p { color: #52637e; }
 html[data-theme="light"] .react-champion-card .react-secondary { background: #fff; color: #263c5b; border-color: #aebbd0; }
+
+/* The home page uses more of the desktop canvas while keeping the other routes compact. */
+.react-app:has(.react-home) { max-width: 1920px; padding-inline: clamp(24px, 3.8vw, 72px); }
+.react-app:has(.react-home) .react-hero { margin-inline: calc(-1 * clamp(24px, 3.8vw, 72px)); }
+.react-app:has(.react-home) .react-hero-copy { width: min(1720px, calc(100% - clamp(48px, 8vw, 180px))); }
+.react-app:has(.react-home) .react-community,
+.react-app:has(.react-home) .react-reasons,
+.react-app:has(.react-home) .react-sponsors { width: min(1720px, calc(100% - 32px)); margin-left: 0; margin-right: auto; }
+.react-champion-card.has-feature { display: grid; grid-template-columns: minmax(0, .9fr) minmax(420px, 1.1fr); align-items: stretch; gap: clamp(28px, 5vw, 80px); min-height: 340px; padding: clamp(24px, 3.5vw, 48px); }
+.react-champion-copy { align-self: center; min-width: 0; }
+.react-champion-feature { position: relative; isolation: isolate; display: flex; min-height: 270px; align-items: flex-end; overflow: hidden; border: 1px solid #d4ab4355; border-radius: 14px; background: radial-gradient(ellipse at 80% 20%, #8b90ff44, transparent 42%), linear-gradient(135deg, #3b3540, #171d29 70%); }
+.react-champion-feature::after { position: absolute; z-index: -1; inset: 0; background: linear-gradient(90deg, #111521f2 0%, #111521a8 42%, #11152118 100%), linear-gradient(0deg, #111521b8, transparent 72%); content: ""; }
+.react-champion-feature > img { position: absolute; z-index: -2; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 32%; filter: saturate(.88); }
+.react-champion-feature-initial { position: absolute; z-index: -2; inset: 0; display: grid; place-items: center; color: #e7c17b; font-size: clamp(100px, 15vw, 220px); font-weight: 700; background: radial-gradient(ellipse at 72% 35%, #777bff55, transparent 38%), linear-gradient(135deg, #313746, #171d29 72%); }
+.react-champion-feature-copy { display: flex; flex-direction: column; gap: 12px; padding: clamp(20px, 3vw, 36px); color: #f5f6fb; text-shadow: 0 2px 14px #0008; }
+.react-champion-feature-copy > span { color: #eed28e; font-size: 10px; font-weight: 700; letter-spacing: .16em; }
+.react-champion-feature-copy strong { font-size: clamp(20px, 2.6vw, 34px); line-height: 1.1; letter-spacing: -.035em; }
+.react-champion-feature-copy small { color: #e4e8f1; font-size: 13px; }
+.react-champion-feature-trophy { position: absolute; top: 18px; right: 18px; filter: drop-shadow(0 8px 18px #0008); }
+html[data-theme="light"] .react-champion-feature::after { background: linear-gradient(90deg, #162139e8 0%, #16213988 48%, #16213912 100%), linear-gradient(0deg, #162139a8, transparent 72%); }
+@media(max-width:1000px) {
+  .react-app:has(.react-home) .react-hero { margin-inline: -20px; }
+  .react-app:has(.react-home) .react-hero-copy { width: calc(100% - 64px); }
+  .react-app:has(.react-home) .react-community,
+  .react-app:has(.react-home) .react-reasons,
+  .react-app:has(.react-home) .react-sponsors { width: calc(100% - 32px); }
+  .react-champion-card.has-feature { grid-template-columns: minmax(0, .85fr) minmax(320px, 1.15fr); gap: 24px; }
+}
+@media(max-width:760px) {
+  .react-app:has(.react-home) .react-hero-copy { width: calc(100% - 48px); }
+  .react-app:has(.react-home) .react-community,
+  .react-app:has(.react-home) .react-reasons,
+  .react-app:has(.react-home) .react-sponsors { width: calc(100% - 32px); }
+  .react-champion-card.has-feature { grid-template-columns: 1fr; gap: 22px; }
+  .react-champion-feature { min-height: 250px; }
+}
+@media(max-width:800px) { .react-app:has(.react-home) { max-width: none; padding-inline: 20px; } }
