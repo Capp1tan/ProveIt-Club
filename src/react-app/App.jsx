@@ -1,10 +1,10 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
-import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { Link, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from './auth/AuthProvider.jsx';
 import ThemeToggle from './theme/ThemeToggle.jsx';
 import GlobalSearch from './components/GlobalSearch.jsx';
 import NotificationsPanel from './components/NotificationsPanel.jsx';
-import { avatarUrl } from '../auth-client.js';
+import { avatarUrl, signOut } from '../auth-client.js';
 import { initializeAccess } from '../badges.js';
 
 const HomePage = lazy(() => import('./pages/HomePage.jsx'));
@@ -36,15 +36,46 @@ function ReactPathRedirect() {
 }
 
 function ProfileNavLink({ profile }) {
+  const navigate = useNavigate();
+  const menuRef = useRef(null);
   const [image, setImage] = useState('');
+  const [open, setOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+  const [error, setError] = useState('');
   useEffect(() => {
     let active = true;
     setImage('');
     if (profile?.id && profile.avatarPath) void avatarUrl(profile.avatarPath, { profileId: profile.id }).then((url) => { if (active) setImage(url || ''); }).catch(() => {});
     return () => { active = false; };
   }, [profile?.id, profile?.avatarPath]);
-  const label = profile?.nickname ? `Mi perfil: ${profile.nickname}` : 'Mi perfil';
-  return <Link className="react-profile-nav" to="/perfil" aria-label={label} title={label}>{image ? <img src={image} alt="" /> : <span aria-hidden="true">{Array.from(profile?.nickname || 'P')[0]?.toUpperCase()}</span>}</Link>;
+  useEffect(() => {
+    if (!open) return undefined;
+    const closeOutside = (event) => { if (!menuRef.current?.contains(event.target)) setOpen(false); };
+    const closeOnEscape = (event) => { if (event.key === 'Escape') setOpen(false); };
+    document.addEventListener('pointerdown', closeOutside);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => { document.removeEventListener('pointerdown', closeOutside); document.removeEventListener('keydown', closeOnEscape); };
+  }, [open]);
+  async function logout() {
+    if (signingOut) return;
+    setSigningOut(true); setError('');
+    try { await signOut(); setOpen(false); navigate('/', { replace: true }); }
+    catch (cause) { setError(cause?.message || 'No pudimos cerrar la sesión.'); }
+    finally { setSigningOut(false); }
+  }
+  const label = profile?.nickname ? `Abrir menú de ${profile.nickname}` : 'Abrir menú de perfil';
+  return <div className="react-profile-menu" ref={menuRef}>
+    <button className="react-profile-nav" type="button" aria-label={label} title={label} aria-expanded={open} aria-haspopup="true" aria-controls="reactProfileMenu" onClick={() => { setOpen((value) => !value); setError(''); }}>
+      {image ? <img src={image} alt="" /> : <span aria-hidden="true">{Array.from(profile?.nickname || 'P')[0]?.toUpperCase()}</span>}
+    </button>
+    {open && <section className="react-profile-popover" id="reactProfileMenu" aria-label="Menú de perfil">
+      <p className="react-profile-greeting">Qué bueno verte, <strong>{profile?.nickname || 'competidor'}</strong></p>
+      <Link to="/perfil" onClick={() => setOpen(false)}><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.7-3.6 3-5.5 7-5.5s6.3 1.9 7 5.5"/></svg> Mi perfil</Link>
+      <Link to="/amigos" onClick={() => setOpen(false)}><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 19c.5-3.1 2.5-4.8 6-4.8s5.5 1.7 6 4.8m1-13a3 3 0 0 1 0 5.8m1 2.4c2.4.7 3.7 2.3 4 4.8"/></svg> Amigos</Link>
+      <button type="button" onClick={() => void logout()} disabled={signingOut}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H5v16h5m4-4 4-4-4-4m4 4H9"/></svg> {signingOut ? 'Cerrando sesión…' : 'Cerrar sesión'}</button>
+      {error && <p className="react-profile-menu-error" role="alert">{error}</p>}
+    </section>}
+  </div>;
 }
 
 function AppLayout() {

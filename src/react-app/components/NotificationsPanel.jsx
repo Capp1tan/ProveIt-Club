@@ -92,7 +92,7 @@ export default function NotificationsPanel() {
     if (nextOpen) { setAnnouncement(''); if (userId.current) persistRead(items); void refresh(); }
   }
   return <div className="club-notifications"><button className="notification-bell" type="button" aria-label={unread ? `Notificaciones: ${unread} sin leer` : 'Notificaciones'} aria-expanded={open} aria-controls="clubNotificationsPanel" onClick={toggle}>
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 17h14l-2-3V9a5 5 0 0 0-10 0v5zM10 20h4" /></svg>{unread > 0 && <span className="notification-count" aria-hidden="true">{unread > 99 ? '99+' : unread}</span>}
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 17h14l-2-3V9a5 5 0 0 0-10 0v5zM10 20h4" /></svg>{unread > 0 && <span key={unread} className="notification-count" aria-hidden="true">{unread > 99 ? '99+' : unread}</span>}
   </button><section className="notification-panel" id="clubNotificationsPanel" hidden={!open} aria-label="Notificaciones"><h2>Notificaciones</h2><div className="notification-list">
     {items.length ? items.map((item) => { const to = routeFor(item); const content = <><NotificationAvatar item={item} /><span className="notification-copy">{item.text}</span></>; return to ? <Link className="notification-item" key={item.id} to={to} onClick={() => { setOpen(false); persistRead(items); }}>{content}</Link> : <div className="notification-item" key={item.id}>{content}</div>; }) : <p className="notification-empty">{failure ? 'No pudimos cargar las notificaciones.' : 'No tenés notificaciones.'}</p>}
   </div><span className="notification-sr" role="status" aria-live="polite">{announcement}</span></section></div>;

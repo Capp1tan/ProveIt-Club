@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { avatarUrl, fetchUserAttributes, loadProfile, saveAvatar, saveProfile, signOut } from '../../auth-client.js';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { avatarUrl, fetchUserAttributes, loadProfile, saveAvatar, saveProfile } from '../../auth-client.js';
 import { viewClubProfile } from '../../community-api.js';
 import { initializeAccess } from '../../badges.js';
 import { communityAction } from '../../community-api.js';
@@ -97,7 +97,6 @@ function normalizePhone(country, value) {
 }
 
 export default function ProfilePage() {
-  const navigate = useNavigate();
   const { status: authStatus, user, profile: sessionProfile } = useAuth();
   const { profileId: pathProfileId } = useParams();
   const [params] = useSearchParams();
@@ -108,6 +107,7 @@ export default function ProfilePage() {
   const [access, setAccess] = useState({ phoneOptional: false });
   const [busy, setBusy] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState(false);
   const [avatarFile, setAvatarFile] = useState(null);
@@ -123,6 +123,7 @@ export default function ProfilePage() {
           const [{ profile: ownProfile, account: privateAccount }, permissions] = await Promise.all([loadProfile({ includePrivate: true }), initializeAccess()]);
           if (!active) return;
           setProfile(ownProfile ? { ...ownProfile, canView: true } : null);
+          setEditing(!ownProfile);
           setAccount(privateAccount);
           setAccess(permissions || { phoneOptional: false });
           if (ownProfile) {
@@ -177,16 +178,18 @@ export default function ProfilePage() {
         visibility: fields.visibility, judgeEnabled: true, socialLinks: JSON.stringify(social),
       });
       const next = { ...profile, ...saved, id: saved.id || profile?.id, avatarPath, socialLinks: JSON.stringify(social), canView: true };
-      setProfile({ ...next, canView: true }); setAvatarFile(null); setNotice('Perfil guardado.');
+      setProfile({ ...next, canView: true }); setAvatarFile(null); setNotice('Perfil guardado.'); setEditing(false);
       try { sessionStorage.removeItem('proveit:signup-country'); } catch {}
       window.dispatchEvent(new Event('proveit:profile-updated'));
     } catch (cause) { setNotice(cause?.message || 'No pudimos guardar el perfil.'); setError(true); }
     finally { setSaving(false); }
   }
 
-  async function logout() {
-    try { await signOut(); navigate('/', { replace: true }); }
-    catch (cause) { setNotice(cause?.message || 'No pudimos cerrar sesión.'); setError(true); }
+  function cancelEditing() {
+    if (!ownProfileReady) return;
+    const links = parseLinks(profile.socialLinks);
+    setFields({ nickname: profile.nickname || '', bio: profile.bio || '', country: profile.country || account?.country || '', phone: account?.phoneNumber || '', visibility: profile.visibility === 'PUBLIC' ? 'PUBLIC' : 'PRIVATE', ...Object.fromEntries(networkFields.map((key) => [key, links[key] || ''])) });
+    setAvatarFile(null); setNotice(''); setError(false); setEditing(false);
   }
 
   if (busy || authStatus === 'checking') return <main className="react-profile-page"><p role="status">Cargando perfil…</p></main>;
@@ -197,7 +200,8 @@ export default function ProfilePage() {
   return <main className="react-profile-page">
     <section className="react-profile-panel">
       {isOwn ? <>
-        <header className="react-profile-heading"><p className="react-eyebrow">TU ESPACIO EN PROVEIT</p><h1>{ownProfileReady ? 'Tu perfil' : 'Completá tu registro'}</h1><p>Tu correo y teléfono se mantienen privados para todos, también para tus amigos.</p></header>
+        {editing || !ownProfileReady ? <>
+        <header className="react-profile-heading"><p className="react-eyebrow">TU ESPACIO EN PROVEIT</p><h1>{ownProfileReady ? 'Editar perfil' : 'Completá tu registro'}</h1><p>Tu correo y teléfono se mantienen privados para todos, también para tus amigos.</p></header>
         <div className="react-profile-top"><Avatar profile={{ ...profile, nickname: fields.nickname }} editable onChange={setAvatarFile} />{avatarPreview && <img className="react-profile-preview" src={avatarPreview} alt="Vista previa de la foto elegida" />}<div><h2>{fields.nickname || 'Elegí tu nick'}</h2><p>{fields.bio || 'Una breve presentación para el club.'}</p></div></div>
         <form className="react-profile-form" onSubmit={submit}>
           <label>Nick único<input required minLength={2} maxLength={30} value={fields.nickname} onChange={(event) => set('nickname', event.target.value)} autoComplete="nickname" /></label>
@@ -205,10 +209,16 @@ export default function ProfilePage() {
           <div className="react-profile-form-row"><label>País<select required value={fields.country} onChange={(event) => set('country', event.target.value)}><option value="">Elegí tu país</option>{countries.map(([code, name]) => <option key={code} value={code}>{name}</option>)}</select></label><label>Teléfono <small>{access.phoneOptional ? 'opcional · privado' : 'requerido · privado'}</small><input type="tel" required={!access.phoneOptional} value={fields.phone} onChange={(event) => set('phone', event.target.value)} placeholder={countries.find(([code]) => code === fields.country)?.[2] || '+54 9…'} autoComplete="tel" /></label></div>
           <label>Visibilidad del perfil<select value={fields.visibility} onChange={(event) => set('visibility', event.target.value)}><option value="PUBLIC">Público</option><option value="PRIVATE">Privado · solo amistades</option></select><small>La privacidad también se aplica a las consultas del servidor.</small></label>
           <fieldset className="react-profile-social-fields"><legend>Redes sociales opcionales</legend>{networkFields.map((key) => <label key={key}>{networkLabels[key]}<input maxLength={500} value={fields[key]} onChange={(event) => set(key, event.target.value)} placeholder={key === 'discord' ? 'Tu usuario o invitación' : 'https://…'} /></label>)}</fieldset>
-          <button className="react-primary" type="submit" disabled={saving}>{saving ? 'Guardando…' : 'Guardar perfil'} <span aria-hidden="true">↗</span></button>
+          <div className="react-profile-editor-actions">{ownProfileReady && <button type="button" onClick={cancelEditing} disabled={saving}>Cancelar</button>}<button className="react-primary" type="submit" disabled={saving}>{saving ? 'Guardando…' : 'Guardar perfil'} <span aria-hidden="true">↗</span></button></div>
           {(notice || error) && <p className={`react-profile-notice${error ? ' is-error' : ''}`} role={error ? 'alert' : 'status'}>{notice}</p>}
         </form>
-        {ownProfileReady && <><Journey profile={profile} own /><div className="react-profile-footer-actions"><button type="button" onClick={() => void logout()}>Cerrar sesión</button><Link to="/torneos">Buscar torneos ↗</Link></div></>}
+        </> : <>
+          <header className="react-profile-public-top"><Avatar profile={profile} /><div><p className="react-eyebrow">TU PERFIL EN EL CLUB</p><h1>{profile.nickname}</h1><p>{profile.bio || 'Compitiendo en ProveIt Club.'}</p><span className="react-profile-visibility">{profile.visibility === 'PUBLIC' ? 'Perfil público' : 'Perfil privado · solo amistades'}</span></div></header>
+          <PublicSocials profile={profile} />
+          <Journey profile={profile} own />
+          {profile.reputation && <Reputation profile={profile} />}
+          <div className="react-profile-preview-actions"><Link to="/torneos">Explorar torneos ↗</Link><button className="react-primary" type="button" onClick={() => { setNotice(''); setError(false); setEditing(true); }}>Editar perfil</button></div>
+        </>}
       </> : profile && <>
         <header className="react-profile-public-top"><Avatar profile={profile} /><div><p className="react-eyebrow">PERFIL DEL CLUB</p><h1>{profile.nickname}</h1><p>{profile.bio || 'Compitiendo en ProveIt Club.'}</p></div></header>
         <PublicSocials profile={profile} />

@@ -2,7 +2,8 @@
 .club-notifications{position:relative}.club-notifications[hidden],.club-notifications [hidden]{display:none!important}
 .notification-bell{position:relative;display:grid;place-items:center;width:42px;height:42px;padding:9px;border:1px solid var(--site-line,#3c4960);border-radius:8px;background:transparent;color:var(--site-text,#edf1f8);cursor:pointer}
 .notification-bell svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.notification-count{position:absolute;top:-5px;right:-5px;min-width:19px;height:19px;padding:0 4px;display:grid;place-items:center;border-radius:12px;background:var(--site-accent,#6171ff);color:white;font:700 11px sans-serif;border:2px solid var(--site-bg,#121722)}
+.notification-count{position:absolute;top:-5px;right:-5px;min-width:20px;height:20px;padding:0 4px;display:grid;place-items:center;border-radius:12px;background:#d9f63d;color:#17200b;font:700 11px sans-serif;border:2px solid var(--site-bg,#121722);box-shadow:0 2px 8px #0003;animation:notification-count-in 220ms cubic-bezier(.2,.8,.25,1.2) both}
+@keyframes notification-count-in{from{opacity:0;transform:scale(.72)}to{opacity:1;transform:scale(1)}}
 .notification-panel{position:absolute;right:0;top:52px;width:min(340px,calc(100vw - 36px));box-sizing:border-box;padding:16px 8px 8px;background:var(--site-panel,#1c2331);color:var(--site-text,#edf1f8);border:1px solid var(--site-line,#3c4960);border-radius:14px;box-shadow:0 14px 40px #0002;z-index:1000;text-align:left;max-height:min(440px,70vh);overflow-y:auto}
 .notification-panel h2{font-size:16px;line-height:1.3;letter-spacing:0;margin:0 10px 10px;font-weight:700}
 .notification-item{display:flex;gap:11px;align-items:center;padding:12px 10px;border-radius:9px;text-decoration:none!important;color:var(--site-text,#edf1f8);transition:background .18s,box-shadow .18s;overflow-wrap:anywhere}
