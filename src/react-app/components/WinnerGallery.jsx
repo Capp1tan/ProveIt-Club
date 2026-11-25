@@ -34,22 +34,21 @@ const fireworkBursts = [
   }),
 }));
 
-function WinnerPhotoCard({ photo, virtualPosition, distance, depth, y, scale, rotate, opacity, zIndex, cardWidth, step, progress, reduceMotion, onOpen }) {
-  const x = useTransform(progress, [0, 1], [distance * step, (distance - 1) * step]);
+function WinnerPhotoCard({ photo, virtualPosition, distance, depth, x, scale, rotate, opacity, zIndex, cardWidth, step, progress, reduceMotion, onOpen }) {
+  const y = useTransform(progress, [0, 1], [-distance * step, -(distance - 1) * step]);
   return (
     <motion.button
       className="react-winner-photo"
       type="button"
       aria-label={`Ampliar foto: ${photo.title}`}
-      style={{ width: cardWidth, zIndex, x }}
+      style={{ width: cardWidth, zIndex, x, y }}
       initial={false}
       animate={{
-        y: reduceMotion ? 0 : y,
         scale: reduceMotion ? (depth === 0 ? 1 : 0.82) : scale,
         rotate: reduceMotion ? 0 : rotate,
         opacity,
       }}
-      whileHover={reduceMotion ? undefined : { scale: scale * 1.08, y: y - 4, zIndex: 30 }}
+      whileHover={reduceMotion ? undefined : { scale: scale * 1.08, x: x - 4, zIndex: 30 }}
       whileTap={reduceMotion ? undefined : { scale: depth === 0 ? 1.01 : scale * 0.98 }}
       transition={reduceMotion ? { duration: 0.12 } : spring}
       onClick={() => onOpen(virtualPosition)}
@@ -79,6 +78,7 @@ export default function WinnerGallery({ photos: galleryPhotos = emptyPhotos }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [galleryWidth, setGalleryWidth] = useState(0);
+  const [galleryHeight, setGalleryHeight] = useState(0);
   const [openingProgress, setOpeningProgress] = useState(0);
   const [showCelebration, setShowCelebration] = useState(false);
   const [celebrationKey, setCelebrationKey] = useState(0);
@@ -94,15 +94,15 @@ export default function WinnerGallery({ photos: galleryPhotos = emptyPhotos }) {
       virtualPosition,
       distance,
       depth,
-      y: Math.min(depth * 9, 18),
+      x: distance * 10,
       scale: depth === 0 ? 1 : depth === 1 ? 0.84 : depth === 2 ? 0.68 : 0.56,
       rotate: distance * 2.5,
       opacity: depth === 0 ? 1 : depth === 1 ? 0.78 : depth === 2 ? 0.48 : 0.25,
       zIndex: 10 - depth,
     };
   }) : [];
-  const cardWidth = Math.min(212, Math.max(128, galleryWidth * 0.245));
-  const step = Math.min(178, Math.max(76, galleryWidth * 0.21));
+  const cardWidth = Math.min(190, Math.max(118, galleryWidth * 0.32));
+  const step = Math.min(76, Math.max(54, galleryHeight * 0.19));
 
   useAnimationFrame((_, delta) => {
     if (isOpen || isDragging || reduceMotion || document.hidden || photos.length < 2) return;
@@ -161,7 +161,11 @@ export default function WinnerGallery({ photos: galleryPhotos = emptyPhotos }) {
   useEffect(() => {
     const element = galleryRef.current;
     if (!element || !photos.length) return undefined;
-    const measure = () => setGalleryWidth(element.getBoundingClientRect().width);
+    const measure = () => {
+      const bounds = element.getBoundingClientRect();
+      setGalleryWidth(bounds.width);
+      setGalleryHeight(bounds.height);
+    };
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(element);
@@ -220,7 +224,7 @@ export default function WinnerGallery({ photos: galleryPhotos = emptyPhotos }) {
     if (!card) return;
     dragRef.current = {
       pointerId: event.pointerId,
-      startX: event.clientX,
+      startY: event.clientY,
       startPosition: activePosition + progress.get(),
       moved: false,
     };
@@ -231,10 +235,10 @@ export default function WinnerGallery({ photos: galleryPhotos = emptyPhotos }) {
   function handlePointerMove(event) {
     const drag = dragRef.current;
     if (!drag || drag.pointerId !== event.pointerId) return;
-    const deltaX = drag.startX - event.clientX;
-    if (!drag.moved && Math.abs(deltaX) < 6) return;
+    const deltaY = event.clientY - drag.startY;
+    if (!drag.moved && Math.abs(deltaY) < 6) return;
     drag.moved = true;
-    const nextPosition = drag.startPosition + deltaX / step;
+    const nextPosition = drag.startPosition + deltaY / step;
     const wholePosition = Math.floor(nextPosition);
     setActivePosition(wholePosition);
     progress.set(nextPosition - wholePosition);
@@ -299,7 +303,7 @@ export default function WinnerGallery({ photos: galleryPhotos = emptyPhotos }) {
         className={`${photos.length ? 'react-winner-gallery' : 'react-winner-gallery-empty'}${isDragging ? ' is-dragging' : ''}`}
         ref={photos.length ? galleryRef : undefined}
         role={photos.length ? 'region' : undefined}
-        aria-label={photos.length ? 'Fotos de ganadores y reconocimientos del club. Arrastrá hacia los lados para recorrerlas.' : undefined}
+        aria-label={photos.length ? 'Fotos de ganadores y reconocimientos del club. Arrastrá hacia arriba o abajo para recorrerlas.' : undefined}
         onPointerDown={photos.length ? handlePointerDown : undefined}
         onPointerMove={photos.length ? handlePointerMove : undefined}
         onPointerUp={photos.length ? handlePointerEnd : undefined}
