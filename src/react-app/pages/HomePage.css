@@ -92,16 +92,27 @@ html[data-theme="light"] .react-champion-card .react-secondary { background: #ff
 .react-app:has(.react-home) .react-sponsors { width: min(1720px, calc(100% - 32px)); margin-left: 0; margin-right: auto; }
 .react-champion-card.has-feature { display: grid; grid-template-columns: minmax(0, .9fr) minmax(420px, 1.1fr); align-items: stretch; gap: clamp(28px, 5vw, 80px); min-height: 340px; padding: clamp(24px, 3.5vw, 48px); }
 .react-champion-copy { align-self: center; min-width: 0; }
-.react-champion-feature { position: relative; isolation: isolate; display: flex; min-height: 270px; align-items: flex-end; overflow: hidden; border: 1px solid #d4ab4355; border-radius: 14px; background: radial-gradient(ellipse at 80% 20%, #8b90ff44, transparent 42%), linear-gradient(135deg, #3b3540, #171d29 70%); }
-.react-champion-feature::after { position: absolute; z-index: -1; inset: 0; background: linear-gradient(90deg, #111521f2 0%, #111521a8 42%, #11152118 100%), linear-gradient(0deg, #111521b8, transparent 72%); content: ""; }
-.react-champion-feature > img { position: absolute; z-index: -2; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 32%; filter: saturate(.88); }
-.react-champion-feature-initial { position: absolute; z-index: -2; inset: 0; display: grid; place-items: center; color: #e7c17b; font-size: clamp(100px, 15vw, 220px); font-weight: 700; background: radial-gradient(ellipse at 72% 35%, #777bff55, transparent 38%), linear-gradient(135deg, #313746, #171d29 72%); }
-.react-champion-feature-copy { display: flex; flex-direction: column; gap: 12px; padding: clamp(20px, 3vw, 36px); color: #f5f6fb; text-shadow: 0 2px 14px #0008; }
-.react-champion-feature-copy > span { color: #eed28e; font-size: 10px; font-weight: 700; letter-spacing: .16em; }
-.react-champion-feature-copy strong { font-size: clamp(20px, 2.6vw, 34px); line-height: 1.1; letter-spacing: -.035em; }
-.react-champion-feature-copy small { color: #e4e8f1; font-size: 13px; }
-.react-champion-feature-trophy { position: absolute; top: 18px; right: 18px; filter: drop-shadow(0 8px 18px #0008); }
-html[data-theme="light"] .react-champion-feature::after { background: linear-gradient(90deg, #162139e8 0%, #16213988 48%, #16213912 100%), linear-gradient(0deg, #162139a8, transparent 72%); }
+.react-champion-feature { position: relative; isolation: isolate; min-width: 0; min-height: 270px; overflow: visible; border: 1px solid color-mix(in srgb, #d4ab43 36%, var(--line)); border-radius: 14px; background: radial-gradient(ellipse at 50% 42%, color-mix(in srgb, #747dff 12%, transparent), transparent 68%); }
+.react-winner-gallery-root { position: relative; width: 100%; min-height: 270px; }
+.react-winner-gallery { position: absolute; inset: 0; display: grid; place-items: center; overflow: hidden; perspective: 900px; -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%); mask-image: linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%); }
+.react-winner-photo { position: absolute; top: 50%; left: 50%; display: block; aspect-ratio: 4 / 5; overflow: hidden; padding: 0; border: 1px solid #ffffff50; border-radius: 14px; background: #171d29; box-shadow: 0 18px 38px #0006; color: inherit; cursor: zoom-in; transform-origin: center; }
+.react-winner-photo::after { position: absolute; inset: 0; border: 1px solid transparent; border-radius: inherit; content: ""; pointer-events: none; transition: border-color 180ms ease, box-shadow 180ms ease; }
+.react-winner-photo.is-selected::after { border-color: #858bff; box-shadow: inset 0 0 0 1px #858bff55, 0 0 22px #6874ff40; }
+.react-winner-photo img { display: block; width: 100%; height: 100%; object-fit: cover; user-select: none; }
+.react-winner-photo:focus-visible,.react-winner-gallery-close:focus-visible { outline: 3px solid #858bff; outline-offset: 4px; }
+.react-winner-gallery-backdrop { position: fixed; z-index: 2000; inset: 0; display: grid; place-items: center; padding: clamp(16px, 4vw, 48px); background: rgb(5 8 18 / 78%); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.react-winner-gallery-dialog { position: relative; width: min(900px, 92vw); overflow: hidden; border: 1px solid #858bff88; border-radius: 18px; background: #141a27; box-shadow: 0 30px 100px #0009; color: #f2f4fa; }
+.react-winner-gallery-expanded { display: block; width: 100%; max-height: min(70vh, 720px); aspect-ratio: 16 / 10; object-fit: contain; background: #0b0e18; }
+.react-winner-gallery-close { position: absolute; z-index: 2; top: 14px; right: 14px; display: grid; width: 42px; height: 42px; place-items: center; border: 1px solid #ffffff4d; border-radius: 50%; background: #0b0e18b8; color: white; font-size: 28px; line-height: 1; cursor: pointer; backdrop-filter: blur(8px); }
+.react-winner-gallery-close:hover { background: #30364acc; }
+.react-winner-gallery-caption { padding: 20px clamp(18px, 3vw, 32px) 26px; }
+.react-winner-gallery-caption .react-eyebrow { margin: 0 0 8px; color: #aeb4ff; font-size: 10px; font-weight: 700; letter-spacing: .14em; }
+.react-winner-gallery-caption h2 { margin: 0 0 6px; font-size: clamp(22px, 3vw, 30px); }
+.react-winner-gallery-caption p:not(.react-eyebrow) { margin: 0; color: #cad1e1; }
+.react-winner-gallery-caption small { display: block; margin-top: 10px; color: #aeb8cb; }
+html[data-theme="light"] .react-winner-gallery-dialog { border-color: #abb6cf; background: #f5f7fc; color: #17243b; }
+html[data-theme="light"] .react-winner-gallery-caption .react-eyebrow { color: #565fc5; }
+html[data-theme="light"] .react-winner-gallery-caption p:not(.react-eyebrow),html[data-theme="light"] .react-winner-gallery-caption small { color: #52637e; }
 @media(max-width:1000px) {
   .react-app:has(.react-home) .react-hero { margin-inline: -20px; }
   .react-app:has(.react-home) .react-hero-copy { width: calc(100% - 64px); }
@@ -117,5 +128,9 @@ html[data-theme="light"] .react-champion-feature::after { background: linear-gra
   .react-app:has(.react-home) .react-sponsors { width: calc(100% - 32px); }
   .react-champion-card.has-feature { grid-template-columns: 1fr; gap: 22px; }
   .react-champion-feature { min-height: 250px; }
+  .react-winner-gallery-root { min-height: 250px; }
+  .react-winner-photo { border-radius: 11px; }
+  .react-winner-gallery-dialog { width: 95vw; }
+  .react-winner-gallery-expanded { max-height: 62vh; aspect-ratio: 4 / 3; }
 }
 @media(max-width:800px) { .react-app:has(.react-home) { max-width: none; padding-inline: 20px; } }
