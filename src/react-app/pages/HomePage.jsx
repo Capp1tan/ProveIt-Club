@@ -141,7 +141,7 @@ export default function HomePage() {
         <div className="react-leagues"><div><p className="react-eyebrow">DE PRINCIPIANTE A LEYENDA</p><h3>Subir cuesta.<br />Llegar se nota.</h3><p>Ocho ligas. Un recorrido que se gana compitiendo.</p></div><div className="react-league-teasers">{leagues.map((league) => <figure key={league.name}><span style={{ '--league-x': league.x, '--league-y': league.y }} /><figcaption>{league.name}<small>{league.detail}</small></figcaption></figure>)}</div></div>
       </section>
 
-      <section className="react-sponsors" aria-labelledby="sponsors-heading"><p className="react-eyebrow" id="sponsors-heading">MARCAS QUE ACOMPAÑAN AL CLUB</p><div><figure><img src="/sponsors/black-line.png" alt="Black Line" loading="lazy" width="350" height="220" /></figure><figure><img src="/sponsors/mila-express.png" alt="Mila Express" loading="lazy" width="350" height="220" /></figure></div></section>
+      <section className="react-sponsors" aria-labelledby="sponsors-heading"><p className="react-eyebrow" id="sponsors-heading">MARCAS QUE ACOMPAÑAN AL CLUB</p><div><figure><img src="/sponsors/black-line.png" alt="Black Line" loading="lazy" width="350" height="220" /></figure><figure><img src="/sponsors/mila-express.png" alt="Mila Express" loading="lazy" width="350" height="220" /></figure><figure><img src="/sponsors/lee-campo-panaderia.png" alt="Lee Campo Panadería" loading="lazy" width="220" height="220" /></figure></div></section>
     </main>
   );
 }
