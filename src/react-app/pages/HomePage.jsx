@@ -61,8 +61,37 @@ export default function HomePage() {
 
   useEffect(() => {
     let alive = true;
-    void loadWinnerGallery().then((photos) => { if (alive) setGalleryPhotos(photos); }).catch(() => { if (alive) setGalleryPhotos([]); });
-    return () => { alive = false; };
+    let inFlight = false;
+    let timer;
+    const load = async () => {
+      if (!alive || inFlight || document.hidden) return;
+      inFlight = true;
+      try {
+        const photos = await loadWinnerGallery();
+        if (alive) setGalleryPhotos(photos);
+      } catch {
+        // Keep the last successful gallery visible when a temporary request fails.
+      } finally {
+        inFlight = false;
+        if (alive) timer = window.setTimeout(load, 60_000);
+      }
+    };
+    const refreshNow = () => {
+      window.clearTimeout(timer);
+      void load();
+    };
+    const onVisibility = () => { if (!document.hidden) refreshNow(); };
+    window.addEventListener('focus', refreshNow);
+    window.addEventListener('proveit:gallery-updated', refreshNow);
+    document.addEventListener('visibilitychange', onVisibility);
+    void load();
+    return () => {
+      alive = false;
+      window.clearTimeout(timer);
+      window.removeEventListener('focus', refreshNow);
+      window.removeEventListener('proveit:gallery-updated', refreshNow);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, []);
 
   useEffect(() => {

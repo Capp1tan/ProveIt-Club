@@ -98,13 +98,13 @@ function WinnerPhotoManager() {
       const uploaded = await fetch(grant.url, { method: 'PUT', headers: { 'Content-Type': optimized.type }, body: optimized, signal: AbortSignal.timeout(60000) });
       if (!uploaded.ok) throw new Error('No pudimos subir la foto. Probá nuevamente.');
       const result = await adminRequest('GALLERY_SAVE', { path: grant.path, title: title.trim(), detail: detail.trim() });
-      setPhotos((current) => [result.photo, ...current]); setFile(null); setTitle(''); setDetail(''); setMessage('Foto agregada al Salón de la fama.');
+      setPhotos((current) => [result.photo, ...current]); window.dispatchEvent(new Event('proveit:gallery-updated')); setFile(null); setTitle(''); setDetail(''); setMessage('Foto agregada al Salón de la fama.');
     } catch (error) { setMessage(error.message || 'No pudimos guardar la foto.'); }
     finally { setBusy(false); }
   }
   async function remove(photo) {
     if (!window.confirm(`¿Retirar “${photo.title}” del Salón de la fama?`)) return;
-    setBusy(true); try { await adminRequest('GALLERY_DELETE', { targetId: photo.id }); setPhotos((current) => current.filter((item) => item.id !== photo.id)); setMessage('Foto retirada de la galería.'); } catch (error) { setMessage(error.message); } finally { setBusy(false); }
+    setBusy(true); try { await adminRequest('GALLERY_DELETE', { targetId: photo.id }); setPhotos((current) => current.filter((item) => item.id !== photo.id)); window.dispatchEvent(new Event('proveit:gallery-updated')); setMessage('Foto retirada de la galería.'); } catch (error) { setMessage(error.message); } finally { setBusy(false); }
   }
   return <section className="react-admin-card react-admin-gallery-manager"><h2>Fotos del Salón de la fama</h2><p>Las fotos que cargues aparecen en la galería de inicio. Se optimizan sin deformarse y se recortan al marco; al abrirlas se muestran completas.</p>
     <form className="react-admin-form" onSubmit={(event) => void submit(event)}>
