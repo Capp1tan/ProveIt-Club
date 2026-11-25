@@ -38,7 +38,7 @@ function WinnerPhotoCard({ photo, virtualPosition, distance, depth, y, scale, ro
   const x = useTransform(progress, [0, 1], [distance * step, (distance - 1) * step]);
   return (
     <motion.button
-      className={`react-winner-photo${distance === 0 ? ' is-selected' : ''}`}
+      className="react-winner-photo"
       type="button"
       aria-label={`Ampliar foto: ${photo.title}`}
       style={{ width: cardWidth, zIndex, x }}
@@ -49,7 +49,7 @@ function WinnerPhotoCard({ photo, virtualPosition, distance, depth, y, scale, ro
         rotate: reduceMotion ? 0 : rotate,
         opacity,
       }}
-      whileHover={reduceMotion ? undefined : { scale: depth === 0 ? 1.08 : scale * 1.04, y: y - 5 }}
+      whileHover={reduceMotion ? undefined : { scale: scale * 1.08, y: y - 4, zIndex: 30 }}
       whileTap={reduceMotion ? undefined : { scale: depth === 0 ? 1.01 : scale * 0.98 }}
       transition={reduceMotion ? { duration: 0.12 } : spring}
       onClick={() => onOpen(virtualPosition)}
@@ -95,7 +95,7 @@ export default function WinnerGallery({ photos: galleryPhotos = emptyPhotos }) {
       distance,
       depth,
       y: Math.min(depth * 9, 18),
-      scale: depth === 0 ? 1.04 : depth === 1 ? 0.84 : depth === 2 ? 0.68 : 0.56,
+      scale: depth === 0 ? 1 : depth === 1 ? 0.84 : depth === 2 ? 0.68 : 0.56,
       rotate: distance * 2.5,
       opacity: depth === 0 ? 1 : depth === 1 ? 0.78 : depth === 2 ? 0.48 : 0.25,
       zIndex: 10 - depth,

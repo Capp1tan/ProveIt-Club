@@ -103,8 +103,6 @@ html[data-theme="light"] .react-champion-card .react-secondary { background: #ff
 .react-winner-gallery { position: absolute; inset: 0; display: grid; place-items: center; overflow: hidden; perspective: 900px; touch-action: pan-y; user-select: none; -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%); mask-image: linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%); }
 .react-winner-photo { position: absolute; top: 50%; left: 50%; display: block; aspect-ratio: 4 / 5; overflow: hidden; padding: 0; border: 1px solid #ffffff50; border-radius: 14px; background: #171d29; box-shadow: 0 18px 38px #0006; color: inherit; cursor: grab; transform-origin: center; translate: -50% -50%; will-change: transform; }
 .react-winner-gallery.is-dragging,.react-winner-gallery.is-dragging .react-winner-photo { cursor: grabbing; }
-.react-winner-photo::after { position: absolute; inset: 0; border: 1px solid transparent; border-radius: inherit; content: ""; pointer-events: none; transition: border-color 180ms ease, box-shadow 180ms ease; }
-.react-winner-photo.is-selected::after { border-color: #858bff; box-shadow: inset 0 0 0 1px #858bff55, 0 0 22px #6874ff40; }
 .react-winner-photo img { display: block; width: 100%; height: 100%; object-fit: cover; user-select: none; }
 .react-winner-photo:focus-visible,.react-winner-gallery-close:focus-visible { outline: 3px solid #858bff; outline-offset: 4px; }
 .react-winner-gallery-backdrop { position: fixed; z-index: 2000; inset: 0; display: grid; place-items: center; padding: clamp(16px, 4vw, 48px); background: rgb(5 8 18 / 78%); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
