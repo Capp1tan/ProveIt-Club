@@ -7,7 +7,6 @@ const db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const s3 = new S3Client({});
 const jsonHeaders = {
   'content-type': 'application/json; charset=utf-8',
-  'access-control-allow-origin': '*',
   'cache-control': 'public, max-age=30',
 };
 
