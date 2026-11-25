@@ -1,8 +1,9 @@
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { AnimatePresence, motion, useAnimationFrame, useMotionValue, useReducedMotion, useTransform } from 'motion/react';
 import { createPortal } from 'react-dom';
 import { useEffect, useId, useRef, useState } from 'react';
 
 const emptyPhotos = [];
+const secondsPerPhoto = 8;
 
 const spring = { type: 'spring', stiffness: 135, damping: 24, mass: 1.25 };
 const openingStartSeconds = 1.05;
@@ -33,6 +34,31 @@ const fireworkBursts = [
   }),
 }));
 
+function WinnerPhotoCard({ photo, virtualPosition, distance, depth, y, scale, rotate, opacity, zIndex, cardWidth, step, progress, reduceMotion, onOpen }) {
+  const x = useTransform(progress, [0, 1], [distance * step, (distance - 1) * step]);
+  return (
+    <motion.button
+      className={`react-winner-photo${distance === 0 ? ' is-selected' : ''}`}
+      type="button"
+      aria-label={`Ampliar foto: ${photo.title}`}
+      style={{ width: cardWidth, zIndex, x }}
+      initial={false}
+      animate={{
+        y: reduceMotion ? 0 : y,
+        scale: reduceMotion ? (depth === 0 ? 1 : 0.82) : scale,
+        rotate: reduceMotion ? 0 : rotate,
+        opacity,
+      }}
+      whileHover={reduceMotion ? undefined : { scale: depth === 0 ? 1.08 : scale * 1.04, y: y - 5 }}
+      whileTap={reduceMotion ? undefined : { scale: depth === 0 ? 1.01 : scale * 0.98 }}
+      transition={reduceMotion ? { duration: 0.12 } : spring}
+      onClick={() => onOpen(virtualPosition)}
+    >
+      <motion.img src={photo.src} alt="" loading="lazy" decoding="async" draggable="false" />
+    </motion.button>
+  );
+}
+
 export default function WinnerGallery({ photos: galleryPhotos = emptyPhotos }) {
   const galleryId = useId();
   const galleryRef = useRef(null);
@@ -44,11 +70,14 @@ export default function WinnerGallery({ photos: galleryPhotos = emptyPhotos }) {
   const audioFallbackRef = useRef(false);
   const audioStartTimeRef = useRef(0);
   const celebrationTimerRef = useRef(0);
+  const dragRef = useRef(null);
+  const suppressClickRef = useRef(false);
+  const progress = useMotionValue(0);
   const reduceMotion = useReducedMotion();
   const photos = Array.isArray(galleryPhotos) ? galleryPhotos : emptyPhotos;
   const [activePosition, setActivePosition] = useState(2);
   const [isOpen, setIsOpen] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const [galleryWidth, setGalleryWidth] = useState(0);
   const [openingProgress, setOpeningProgress] = useState(0);
   const [showCelebration, setShowCelebration] = useState(false);
@@ -74,6 +103,18 @@ export default function WinnerGallery({ photos: galleryPhotos = emptyPhotos }) {
   }) : [];
   const cardWidth = Math.min(212, Math.max(128, galleryWidth * 0.245));
   const step = Math.min(178, Math.max(76, galleryWidth * 0.21));
+
+  useAnimationFrame((_, delta) => {
+    if (isOpen || isDragging || reduceMotion || document.hidden || photos.length < 2) return;
+    const next = progress.get() + Math.min(delta, 48) / (secondsPerPhoto * 1000);
+    if (next >= 1) {
+      const steps = Math.floor(next);
+      setActivePosition((position) => position + steps);
+      progress.set(next - steps);
+    } else {
+      progress.set(next);
+    }
+  });
 
   useEffect(() => {
     const audio = new Audio('/audio/winner-gallery-open.mp3');
@@ -116,15 +157,6 @@ export default function WinnerGallery({ photos: galleryPhotos = emptyPhotos }) {
     frame = window.requestAnimationFrame(animateOpening);
     return () => window.cancelAnimationFrame(frame);
   }, [isOpen, celebrationKey]);
-
-  useEffect(() => {
-    if (isOpen || isPaused || reduceMotion || photos.length < 2) return undefined;
-    const timer = window.setInterval(() => {
-      if (document.hidden) return;
-      setActivePosition((position) => position + 1);
-    }, 8000);
-    return () => window.clearInterval(timer);
-  }, [isOpen, isPaused, photos, reduceMotion]);
 
   useEffect(() => {
     const element = galleryRef.current;
@@ -182,9 +214,48 @@ export default function WinnerGallery({ photos: galleryPhotos = emptyPhotos }) {
     };
   }, [isOpen]);
 
+  function handlePointerDown(event) {
+    if (!photos.length || !event.isPrimary || (event.pointerType === 'mouse' && event.button !== 0)) return;
+    const card = event.target.closest?.('.react-winner-photo');
+    if (!card) return;
+    dragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startPosition: activePosition + progress.get(),
+      moved: false,
+    };
+    card.setPointerCapture?.(event.pointerId);
+    setIsDragging(true);
+  }
+
+  function handlePointerMove(event) {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    const deltaX = drag.startX - event.clientX;
+    if (!drag.moved && Math.abs(deltaX) < 6) return;
+    drag.moved = true;
+    const nextPosition = drag.startPosition + deltaX / step;
+    const wholePosition = Math.floor(nextPosition);
+    setActivePosition(wholePosition);
+    progress.set(nextPosition - wholePosition);
+  }
+
+  function handlePointerEnd(event) {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    dragRef.current = null;
+    setIsDragging(false);
+    if (drag.moved) {
+      suppressClickRef.current = true;
+      window.setTimeout(() => { suppressClickRef.current = false; }, 0);
+    }
+  }
+
   function openPhoto(virtualPosition) {
+    if (suppressClickRef.current) return;
     const playbackToken = ++playbackTokenRef.current;
     setActivePosition(virtualPosition);
+    progress.set(0);
     setOpeningProgress(0);
     setShowCelebration(false);
     setCelebrationKey((key) => key + 1);
@@ -225,45 +296,17 @@ export default function WinnerGallery({ photos: galleryPhotos = emptyPhotos }) {
   return (
     <div className="react-winner-gallery-root">
       <div
-        className={photos.length ? 'react-winner-gallery' : 'react-winner-gallery-empty'}
+        className={`${photos.length ? 'react-winner-gallery' : 'react-winner-gallery-empty'}${isDragging ? ' is-dragging' : ''}`}
         ref={photos.length ? galleryRef : undefined}
         role={photos.length ? 'region' : undefined}
-        aria-label={photos.length ? 'Fotos de ganadores y reconocimientos del club' : undefined}
-        onMouseEnter={photos.length ? () => setIsPaused(true) : undefined}
-        onMouseLeave={photos.length ? () => setIsPaused(false) : undefined}
-        onFocusCapture={photos.length ? () => setIsPaused(true) : undefined}
-        onBlurCapture={photos.length ? (event) => {
-          if (!event.currentTarget.contains(event.relatedTarget)) setIsPaused(false);
-        } : undefined}
+        aria-label={photos.length ? 'Fotos de ganadores y reconocimientos del club. Arrastrá hacia los lados para recorrerlas.' : undefined}
+        onPointerDown={photos.length ? handlePointerDown : undefined}
+        onPointerMove={photos.length ? handlePointerMove : undefined}
+        onPointerUp={photos.length ? handlePointerEnd : undefined}
+        onPointerCancel={photos.length ? handlePointerEnd : undefined}
       >
-        {photos.length ? positions.map(({ photo, virtualPosition, distance, depth, y, scale, rotate, opacity, zIndex }) => (
-          <motion.button
-            key={virtualPosition}
-            className={`react-winner-photo${distance === 0 ? ' is-selected' : ''}`}
-            type="button"
-            aria-label={`Ampliar foto: ${photo.title}`}
-            style={{ width: galleryWidth ? `${cardWidth}px` : '24%', zIndex }}
-            initial={false}
-            animate={{
-              x: distance * step,
-              y: reduceMotion ? 0 : y,
-              scale: reduceMotion ? (depth === 0 ? 1 : 0.82) : scale,
-              rotate: reduceMotion ? 0 : rotate,
-              opacity,
-            }}
-            whileHover={reduceMotion ? undefined : { scale: depth === 0 ? 1.08 : scale * 1.04, y: y - 5 }}
-            whileTap={reduceMotion ? undefined : { scale: depth === 0 ? 1.01 : scale * 0.98 }}
-            transition={reduceMotion ? { duration: 0.12 } : spring}
-            onClick={() => openPhoto(virtualPosition)}
-          >
-            <motion.img
-              src={photo.src}
-              alt=""
-              loading="lazy"
-              decoding="async"
-              draggable="false"
-            />
-          </motion.button>
+        {photos.length ? positions.map((position) => (
+          <WinnerPhotoCard {...position} key={position.virtualPosition} cardWidth={galleryWidth ? `${cardWidth}px` : '24%'} step={step} progress={progress} reduceMotion={reduceMotion} onOpen={openPhoto} />
         )) : (
           <div className="react-winner-gallery-coming-soon" role="status">
             <span className="react-winner-gallery-coming-soon-icon" aria-hidden="true">✦</span>
