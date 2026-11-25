@@ -34,7 +34,7 @@ const basePhotos = [
 ];
 
 const spring = { type: 'spring', stiffness: 135, damping: 24, mass: 1.25 };
-const openingSeconds = 0.55;
+const openingStartSeconds = 0.7;
 const celebrationSeconds = 0.9;
 const confettiColors = ['#8189ff', '#56d5ff', '#ffd86a', '#ff7b9d', '#a8f078', '#f4f6ff'];
 const confettiPieces = Array.from({ length: 46 }, (_, index) => {
@@ -139,7 +139,7 @@ export default function WinnerGallery({ championName, tournamentName, championAv
       const elapsed = audioFallbackRef.current
         ? (performance.now() - audioStartTimeRef.current) / 1000
         : audio?.currentTime || 0;
-      const progress = Math.min(1, elapsed / openingSeconds);
+      const progress = Math.min(1, Math.max(0, (elapsed - openingStartSeconds) / (celebrationSeconds - openingStartSeconds)));
       setOpeningProgress(progress);
       if (elapsed >= celebrationSeconds && !celebrationStarted) {
         celebrationStarted = true;
