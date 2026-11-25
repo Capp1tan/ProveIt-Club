@@ -52,7 +52,7 @@ backend.publicGallery.resources.lambda.addToRolePolicy(new PolicyStatement({
 backend.storage.resources.bucket.grantRead(backend.publicGallery.resources.lambda, 'community-gallery/*');
 const winnerGalleryFeed = backend.publicGallery.resources.lambda.addFunctionUrl({
  authType: FunctionUrlAuthType.NONE,
- cors: { allowedOrigins: ['*'], allowedMethods: [HttpMethod.GET, HttpMethod.OPTIONS], allowedHeaders: ['content-type'], maxAge: Duration.minutes(5) },
+ cors: { allowedOrigins: ['*'], allowedMethods: [HttpMethod.GET], allowedHeaders: ['content-type'], maxAge: Duration.minutes(5) },
 });
 for(const [model,env] of [['Profile','PROFILE_TABLE_NAME'],['Tournament','TOURNAMENT_TABLE_NAME'],['UniqueClaim','CLAIM_TABLE_NAME']] as const){
   backend.data.resources.tables[model].grantReadData(backend.social.resources.lambda);
