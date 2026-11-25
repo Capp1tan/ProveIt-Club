@@ -34,8 +34,8 @@ const basePhotos = [
 ];
 
 const spring = { type: 'spring', stiffness: 135, damping: 24, mass: 1.25 };
-const openingStartSeconds = 0.7;
-const celebrationSeconds = 0.9;
+const openingStartSeconds = 0.95;
+const celebrationSeconds = 1.15;
 const confettiColors = ['#8189ff', '#56d5ff', '#ffd86a', '#ff7b9d', '#a8f078', '#f4f6ff'];
 const confettiPieces = Array.from({ length: 46 }, (_, index) => {
   const angle = (index / 46) * Math.PI * 2;
