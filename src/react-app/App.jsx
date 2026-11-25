@@ -162,6 +162,7 @@ function AppLayout() {
           <Route path="/react/*" element={<ReactPathRedirect />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        <InitialPageReady />
       </Suspense>
       <footer className="react-footer">
         <span>ProveIt Club</span><span>Decirlo es fácil, demostralo.</span>
@@ -169,6 +170,53 @@ function AppLayout() {
       </footer>
     </div>
   );
+}
+
+function InitialPageReady() {
+  useEffect(() => {
+    let cancelled = false;
+    let timeoutId;
+    const waitForWindowLoad = document.readyState === 'complete'
+      ? Promise.resolve()
+      : new Promise((resolve) => window.addEventListener('load', resolve, { once: true }));
+    const waitForVisibleImages = () => {
+      const images = Array.from(document.querySelectorAll('#root img:not([loading="lazy"])'));
+      return Promise.all(images.map((image) => {
+        if (image.complete) return image.decode?.().catch(() => undefined);
+        return new Promise((resolve) => {
+          image.addEventListener('load', resolve, { once: true });
+          image.addEventListener('error', resolve, { once: true });
+        });
+      }));
+    };
+    const reveal = async () => {
+      const startedAt = performance.now();
+      const ready = Promise.all([
+        waitForWindowLoad,
+        document.fonts?.ready?.catch(() => undefined),
+        waitForVisibleImages(),
+      ]);
+      let timeout;
+      await Promise.race([ready, new Promise((resolve) => { timeout = window.setTimeout(resolve, 12000); })]);
+      window.clearTimeout(timeout);
+      await new Promise((resolve) => window.requestAnimationFrame(() => window.requestAnimationFrame(resolve)));
+      const remaining = Math.max(0, 420 - (performance.now() - startedAt));
+      if (remaining) await new Promise((resolve) => { timeoutId = window.setTimeout(resolve, remaining); });
+      if (cancelled) return;
+      const root = document.getElementById('root');
+      const screen = document.getElementById('proveit-boot');
+      root?.removeAttribute('aria-hidden');
+      document.documentElement.removeAttribute('data-app-loading');
+      screen?.classList.add('is-hidden');
+      window.setTimeout(() => screen?.remove(), 380);
+    };
+    void reveal();
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, []);
+  return null;
 }
 
 export default function App() {
