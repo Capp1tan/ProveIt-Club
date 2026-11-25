@@ -1,4 +1,15 @@
 .react-admin-page{width:100%;max-width:1180px;--site-line:#39475f;--site-panel:#1b2432;--site-raised:#232e40;--site-tint:#29354a;--site-muted:#b6c1d4}
+.react-admin-gallery-manager .react-admin-gallery-preview{width:min(100%,320px);aspect-ratio:4/5;overflow:hidden;border:1px solid var(--site-line);border-radius:14px;background:var(--site-raised)}
+.react-admin-gallery-manager .react-admin-gallery-preview img{display:block;width:100%;height:100%;object-fit:cover}
+.react-admin-gallery-manager .react-admin-gallery-preview-empty{display:grid;place-items:center;padding:20px;color:var(--site-muted);text-align:center}
+.react-admin-gallery-list{display:grid;gap:12px;margin-top:28px}
+.react-admin-gallery-list h3{margin:0 0 4px}
+.react-admin-gallery-list article{display:flex;align-items:center;gap:14px;padding:12px;border:1px solid var(--site-line);border-radius:12px;background:var(--site-raised)}
+.react-admin-gallery-list article>img{width:64px;height:80px;flex:0 0 auto;object-fit:cover;border-radius:8px}
+.react-admin-gallery-list article>div{display:grid;gap:5px;min-width:0;flex:1}
+.react-admin-gallery-list article small{color:var(--site-muted)}
+.react-admin-gallery-list article button{flex:0 0 auto}
+@media(max-width:560px){.react-admin-gallery-list article{align-items:flex-start;flex-wrap:wrap}.react-admin-gallery-list article>div{padding-top:5px}.react-admin-gallery-list article button{margin-left:78px}}
 html[data-theme="light"] .react-admin-page{--site-line:#cbd5e3;--site-panel:#f8fafd;--site-raised:#fff;--site-tint:#edf1f8;--site-muted:#53627a}
 .react-admin-page[hidden]{display:none!important}
 .react-admin-page #adminApp{min-width:0}

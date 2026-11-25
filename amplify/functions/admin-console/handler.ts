@@ -1,9 +1,9 @@
 // Consola de consulta: nunca acepta un rol del navegador ni devuelve claves del entorno.
 import {randomUUID} from 'node:crypto';
 import {DynamoDBClient} from '@aws-sdk/client-dynamodb';
-import {DynamoDBDocumentClient,GetCommand,ScanCommand,QueryCommand,PutCommand,TransactWriteCommand} from '@aws-sdk/lib-dynamodb';
+import {DynamoDBDocumentClient,GetCommand,ScanCommand,QueryCommand,PutCommand,DeleteCommand,TransactWriteCommand} from '@aws-sdk/lib-dynamodb';
 import {CognitoIdentityProviderClient,ListUsersCommand,AdminGetUserCommand} from '@aws-sdk/client-cognito-identity-provider';
-import {S3Client,GetObjectCommand} from '@aws-sdk/client-s3';
+import {S3Client,GetObjectCommand,PutObjectCommand,HeadObjectCommand,DeleteObjectCommand} from '@aws-sdk/client-s3';
 import {getSignedUrl} from '@aws-sdk/s3-request-presigner';
 const db=DynamoDBDocumentClient.from(new DynamoDBClient({})),cognito=new CognitoIdentityProviderClient({}),s3=new S3Client({});
 const env=(key:string)=>process.env[key]!;
@@ -30,6 +30,37 @@ export const handler=async(event:{arguments?:Record<string,any>;identity?:{sub?:
  if(q.length>100)throw new Error('La búsqueda admite hasta 100 caracteres.');
  const audit=async(target:string,reason='Consulta administrativa')=>db.send(new PutCommand({TableName:env('SOCIAL_TABLE_NAME'),Item:{pk:'ADMIN_AUDIT',sk:new Date().toISOString()+'#'+randomUUID(),actorSub:sub,action,target,reason,requestedAt:new Date().toISOString()}}));
  if(action==='ACCESS')return JSON.stringify({allowed:true});
+ if(action==='GALLERY_LIST'){
+  await audit('COMMUNITY_GALLERY','Consulta de fotos del Salón de la fama');
+  const result=await db.send(new QueryCommand({TableName:env('SOCIAL_TABLE_NAME'),KeyConditionExpression:'pk=:pk AND begins_with(sk,:prefix)',ExpressionAttributeValues:{':pk':'COMMUNITY_GALLERY',':prefix':'PHOTO#'},Limit:40,ScanIndexForward:false,ConsistentRead:true}));
+  const photos=await Promise.all((result.Items || []).map(async(photo:any)=>({id:photo.id,title:photo.title,detail:photo.detail || '',createdAt:photo.createdAt,url:await getSignedUrl(s3,new GetObjectCommand({Bucket:env('PROFILE_BUCKET_NAME'),Key:photo.path}),{expiresIn:3600})})));
+  return JSON.stringify({photos});
+ }
+ if(action==='GALLERY_UPLOAD'){
+  if(a.contentType!=='image/webp' || !Number.isInteger(a.size) || a.size<1 || a.size>2097152)throw new Error('La foto debe ser WebP y pesar hasta 2 MB.');
+  const path=`community-gallery/${randomUUID()}.webp`;
+  return JSON.stringify({path,url:await getSignedUrl(s3,new PutObjectCommand({Bucket:env('PROFILE_BUCKET_NAME'),Key:path,ContentType:'image/webp',ContentLength:a.size}),{expiresIn:120})});
+ }
+ if(action==='GALLERY_SAVE'){
+  if(typeof a.path!=='string' || !/^community-gallery\/[a-f0-9-]{36}\.webp$/i.test(a.path))throw new Error('La foto cargada no es válida.');
+  const title=String(a.title || '').trim(),detail=String(a.detail || '').trim();
+  if(title.length<2 || title.length>80 || detail.length>160)throw new Error('El título debe tener entre 2 y 80 caracteres; el detalle admite hasta 160.');
+  const uploaded=await s3.send(new HeadObjectCommand({Bucket:env('PROFILE_BUCKET_NAME'),Key:a.path}));
+  if(uploaded.ContentType!=='image/webp' || !uploaded.ContentLength || uploaded.ContentLength>2097152)throw new Error('No pudimos verificar la imagen WebP. Volvé a cargarla.');
+  const id=randomUUID(),now=new Date().toISOString(),item={pk:'COMMUNITY_GALLERY',sk:'PHOTO#'+id,id,path:a.path,title,detail,alt:detail || title,createdAt:now};
+  await db.send(new PutCommand({TableName:env('SOCIAL_TABLE_NAME'),Item:item,ConditionExpression:'attribute_not_exists(pk) AND attribute_not_exists(sk)'}));
+  await audit(id,'Foto publicada en el Salón de la fama');
+  return JSON.stringify({photo:{id,title,detail,createdAt:now,url:await getSignedUrl(s3,new GetObjectCommand({Bucket:env('PROFILE_BUCKET_NAME'),Key:a.path}),{expiresIn:3600})}});
+ }
+ if(action==='GALLERY_DELETE'){
+  if(typeof a.targetId!=='string' || !/^[a-f0-9-]{36}$/i.test(a.targetId))throw new Error('Foto inválida.');
+  const item=await db.send(new GetCommand({TableName:env('SOCIAL_TABLE_NAME'),Key:{pk:'COMMUNITY_GALLERY',sk:'PHOTO#'+a.targetId},ConsistentRead:true}));
+  if(!item.Item || typeof item.Item.path!=='string' || !/^community-gallery\/[a-f0-9-]{36}\.webp$/i.test(item.Item.path))throw new Error('La foto ya no está en la galería.');
+  await db.send(new DeleteCommand({TableName:env('SOCIAL_TABLE_NAME'),Key:{pk:'COMMUNITY_GALLERY',sk:'PHOTO#'+a.targetId},ConditionExpression:'path=:path',ExpressionAttributeValues:{':path':item.Item.path}}));
+  await s3.send(new DeleteObjectCommand({Bucket:env('PROFILE_BUCKET_NAME'),Key:item.Item.path}));
+  await audit(a.targetId,'Foto retirada del Salón de la fama');
+  return JSON.stringify({deleted:true});
+ }
  if(action==='SET_CREATION_EXEMPTION'){
   if(typeof a.targetId!=='string' || !/^[a-f0-9-]{36}$/i.test(a.targetId) || typeof a.enabled!=='boolean')throw new Error('Cuenta o permiso inválidos.');
   if(a.targetId===sub)throw new Error('El Creador ya tiene creación gratuita permanente.');

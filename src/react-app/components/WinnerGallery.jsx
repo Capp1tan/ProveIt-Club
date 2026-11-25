@@ -1,37 +1,8 @@
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { createPortal } from 'react-dom';
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 
-const basePhotos = [
-  {
-    id: 'cards',
-    src: '/carousel/cartas-800.webp',
-    alt: 'Amigos compartiendo una partida de cartas.',
-    title: 'Cartas entre amigos',
-    detail: 'Un encuentro del club · Imagen ilustrativa',
-  },
-  {
-    id: 'padel',
-    src: '/carousel/padel-800.webp',
-    alt: 'Amigos compitiendo en una cancha de pádel.',
-    title: 'Pádel entre amigos',
-    detail: 'Un encuentro del club · Imagen ilustrativa',
-  },
-  {
-    id: 'award',
-    src: '/community/winner-award.jpg',
-    alt: 'Entrega ilustrativa de un certificado de reconocimiento.',
-    title: 'Entrega de premio',
-    detail: 'Foto ilustrativa del Salón de la fama',
-  },
-  {
-    id: 'shooter',
-    src: '/carousel/shooter-800.webp',
-    alt: 'Una persona celebrando una partida de videojuegos.',
-    title: 'Videojuegos entre amigos',
-    detail: 'Un encuentro del club · Imagen ilustrativa',
-  },
-];
+const emptyPhotos = [];
 
 const spring = { type: 'spring', stiffness: 135, damping: 24, mass: 1.25 };
 const openingStartSeconds = 1.05;
@@ -62,7 +33,7 @@ const fireworkBursts = [
   }),
 }));
 
-export default function WinnerGallery({ championName, tournamentName, championAvatar }) {
+export default function WinnerGallery({ photos: galleryPhotos = emptyPhotos }) {
   const galleryId = useId();
   const galleryRef = useRef(null);
   const dialogRef = useRef(null);
@@ -74,16 +45,7 @@ export default function WinnerGallery({ championName, tournamentName, championAv
   const audioStartTimeRef = useRef(0);
   const celebrationTimerRef = useRef(0);
   const reduceMotion = useReducedMotion();
-  const photos = useMemo(() => {
-    if (!championAvatar) return basePhotos;
-    return [...basePhotos, {
-      id: 'champion',
-      src: championAvatar,
-      alt: `Foto de perfil de ${championName}, último campeón del club.`,
-      title: championName,
-      detail: `Último campeón · ${tournamentName}`,
-    }];
-  }, [championAvatar, championName, tournamentName]);
+  const photos = Array.isArray(galleryPhotos) ? galleryPhotos : emptyPhotos;
   const [activePosition, setActivePosition] = useState(2);
   const [isOpen, setIsOpen] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -91,9 +53,9 @@ export default function WinnerGallery({ championName, tournamentName, championAv
   const [openingProgress, setOpeningProgress] = useState(0);
   const [showCelebration, setShowCelebration] = useState(false);
   const [celebrationKey, setCelebrationKey] = useState(0);
-  const selectedIndex = ((activePosition % photos.length) + photos.length) % photos.length;
+  const selectedIndex = photos.length ? ((activePosition % photos.length) + photos.length) % photos.length : 0;
   const selectedPhoto = photos[selectedIndex];
-  const positions = Array.from({ length: 7 }, (_, slot) => {
+  const positions = photos.length ? Array.from({ length: 7 }, (_, slot) => {
     const distance = slot - 3;
     const virtualPosition = activePosition + distance;
     const photoIndex = ((virtualPosition % photos.length) + photos.length) % photos.length;
@@ -109,7 +71,7 @@ export default function WinnerGallery({ championName, tournamentName, championAv
       opacity: depth === 0 ? 1 : depth === 1 ? 0.78 : depth === 2 ? 0.48 : 0.25,
       zIndex: 10 - depth,
     };
-  });
+  }) : [];
   const cardWidth = Math.min(212, Math.max(128, galleryWidth * 0.245));
   const step = Math.min(178, Math.max(76, galleryWidth * 0.21));
 
@@ -166,13 +128,13 @@ export default function WinnerGallery({ championName, tournamentName, championAv
 
   useEffect(() => {
     const element = galleryRef.current;
-    if (!element) return undefined;
+    if (!element || !photos.length) return undefined;
     const measure = () => setGalleryWidth(element.getBoundingClientRect().width);
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(element);
     return () => observer.disconnect();
-  }, []);
+  }, [photos.length]);
 
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -263,18 +225,18 @@ export default function WinnerGallery({ championName, tournamentName, championAv
   return (
     <div className="react-winner-gallery-root">
       <div
-        className="react-winner-gallery"
-        ref={galleryRef}
-        role="region"
-        aria-label="Galería de momentos y reconocimientos del club"
-        onMouseEnter={() => setIsPaused(true)}
-        onMouseLeave={() => setIsPaused(false)}
-        onFocusCapture={() => setIsPaused(true)}
-        onBlurCapture={(event) => {
+        className={photos.length ? 'react-winner-gallery' : 'react-winner-gallery-empty'}
+        ref={photos.length ? galleryRef : undefined}
+        role={photos.length ? 'region' : undefined}
+        aria-label={photos.length ? 'Fotos de ganadores y reconocimientos del club' : undefined}
+        onMouseEnter={photos.length ? () => setIsPaused(true) : undefined}
+        onMouseLeave={photos.length ? () => setIsPaused(false) : undefined}
+        onFocusCapture={photos.length ? () => setIsPaused(true) : undefined}
+        onBlurCapture={photos.length ? (event) => {
           if (!event.currentTarget.contains(event.relatedTarget)) setIsPaused(false);
-        }}
+        } : undefined}
       >
-        {positions.map(({ photo, virtualPosition, distance, depth, y, scale, rotate, opacity, zIndex }) => (
+        {photos.length ? positions.map(({ photo, virtualPosition, distance, depth, y, scale, rotate, opacity, zIndex }) => (
           <motion.button
             key={virtualPosition}
             className={`react-winner-photo${distance === 0 ? ' is-selected' : ''}`}
@@ -302,13 +264,20 @@ export default function WinnerGallery({ championName, tournamentName, championAv
               draggable="false"
             />
           </motion.button>
-        ))}
-        <p className="react-sr-only" aria-live="polite">Foto destacada: {selectedPhoto.title}</p>
+        )) : (
+          <div className="react-winner-gallery-coming-soon" role="status">
+            <span className="react-winner-gallery-coming-soon-icon" aria-hidden="true">✦</span>
+            <p className="react-eyebrow">SALÓN DE LA FAMA · PROVEIT CLUB</p>
+            <h3>Próximamente</h3>
+            <p>Muy pronto, fotos de quienes hicieron historia en el club.</p>
+          </div>
+        )}
+        {photos.length > 0 ? <p className="react-sr-only" aria-live="polite">Foto destacada: {selectedPhoto?.title}</p> : null}
       </div>
 
       {createPortal(
         <AnimatePresence>
-          {isOpen ? (
+          {isOpen && selectedPhoto ? (
             <>
           <motion.div
             className="react-winner-gallery-backdrop"
@@ -340,7 +309,6 @@ export default function WinnerGallery({ championName, tournamentName, championAv
                 <p className="react-eyebrow">SALÓN DE LA FAMA · PROVEIT CLUB</p>
                 <h2 id={`${galleryId}-title`}>{selectedPhoto.title}</h2>
                 <p id={`${galleryId}-detail`}>{selectedPhoto.detail}</p>
-                {selectedPhoto.id !== 'champion' ? <small>Último campeón: {championName} · {tournamentName}</small> : null}
               </div>
             </motion.section>
           </motion.div>

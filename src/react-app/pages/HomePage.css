@@ -94,6 +94,12 @@ html[data-theme="light"] .react-champion-card .react-secondary { background: #ff
 .react-champion-copy { align-self: center; min-width: 0; }
 .react-champion-feature { position: relative; isolation: isolate; min-width: 0; min-height: 270px; overflow: visible; border: 1px solid color-mix(in srgb, #d4ab43 36%, var(--line)); border-radius: 14px; background: radial-gradient(ellipse at 50% 42%, color-mix(in srgb, #747dff 12%, transparent), transparent 68%); }
 .react-winner-gallery-root { position: relative; width: 100%; min-height: 270px; }
+.react-winner-gallery-empty { position: absolute; inset: 0; display: grid; align-content: center; justify-items: center; gap: 7px; overflow: hidden; padding: 24px; border-radius: inherit; text-align: center; background: radial-gradient(ellipse at 50% 44%, color-mix(in srgb, #858bff 13%, transparent), transparent 70%); }
+.react-winner-gallery-coming-soon { display: grid; justify-items: center; gap: 8px; max-width: 340px; }
+.react-winner-gallery-coming-soon-icon { display: grid; width: 46px; height: 46px; place-items: center; border: 1px solid #858bff66; border-radius: 50%; color: #aeb4ff; font-size: 23px; background: #858bff14; }
+.react-winner-gallery-coming-soon .react-eyebrow { margin: 8px 0 0; font-size: 9px; }
+.react-winner-gallery-coming-soon h3 { margin: 0; font-size: clamp(22px, 2.3vw, 30px); }
+.react-winner-gallery-coming-soon p:last-child { max-width: 290px; margin: 0; color: var(--muted); line-height: 1.55; }
 .react-winner-gallery { position: absolute; inset: 0; display: grid; place-items: center; overflow: hidden; perspective: 900px; -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%); mask-image: linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%); }
 .react-winner-photo { position: absolute; top: 50%; left: 50%; display: block; aspect-ratio: 4 / 5; overflow: hidden; padding: 0; border: 1px solid #ffffff50; border-radius: 14px; background: #171d29; box-shadow: 0 18px 38px #0006; color: inherit; cursor: zoom-in; transform-origin: center; translate: -50% -50%; }
 .react-winner-photo::after { position: absolute; inset: 0; border: 1px solid transparent; border-radius: inherit; content: ""; pointer-events: none; transition: border-color 180ms ease, box-shadow 180ms ease; }

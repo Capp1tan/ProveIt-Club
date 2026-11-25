@@ -11,11 +11,11 @@ import './AdminPage.css';
 const sections = [
   ['USERS', 'Cuentas'], ['PROFILES', 'Perfiles'], ['PRIVATE_ACCOUNTS', 'Teléfonos registrados'],
   ['TOURNAMENTS', 'Torneos'], ['PAYMENTS', 'Pagos'], ['INVITATIONS', 'Invitaciones'],
-  ['BADGES', 'Emblemas'], ['FRIENDSHIPS', 'Amistades'], ['JUDGES', 'Reputación de jueces'],
+  ['GALLERY', 'Fotos del Salón de la fama'], ['BADGES', 'Emblemas'], ['FRIENDSHIPS', 'Amistades'], ['JUDGES', 'Reputación de jueces'],
   ['REPORTS', 'Reclamos'], ['ROOMS', 'Salas y mensajes'], ['SETTINGS', 'Configuración de tarifas'],
   ['CLAIMS', 'Reservas y accesos'], ['AUDIT', 'Registro de actividad'],
 ];
-const collections = new Set(sections.map(([key]) => key).filter((key) => !['USERS', 'BADGES', 'SETTINGS', 'REPORTS'].includes(key)));
+const collections = new Set(sections.map(([key]) => key).filter((key) => !['USERS', 'GALLERY', 'BADGES', 'SETTINGS', 'REPORTS'].includes(key)));
 const canLoadSection = (key) => key === 'USERS' || collections.has(key);
 const titles = { id: 'Identificador', name: 'Nombre', nickname: 'Nick', status: 'Estado', activity: 'Actividad', format: 'Formato', createdAt: 'Creado', updatedAt: 'Actualizado', startsAt: 'Inicio', timeZone: 'Zona horaria', createdBySub: 'Cuenta organizadora', accountSub: 'Cuenta', phoneNumber: 'Teléfono', phoneVerified: 'Teléfono verificado por SMS', code: 'Insignia', reason: 'Motivo', reviewReason: 'Motivo de revisión', prizeTitle: 'Premio', prizeHolder: 'Responsable del premio', prizeFunder: 'Financia el premio', prizeFundingStatus: 'Confirmación del premio', deletedAt: 'Eliminado', visibility: 'Privacidad', judgeEnabled: 'Disponible como juez', currency: 'Moneda', paymentMode: 'Modo de pago', amountCents: 'Importe en centavos', tournamentName: 'Torneo', role: 'Rol', consentAcceptedAt: 'Aceptación', requestedAt: 'Consulta solicitada', actorSub: 'Administrador', action: 'Acción', target: 'Registro consultado' };
 const date = (value) => { if (!value) return 'Sin fecha'; const d = new Date(value); return Number.isNaN(d.valueOf()) ? String(value) : d.toLocaleString('es-AR'); };
@@ -61,6 +61,64 @@ function ReportsManager() {
 }
 function ReportRow({ report, busy, review }) { const [reason, setReason] = useState(''); return <article className="react-admin-report"><h3>{report.judgeName}</h3><Link to={`/torneo?id=${encodeURIComponent(report.tournamentId)}`}>{report.tournamentName}</Link><p>{report.reason}</p><p>Estado: {report.status}</p>{report.status === 'PENDING' ? <><label>Motivo de revisión<input maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} /></label><div className="react-admin-actions"><button className="react-admin-primary" disabled={busy} onClick={() => void review(report, 'CONFIRMED', reason)}>Confirmar reclamo verídico</button><button className="react-admin-secondary" disabled={busy} onClick={() => void review(report, 'DISMISSED', reason)}>Desestimar reclamo</button></div></> : <p>Revisión: {report.reviewReason || 'Sin motivo registrado'}</p>}</article>; }
 
+async function prepareWinnerPhoto(file) {
+  if (!file || !['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 15 * 1024 * 1024) throw new Error('Elegí una foto JPG, PNG o WebP de hasta 15 MB.');
+  const bitmap = await createImageBitmap(file);
+  try {
+    if (bitmap.width * bitmap.height > 60000000) throw new Error('La foto tiene demasiados píxeles. Elegí una imagen más pequeña.');
+    const scale = Math.min(1, 1920 / bitmap.width, 1600 / bitmap.height);
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('No pudimos preparar la foto.');
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = 'high';
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    for (const quality of [0.88, 0.78, 0.68]) {
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/webp', quality));
+      if (blob?.type === 'image/webp' && blob.size <= 2 * 1024 * 1024) return blob;
+    }
+    throw new Error('La foto sigue pesando más de 2 MB después de optimizarla. Probá con otra.');
+  } finally { bitmap.close(); }
+}
+
+function WinnerPhotoManager() {
+  const [photos, setPhotos] = useState([]); const [file, setFile] = useState(null); const [preview, setPreview] = useState('');
+  const [title, setTitle] = useState(''); const [detail, setDetail] = useState(''); const [busy, setBusy] = useState(false); const [message, setMessage] = useState('');
+  const refresh = useCallback(async () => { setBusy(true); try { const result = await adminRequest('GALLERY_LIST'); setPhotos(result.photos || []); } catch (error) { setMessage(error.message); } finally { setBusy(false); } }, []);
+  useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => { if (!file) { setPreview(''); return undefined; } const url = URL.createObjectURL(file); setPreview(url); return () => URL.revokeObjectURL(url); }, [file]);
+  async function submit(event) {
+    event.preventDefault(); if (!file) { setMessage('Elegí una foto primero.'); return; }
+    setBusy(true); setMessage('Optimizando la foto…');
+    try {
+      const optimized = await prepareWinnerPhoto(file);
+      const grant = await adminRequest('GALLERY_UPLOAD', { contentType: optimized.type, size: optimized.size });
+      const uploaded = await fetch(grant.url, { method: 'PUT', headers: { 'Content-Type': optimized.type }, body: optimized, signal: AbortSignal.timeout(60000) });
+      if (!uploaded.ok) throw new Error('No pudimos subir la foto. Probá nuevamente.');
+      const result = await adminRequest('GALLERY_SAVE', { path: grant.path, title: title.trim(), detail: detail.trim() });
+      setPhotos((current) => [result.photo, ...current]); setFile(null); setTitle(''); setDetail(''); setMessage('Foto agregada al Salón de la fama.');
+    } catch (error) { setMessage(error.message || 'No pudimos guardar la foto.'); }
+    finally { setBusy(false); }
+  }
+  async function remove(photo) {
+    if (!window.confirm(`¿Retirar “${photo.title}” del Salón de la fama?`)) return;
+    setBusy(true); try { await adminRequest('GALLERY_DELETE', { targetId: photo.id }); setPhotos((current) => current.filter((item) => item.id !== photo.id)); setMessage('Foto retirada de la galería.'); } catch (error) { setMessage(error.message); } finally { setBusy(false); }
+  }
+  return <section className="react-admin-card react-admin-gallery-manager"><h2>Fotos del Salón de la fama</h2><p>Las fotos que cargues aparecen en la galería de inicio. Se optimizan sin deformarse y se recortan al marco; al abrirlas se muestran completas.</p>
+    <form className="react-admin-form" onSubmit={(event) => void submit(event)}>
+      <label>Foto JPG, PNG o WebP<input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setFile(event.target.files?.[0] || null)} /></label>
+      {preview ? <div className="react-admin-gallery-preview"><img src={preview} alt="Vista previa recortada como se verá en la galería" /></div> : <div className="react-admin-gallery-preview react-admin-gallery-preview-empty">La vista previa aparecerá aquí</div>}
+      <label>Título<input required minLength={2} maxLength={80} value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Ejemplo: Ganador del torneo de pádel" /></label>
+      <label>Detalle opcional<input maxLength={160} value={detail} onChange={(event) => setDetail(event.target.value)} placeholder="Ejemplo: Copa de primavera · 2026" /></label>
+      <button className="react-admin-primary" disabled={busy || !file}>{busy ? 'Guardando…' : 'Agregar foto'}</button>
+      <p role="status">{message || 'La foto se optimiza y se muestra dentro del marco sin estirarse.'}</p>
+    </form>
+    <div className="react-admin-gallery-list"><h3>Fotos publicadas ({photos.length})</h3>{busy && !photos.length ? <p>Cargando fotos…</p> : null}{photos.map((photo) => <article key={photo.id}><img src={photo.url} alt="" /><div><strong>{photo.title}</strong><small>{photo.detail || 'Sin detalle'}</small></div><button type="button" className="react-admin-danger" disabled={busy} onClick={() => void remove(photo)}>Retirar</button></article>)}</div>
+  </section>;
+}
+
 function AdminPage() {
   const location = useLocation(); const active = location.pathname === '/admin'; const { status: authStatus } = useAuth();
   const [allowed, setAllowed] = useState(false); const [accessError, setAccessError] = useState(''); const [section, setSection] = useState('USERS'); const [query, setQuery] = useState(''); const [appliedQuery, setAppliedQuery] = useState(''); const [rows, setRows] = useState([]); const [cursor, setCursor] = useState(null); const [currentCursor, setCurrentCursor] = useState(null); const [pages, setPages] = useState([]); const [busy, setBusy] = useState(false); const [notice, setNotice] = useState(''); const [detail, setDetail] = useState(null); const [roomReason, setRoomReason] = useState(''); const [messages, setMessages] = useState([]); const [messageCursor, setMessageCursor] = useState(null); const [exemptionReason, setExemptionReason] = useState(''); const [avatar, setAvatar] = useState('');
@@ -97,7 +155,7 @@ function AdminPage() {
     {authStatus !== 'signed-in' ? <section className="react-admin-card"><p>{authStatus === 'checking' ? 'Comprobando sesión…' : 'Ingresá con la cuenta administradora para abrir este panel.'}</p><Link className="react-admin-primary" to="/ingresar">Ingresar ↗</Link></section> : !allowed ? <section className="react-admin-card"><p role="status">{accessError}</p><button className="react-admin-secondary" onClick={() => setSection((value) => value)}>Volver a comprobar acceso</button></section> : <>
       <p className="react-admin-notice" role="status">{busy ? 'Procesando…' : notice}</p><p className="react-admin-access-note">Acceso exclusivo del administrador general. Cada lectura y cambio administrativo queda registrado. Los datos privados sólo se consultan aquí.</p>
       <nav className="react-admin-sections" aria-label="Secciones de administración"><span className="react-admin-sections-title">SECCIONES</span>{sections.map(([key, name]) => <button key={key} type="button" aria-pressed={section === key} onClick={() => { setSection(key); setQuery(''); setAppliedQuery(''); setDetail(null); setNotice(''); }}>{name}</button>)}</nav>
-      {section === 'BADGES' ? <BadgeManager /> : section === 'SETTINGS' ? <BillingManager /> : section === 'REPORTS' ? <ReportsManager /> : <section className="react-admin-card"><h2>{sections.find(([key]) => key === section)?.[1]}</h2><form className="react-admin-search" onSubmit={search}><input type="search" maxLength={100} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Nick, correo, nombre o identificador" aria-label="Buscar datos de administración" /><button className="react-admin-primary">Buscar</button><button type="button" className="react-admin-secondary" onClick={() => void load(null, [], section, appliedQuery)}>Actualizar</button></form>
+      {section === 'GALLERY' ? <WinnerPhotoManager /> : section === 'BADGES' ? <BadgeManager /> : section === 'SETTINGS' ? <BillingManager /> : section === 'REPORTS' ? <ReportsManager /> : <section className="react-admin-card"><h2>{sections.find(([key]) => key === section)?.[1]}</h2><form className="react-admin-search" onSubmit={search}><input type="search" maxLength={100} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Nick, correo, nombre o identificador" aria-label="Buscar datos de administración" /><button className="react-admin-primary">Buscar</button><button type="button" className="react-admin-secondary" onClick={() => void load(null, [], section, appliedQuery)}>Actualizar</button></form>
         {section === 'TOURNAMENTS' && <p>Podés eliminar un torneo individual, incluso si terminó y su sala cerró. Escribí ELIMINAR para confirmar; no existe eliminación masiva.</p>}
         <div className="react-admin-table-wrap"><table className="react-admin-table"><thead><tr>{(section === 'TOURNAMENTS' ? ['Torneo', 'Actividad', 'Estado'] : section === 'USERS' ? ['Cuenta', 'Correo', 'Estado'] : section === 'ROOMS' ? ['Sala', 'Identificador', 'Tipo'] : ['Registro', 'Descripción', 'Estado o fecha']).map((x) => <th key={x}>{x}</th>)}<th>Acción</th></tr></thead><tbody>{rows.map((row, index) => { const userRow = section === 'USERS'; const room = section === 'ROOMS'; const values = section === 'TOURNAMENTS' ? [row.name || row.id, row.activity || 'Sin actividad', row.deletedAt || row.status === 'DELETED' ? 'Eliminado' : row.status === 'COMPLETED' ? 'Finalizado' : row.status || 'En preparación'] : userRow ? [row.nickname || 'Cuenta sin perfil', row.email || 'Sin correo', `${row.enabled ? 'Habilitada' : 'Deshabilitada'} · ${row.status}`] : room ? [row.name || 'Sala', row.roomKey, row.roomKey?.startsWith('DM#') ? 'Privada' : 'Torneo'] : [row.id || row.sk || row.pk || 'Registro', row.name || row.tournamentName || row.nickname || row.peerName || row.reason || row.action || row.code || row.target || row.pk || 'Datos del club', row.status || date(row.createdAt || row.updatedAt || row.requestedAt)]; return <tr key={row.id || row.roomKey || row.sk || row.pk || index}>{values.map((value, i) => <td key={i}>{String(value || '')}</td>)}<td className="react-admin-actions"><button className="react-admin-secondary" onClick={() => userRow ? void showAccount(row) : room ? (setDetail({ type: 'ROOM', value: row }), setMessages([]), setMessageCursor(null)) : void showRecord(row)}>{userRow ? 'Ver cuenta' : room ? 'Consultar sala' : 'Ver detalle'}</button>{section === 'TOURNAMENTS' && !row.deletedAt && row.status !== 'DELETED' && <button className="react-admin-danger" onClick={() => void deleteEvent(row)}>Eliminar torneo</button>}</td></tr>; })}</tbody></table></div>
         {!rows.length && <p>{busy ? 'Cargando registros…' : 'No hay coincidencias en esta página.'}</p>}

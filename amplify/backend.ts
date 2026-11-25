@@ -4,7 +4,7 @@ import {Policy,PolicyStatement} from 'aws-cdk-lib/aws-iam';
 import { billing } from './functions/billing/resource';
 import { maintenance } from './functions/maintenance/resource';
 import { paymentWebhook } from './functions/payment-webhook/resource';
-import { FunctionUrlAuthType } from 'aws-cdk-lib/aws-lambda';
+import { FunctionUrlAuthType, HttpMethod } from 'aws-cdk-lib/aws-lambda';
 import { defineBackend } from '@aws-amplify/backend';
 import { clubAccount } from './functions/club-account/resource';
 import { auth } from './auth/resource';
@@ -13,13 +13,14 @@ import { storage } from './storage/resource';
 import { respondInvitation } from './functions/respond-invitation/resource';
 import { createTournament } from './functions/create-tournament/resource';
 import { social } from './functions/social/resource';
+import { publicGallery } from './functions/public-gallery/resource';
 import { Table, CfnTable, AttributeType, BillingMode } from 'aws-cdk-lib/aws-dynamodb';
-import { RemovalPolicy } from 'aws-cdk-lib';
+import { Duration, RemovalPolicy } from 'aws-cdk-lib';
 import { LogRetention, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { CfnUserPool } from 'aws-cdk-lib/aws-cognito';
 
 /** Recursos AWS que Amplify podrá desplegar cuando habilitemos el backend. */
-const backend = defineBackend({ auth, data, storage, createTournament, respondInvitation, clubAccount, billing, paymentWebhook, maintenance, social, adminConsole, preSignUp });
+const backend = defineBackend({ auth, data, storage, createTournament, respondInvitation, clubAccount, billing, paymentWebhook, maintenance, social, adminConsole, preSignUp, publicGallery });
 // Mantiene un mínimo razonable, sin obligar a combinar mayúsculas, números o símbolos.
 // Amplify aplica una política más estricta por defecto, así que se fija explícitamente.
 const userPoolResource = backend.auth.resources.userPool.node.defaultChild as CfnUserPool;
@@ -41,6 +42,18 @@ const socialTable=new Table(backend.data.resources.graphqlApi.stack,'ClubSocial'
 });
 socialTable.grantReadWriteData(backend.social.resources.lambda);
 backend.social.addEnvironment('SOCIAL_TABLE_NAME',socialTable.tableName);
+backend.publicGallery.addEnvironment('SOCIAL_TABLE_NAME', socialTable.tableName);
+backend.publicGallery.addEnvironment('PROFILE_BUCKET_NAME', backend.storage.resources.bucket.bucketName);
+backend.publicGallery.resources.lambda.addToRolePolicy(new PolicyStatement({
+ actions: ['dynamodb:Query'],
+ resources: [socialTable.tableArn],
+ conditions: { 'ForAllValues:StringEquals': { 'dynamodb:LeadingKeys': ['COMMUNITY_GALLERY'] } },
+}));
+backend.storage.resources.bucket.grantRead(backend.publicGallery.resources.lambda, 'community-gallery/*');
+const winnerGalleryFeed = backend.publicGallery.resources.lambda.addFunctionUrl({
+ authType: FunctionUrlAuthType.NONE,
+ cors: { allowedOrigins: ['*'], allowedMethods: [HttpMethod.GET, HttpMethod.OPTIONS], allowedHeaders: ['content-type'], maxAge: Duration.minutes(5) },
+});
 for(const [model,env] of [['Profile','PROFILE_TABLE_NAME'],['Tournament','TOURNAMENT_TABLE_NAME'],['UniqueClaim','CLAIM_TABLE_NAME']] as const){
   backend.data.resources.tables[model].grantReadData(backend.social.resources.lambda);
   backend.social.addEnvironment(env,backend.data.resources.tables[model].tableName);
@@ -99,7 +112,7 @@ backend.respondInvitation.addEnvironment('PROFILE_TABLE_NAME', profiles.tableNam
 
 // URL sólo de recepción: no acepta decisiones del navegador, valida firma y consulta MP.
 const webhookUrl=backend.paymentWebhook.resources.lambda.addFunctionUrl({authType:FunctionUrlAuthType.NONE});
-backend.addOutput({custom:{paymentWebhookUrl:webhookUrl.url}});
+backend.addOutput({custom:{paymentWebhookUrl:webhookUrl.url,winnerGalleryFeedUrl:winnerGalleryFeed.url}});
 for(const fn of [backend.createTournament,backend.billing]) {
   fn.addEnvironment('PAYMENT_WEBHOOK_URL',webhookUrl.url);
   backend.data.resources.tables['TournamentPayment'].grantReadWriteData(fn.resources.lambda);
@@ -153,6 +166,7 @@ for(const [model,key] of [['Profile','PROFILE_TABLE_NAME'],['PrivateAccount','AC
 }
 socialTable.grantReadData(backend.adminConsole.resources.lambda);
 backend.adminConsole.resources.lambda.addToRolePolicy(new PolicyStatement({actions:['dynamodb:PutItem'],resources:[socialTable.tableArn],conditions:{'ForAllValues:StringEquals':{'dynamodb:LeadingKeys':['ADMIN_AUDIT']}}}));
+backend.adminConsole.resources.lambda.addToRolePolicy(new PolicyStatement({actions:['dynamodb:PutItem','dynamodb:DeleteItem'],resources:[socialTable.tableArn],conditions:{'ForAllValues:StringEquals':{'dynamodb:LeadingKeys':['COMMUNITY_GALLERY']}}}));
 backend.adminConsole.addEnvironment('SOCIAL_TABLE_NAME',socialTable.tableName);
 backend.adminConsole.resources.lambda.addToRolePolicy(new PolicyStatement({actions:['dynamodb:PutItem'],resources:[backend.data.resources.tables['UniqueClaim'].tableArn],conditions:{'ForAllValues:StringLike':{'dynamodb:LeadingKeys':['creation-exempt:*']}}}));
 backend.data.resources.tables['UniqueClaim'].grant(backend.adminConsole.resources.lambda,'dynamodb:ConditionCheckItem');
@@ -163,6 +177,7 @@ backend.auth.resources.userPool.grant(backend.adminConsole.resources.lambda,'cog
 backend.adminConsole.addEnvironment('USER_POOL_ID',backend.auth.resources.userPool.userPoolId);
 backend.storage.resources.bucket.grantRead(backend.adminConsole.resources.lambda,'profile-pictures/*');
 backend.storage.resources.bucket.grantRead(backend.adminConsole.resources.lambda,'profile-private/*');
+backend.storage.resources.bucket.grantReadWrite(backend.adminConsole.resources.lambda,'community-gallery/*');
 backend.adminConsole.addEnvironment('PROFILE_BUCKET_NAME',backend.storage.resources.bucket.bucketName);
 
 // Reserva de correos del alta, privada y en el stack de Auth para evitar dependencias circulares.

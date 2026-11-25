@@ -5,6 +5,7 @@ import { listClubTournaments } from '../../tournaments-api.js';
 import { useAuth } from '../auth/AuthProvider.jsx';
 import { avatarUrl } from '../../auth-client.js';
 import { viewClubProfile } from '../../community-api.js';
+import { loadWinnerGallery } from '../../community-gallery.js';
 import WinnerGallery from '../components/WinnerGallery.jsx';
 import './HomePage.css';
 
@@ -38,6 +39,7 @@ export default function HomePage() {
   const [rows, setRows] = useState([]);
   const [activityState, setActivityState] = useState('loading');
   const [championAvatar, setChampionAvatar] = useState('');
+  const [galleryPhotos, setGalleryPhotos] = useState([]);
   const [paused, setPaused] = useState(false);
   const [visible, setVisible] = useState(true);
   const [reducedMotion, setReducedMotion] = useState(() => matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -56,6 +58,12 @@ export default function HomePage() {
       .catch(() => { if (alive) setChampionAvatar(''); });
     return () => { alive = false; };
   }, [champion?.winnerProfileId]);
+
+  useEffect(() => {
+    let alive = true;
+    void loadWinnerGallery().then((photos) => { if (alive) setGalleryPhotos(photos); }).catch(() => { if (alive) setGalleryPhotos([]); });
+    return () => { alive = false; };
+  }, []);
 
   useEffect(() => {
     const media = matchMedia('(prefers-reduced-motion: reduce)');
@@ -128,7 +136,7 @@ export default function HomePage() {
             <p>Ganó <b>{champion.name}</b>{champion.decidedAt && <> · {new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(champion.decidedAt))}</>}</p>
           </div>
           <aside className="react-champion-feature" aria-label={`Galería de momentos y reconocimientos del club. Último campeón: ${champion.winnerName}, torneo ${champion.name}`}>
-            <WinnerGallery championName={champion.winnerName} tournamentName={champion.name} championAvatar={championAvatar} />
+            <WinnerGallery photos={galleryPhotos} />
           </aside>
         </article>
           : <article className="react-champion-card is-empty"><Trophy /><h3>{activityState === 'guest' ? 'Tu próxima victoria puede quedar acá' : activityState === 'error' ? 'No pudimos cargar al último campeón' : 'El salón está vacío'}</h3><p>{activityState === 'guest' ? 'Ingresá para conocer a los campeones del club.' : activityState === 'error' ? 'Intentá nuevamente en unos momentos.' : 'El primero que gane un torneo queda acá. ¿Vas a ser vos?'}</p>{activityState === 'guest' ? <Link className="react-secondary" to="/ingresar">Ingresar ↗</Link> : <Link className="react-secondary" to="/crear-torneo">Crear torneo ↗</Link>}</article>}
