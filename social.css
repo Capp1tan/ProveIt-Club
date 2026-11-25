@@ -22,3 +22,38 @@
 .chat-delivery{display:block;font-size:9px;color:#b7c99f;margin-top:5px}.chat-message[data-delivery=pending]{opacity:.72}.chat-message[data-delivery=failed]{border-color:#bd8164}.chat-retry{display:block;margin-top:6px;padding:5px 7px;font-size:10px;border:1px solid #a57554;border-radius:5px;background:#3d2b21;color:#ffd7b7;cursor:pointer}
 
 .chat-dock-panel{transform-origin:bottom right}.chat-dock-contact,.chat-dock-launcher,.chat-composer button{transition:background-color 160ms,border-color 160ms,opacity 160ms}.chat-message{transition:opacity 160ms,border-color 160ms}.chat-dock-body,.chat-dock-list{animation:chat-view-in 180ms cubic-bezier(.23,1,.32,1)}@keyframes chat-view-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}@media(prefers-reduced-motion:reduce){.chat-dock-body,.chat-dock-list{animation:none}.chat-message,.chat-dock-contact,.chat-dock-launcher,.chat-composer button{transition:none}}
+
+/* Keep chat surfaces within ProveIt's indigo and blue palette. */
+.chat-dock-launcher{background:linear-gradient(110deg,#20263a,#292f4b);border-color:#4b5676;color:#edf0ff}
+.chat-dock-launcher[data-unread=true]{border-color:#858bff;box-shadow:0 0 14px #747bff30}
+.chat-dock-symbol{color:#aab0ff}
+.chat-unread{background:#777dff;color:#fff}
+.chat-dock-panel{border-color:#46516f;background:#171d2b;color:#edf0f8}
+.chat-dock-header{background:#252c42;border-bottom-color:#3c4766}
+.chat-dock-header button{background:#1a2031;border-color:#46516f;color:#e4e8ff}
+.chat-dock-contact{border-bottom-color:#343e59;color:#e8ebf5}
+.chat-dock-contact:hover{background:#29314a}
+.chat-dock-friends{color:#aeb5ff}
+.chat-dock button:focus-visible,.chat-dock a:focus-visible{outline-color:#9298ff}
+.club-chat .social-help,.club-chat .social-notice,.club-chat .chat-keyboard-help,.club-chat .chat-composer label{color:#aab4cc}
+.club-chat .chat-messages{scrollbar-color:#6673d4 #161c29}
+.club-chat .chat-message{border-color:#3b4661;background:#252d40}
+.club-chat .chat-message[data-mine=true]{border-color:#5864a1;background:#2d3557}
+.club-chat .chat-message strong{color:#bcc2ff}
+.club-chat .chat-message p{color:#edf0f8}
+.club-chat .chat-message time,.club-chat .chat-delivery{color:#aab4cc}
+.club-chat .chat-composer textarea{border-color:#46516f;background:#151b28;color:#edf0f8}
+.club-chat .chat-composer textarea:focus{border-color:#858bff;outline:2px solid #858bff30}
+.club-chat .chat-composer button.primary-button{border:1px solid #858bff;background:#6872f5;color:#fff}
+html[data-theme="light"] .chat-dock-panel{border-color:#c4cce0;background:#f8f9fd;color:#17243b}
+html[data-theme="light"] .chat-dock-header{background:#e9ecf7;border-bottom-color:#cbd2e5}
+html[data-theme="light"] .chat-dock-header button{background:#fff;border-color:#c3cce0;color:#263c5b}
+html[data-theme="light"] .chat-dock-contact{border-bottom-color:#dce1ed;color:#192743}
+html[data-theme="light"] .chat-dock-contact:hover{background:#eceffd}
+html[data-theme="light"] .club-chat .social-help,html[data-theme="light"] .club-chat .social-notice,html[data-theme="light"] .club-chat .chat-keyboard-help,html[data-theme="light"] .club-chat .chat-composer label{color:#53627a}
+html[data-theme="light"] .club-chat .chat-message{border-color:#d1d8e8;background:#f1f3f9}
+html[data-theme="light"] .club-chat .chat-message[data-mine=true]{border-color:#aeb8ef;background:#e9ebff}
+html[data-theme="light"] .club-chat .chat-message strong{color:#3e4ab2}
+html[data-theme="light"] .club-chat .chat-message p{color:#192743}
+html[data-theme="light"] .club-chat .chat-message time,html[data-theme="light"] .club-chat .chat-delivery{color:#5d6b83}
+html[data-theme="light"] .club-chat .chat-composer textarea{border-color:#c4cde0;background:#fff;color:#17243b}

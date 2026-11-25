@@ -33,7 +33,7 @@ const basePhotos = [
   },
 ];
 
-const spring = { type: 'spring', stiffness: 230, damping: 25, mass: 0.8 };
+const spring = { type: 'spring', stiffness: 135, damping: 24, mass: 1.25 };
 
 function photoPositions(photos, selectedId) {
   const selectedIndex = Math.max(0, photos.findIndex((photo) => photo.id === selectedId));
@@ -72,11 +72,24 @@ export default function WinnerGallery({ championName, tournamentName, championAv
   }, [championAvatar, championName, tournamentName]);
   const [selectedId, setSelectedId] = useState('award');
   const [isOpen, setIsOpen] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [galleryWidth, setGalleryWidth] = useState(0);
   const selectedPhoto = photos.find((photo) => photo.id === selectedId) || photos[2];
   const positions = photoPositions(photos, selectedPhoto.id);
   const cardWidth = Math.min(212, Math.max(128, galleryWidth * 0.245));
   const step = Math.min(178, Math.max(76, galleryWidth * 0.21));
+
+  useEffect(() => {
+    if (isOpen || isPaused || reduceMotion || photos.length < 2) return undefined;
+    const timer = window.setInterval(() => {
+      if (document.hidden) return;
+      setSelectedId((current) => {
+        const index = photos.findIndex((photo) => photo.id === current);
+        return photos[(index + 1) % photos.length].id;
+      });
+    }, 8000);
+    return () => window.clearInterval(timer);
+  }, [isOpen, isPaused, photos, reduceMotion]);
 
   useEffect(() => {
     const element = galleryRef.current;
@@ -141,7 +154,18 @@ export default function WinnerGallery({ championName, tournamentName, championAv
 
   return (
     <div className="react-winner-gallery-root">
-      <div className="react-winner-gallery" ref={galleryRef} aria-label="Galería de momentos y reconocimientos del club">
+      <div
+        className="react-winner-gallery"
+        ref={galleryRef}
+        role="region"
+        aria-label="Galería de momentos y reconocimientos del club"
+        onMouseEnter={() => setIsPaused(true)}
+        onMouseLeave={() => setIsPaused(false)}
+        onFocusCapture={() => setIsPaused(true)}
+        onBlurCapture={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget)) setIsPaused(false);
+        }}
+      >
         {positions.map(({ photo, distance, depth, y, scale, rotate, opacity, zIndex }) => (
           <motion.button
             key={photo.id}
