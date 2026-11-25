@@ -73,13 +73,13 @@
 @media(max-width:760px) { .react-hero { min-height: 0; margin-inline: -20px; padding-bottom: 24px; } .react-hero-copy { width: calc(100% - 48px); padding: 128px 0 26px; } .react-hero-copy h1 { font-size: clamp(36px, 8vw, 49px); letter-spacing: -1.5px; } .react-hero-copy>p:not(.react-eyebrow) { font-size: 16px; } .react-hero-images { position: relative; inset: auto; width: 100%; height: auto; aspect-ratio: 16/10; margin-top: -6px; } .react-hero-images img { object-position: center; -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 12%, #000 58%, transparent 100%); -webkit-mask-composite: source-in; mask-image: linear-gradient(180deg, transparent 0%, #000 12%, #000 58%, transparent 100%); mask-composite: intersect; } .react-community,.react-reasons,.react-sponsors { width: calc(100% - 32px); } .react-community { margin-bottom: 42px; } .react-reasons { padding: 18px 0 40px; } .react-reasons-grid { grid-template-columns: 1fr; gap: 12px; margin-top: 26px; } .react-leagues { grid-template-columns: 1fr; gap: 14px; margin-top: 22px; padding: 22px; } .react-league-teasers { grid-template-columns: repeat(2, 1fr); gap: 18px; } .react-league-teasers figure>span { max-width: 130px; } .react-sponsors { padding-bottom: 36px; } .react-sponsors>div { gap: clamp(10px, 4vw, 24px); } .react-sponsors figure { width: min(27vw, 200px); } .react-sponsors img { height: 140px; } }
 @media(hover:hover) and (pointer:fine) { .react-activity:hover .react-activity-track,.react-activity:focus-within .react-activity-track { animation-play-state: paused; } }
 @media(prefers-reduced-motion:reduce) { .react-hero-images img { transition: none; } .react-activity-track { animation: none; } .react-activity ul[aria-hidden=true] { display: none; } }
-html[data-theme="light"] .react-hero { --hero-blend: #dde2e9; }
-html[data-theme="light"] .react-hero-copy h1 { color: #192743; }
+html[data-theme="light"] .react-hero { --hero-blend: #f4f5ef; }
+html[data-theme="light"] .react-hero-copy h1 { color: #0b1030; }
 html[data-theme="light"] .react-champion-card { background: linear-gradient(155deg, #fff9e9, #f7f8fb 76%); }
 html[data-theme="light"] .react-champion-label { color: #765710; }
 html[data-theme="light"] .react-champion-name span { background: #fff; color: #765710; }
 html[data-theme="light"] .react-champion-card > p { color: #52637e; }
-html[data-theme="light"] .react-champion-card.is-empty h3 { color: #192743; }
+html[data-theme="light"] .react-champion-card.is-empty h3 { color: #0b1030; }
 html[data-theme="light"] .react-champion-card.is-empty > p { color: #52637e; }
 html[data-theme="light"] .react-champion-card .react-secondary { background: #fff; color: #263c5b; border-color: #aebbd0; }
 

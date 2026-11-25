@@ -6,7 +6,7 @@
   function apply(value) {
     theme = value === 'dark' ? 'dark' : 'light'; root.dataset.theme = theme;
     root.style.colorScheme = theme;
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#121722' : '#dde2e9');
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#121722' : '#f4f5ef');
     const button = document.querySelector('[data-theme-toggle]');
     if (button) {
       const label = theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro';
