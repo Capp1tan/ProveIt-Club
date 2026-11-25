@@ -34,7 +34,8 @@ const basePhotos = [
 ];
 
 const spring = { type: 'spring', stiffness: 135, damping: 24, mass: 1.25 };
-const openingSeconds = 0.9;
+const openingSeconds = 0.55;
+const celebrationSeconds = 0.9;
 const confettiColors = ['#8189ff', '#56d5ff', '#ffd86a', '#ff7b9d', '#a8f078', '#f4f6ff'];
 const confettiPieces = Array.from({ length: 46 }, (_, index) => {
   const angle = (index / 46) * Math.PI * 2;
@@ -140,13 +141,13 @@ export default function WinnerGallery({ championName, tournamentName, championAv
         : audio?.currentTime || 0;
       const progress = Math.min(1, elapsed / openingSeconds);
       setOpeningProgress(progress);
-      if (progress >= 1 && !celebrationStarted) {
+      if (elapsed >= celebrationSeconds && !celebrationStarted) {
         celebrationStarted = true;
         setShowCelebration(true);
         window.clearTimeout(celebrationTimerRef.current);
         celebrationTimerRef.current = window.setTimeout(() => setShowCelebration(false), 2100);
       }
-      if (progress < 1 || (audio && !audio.paused && !audio.ended)) {
+      if (elapsed < celebrationSeconds || (audio && !audio.paused && !audio.ended)) {
         frame = window.requestAnimationFrame(animateOpening);
       }
     };
