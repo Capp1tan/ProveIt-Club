@@ -15,26 +15,34 @@ archivo `amplify/functions/leagues.ts`. No se reinician ni borran cuentas.
 Los torneos previos permanecen en el historial pero no conceden experiencia.
 Sólo se toman eventos creados y terminados desde esa fecha.
 
-## Progresión inicial, ajustable
+## Ligas y divisiones
 
-| Liga | XP acumulada mínima |
-|---|---:|
-| Sin liga | 0 |
-| Pañal con caca | 25 |
-| Cartón mojado | 50 |
-| Madera | 100 |
-| Cobre | 350 |
-| Hierro oxidado | 1.000 |
-| Acero templado | 2.500 |
-| Obsidiana | 6.000 |
-| Leyenda | 15.000 |
+Cada liga se divide en III, II y I, en ese orden de progreso. Élite es la
+categoría superior y sus umbrales son deliberadamente exigentes.
 
-Un torneo terminado concede 25 XP; ganar añade 10 XP. Con ello el primer
-evento válido desbloquea Pañal. Dos eventos desbloquean Cartón y entre tres
-y cuatro eventos permiten llegar a Madera. No es una clasificación de habilidad:
-es la primera versión de progresión del club. La liga máxima no tiene un
-requisito adicional de campeonato todavía. Los objetivos altos se pueden revisar
-cuando exista suficiente actividad real para evaluar su dificultad.
+| Liga | División | XP acumulada mínima |
+|---|---|---:|
+| Sin liga | — | 0 |
+| Principiante | III | 25 |
+| Principiante | II | 50 |
+| Principiante | I | 100 |
+| Ascendente | III | 200 |
+| Ascendente | II | 350 |
+| Ascendente | I | 600 |
+| Maestro | III | 1.000 |
+| Maestro | II | 2.000 |
+| Maestro | I | 3.500 |
+| Élite | III | 6.000 |
+| Élite | II | 10.000 |
+| Élite | I | 15.000 |
+
+Un torneo terminado concede 25 XP; ganar añade 10 XP. Los puntos se mantienen
+derivados de resultados válidos, no editables desde el navegador. A 25 XP por
+evento sin victorias, alcanzar Élite requiere al menos 240 torneos válidos; la
+división Élite I requiere 600. El máximo de tres torneos acreditados por día y
+las demás reglas de validez hacen que la progresión alta requiera constancia.
+Las ligas representan recorrido dentro del club, no una medición oficial de
+habilidad ni dinero.
 
 Un evento cuenta una vez, con al menos dos participantes distintos aceptados,
 ganador definitivo, sin reversión del cobro ni resultado por sanción. Las
@@ -71,7 +79,7 @@ paginado; con crecimiento conviene sustituirlo por índices/eventos persistentes
 - `src/profile-leagues.js`: identidad, liga y ambos historiales.
 - `src/profile-ui.js` y `src/profile-public.js`: integración propia/ajena.
 - `leagues.css`: disposición, tamaño de símbolos y adaptación al móvil.
-- `public/leagues/symbols.webp`: atlas transparente 4×2, orden de las ocho ligas.
+- `public/leagues/symbols.webp`: atlas transparente 4×2, un símbolo por categoría.
 - `public/leagues/profile-background.webp`: paisaje compartido del perfil.
 
 Los gráficos se generaron con la herramienta integrada de imágenes y se

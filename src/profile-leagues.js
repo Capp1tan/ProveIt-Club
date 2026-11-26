@@ -24,9 +24,9 @@ export function profileIdentity(profile){
  return card;
 }
 
-function symbol(rank){
+function symbol(categoryIndex){
  const el=node('span','','league-symbol');el.setAttribute('aria-hidden','true');
- el.style.backgroundPosition=((rank%4)*100/3)+'% '+(rank<4?'0%':'100%');return el;
+ el.style.backgroundPosition=((categoryIndex%4)*100/3)+'% 0%';return el;
 }
 function messagePanel(title,copy){const card=node('section','','league-panel');card.append(node('h2',title),node('p',copy));return card;}
 
@@ -44,9 +44,12 @@ export function profileProgress(profile,{own=false}={}){
    if(data.hidden){root.replaceChildren(messagePanel('Recorrido privado','Este perfil sólo comparte su recorrido con amigos.'));return;}
    if(!Array.isArray(data.history) || !Array.isArray(data.achievements) || !Number.isFinite(data.xp))throw new Error('La actualización de ligas todavía no está disponible.');
    const card=node('section','','league-current league-panel'),identity=node('div','','league-current-identity');
-   if(data.rank)identity.append(symbol(data.rank.index));
+   if(data.rank)identity.append(symbol(data.rank.categoryIndex ?? Math.floor(data.rank.index/3)));
    else{const empty=node('span','◇','league-unranked');empty.setAttribute('aria-hidden','true');identity.append(empty);}
-   const label=node('div');label.append(node('p',data.rank?'LIGA ACTUAL':'TU RECORRIDO EMPIEZA ACÁ','league-eyebrow'),node('h2',data.rank?.name || 'Sin liga'));identity.append(label);card.append(identity);
+   const label=node('div');label.append(node('p',data.rank?'LIGA ACTUAL':'TU RECORRIDO EMPIEZA ACÁ','league-eyebrow'));
+   if(data.rank){const title=node('div','','league-current-title'+(data.rank.name==='Élite'?' is-elite':''));title.append(node('h2',data.rank.name),node('span',data.rank.division,'league-current-division'));label.append(title);}
+   else label.append(node('h2','Sin liga'));
+   identity.append(label);card.append(identity);
    const experience=node('div','','league-experience');
    if(!data.rank){
     experience.append(node('p','Competí para desbloquear ligas y recompensas.'),node('small','Completá tu primer torneo válido para obtener tu primera liga. Los logros son la primera recompensa; los premios reales se anunciarán por separado.'));
@@ -54,7 +57,7 @@ export function profileProgress(profile,{own=false}={}){
    }else{
     experience.append(node('h3','Experiencia'));
     const meter=node('progress');meter.max=data.nextMinimum || Math.max(1,data.xp);meter.value=data.xp;meter.setAttribute('aria-label','Experiencia acumulada');
-    experience.append(meter,node('p',data.nextMinimum?data.xp.toLocaleString('es')+' / '+data.nextMinimum.toLocaleString('es')+' XP':data.xp.toLocaleString('es')+' XP · Liga máxima'),node('small','La experiencia reconoce tu recorrido en el club. No representa un saldo de dinero.'));
+    experience.append(meter,node('p',data.nextMinimum?data.xp.toLocaleString('es')+' / '+data.nextMinimum.toLocaleString('es')+' XP':data.xp.toLocaleString('es')+' XP · Élite I · división máxima'),node('small','La experiencia reconoce tu recorrido en el club. No representa un saldo de dinero.'));
    }card.append(experience);
    const columns=node('div','','league-histories'),history=messagePanel('Historial de participaciones',''),achievements=messagePanel('Historial de logros','');
    history.lastElementChild.remove();achievements.lastElementChild.remove();

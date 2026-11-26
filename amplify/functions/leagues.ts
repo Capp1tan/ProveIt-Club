@@ -8,10 +8,18 @@ import {DynamoDBDocumentClient,ScanCommand} from '@aws-sdk/lib-dynamodb';
 // Los puntos se calculan en el servidor. No hay campos de XP editables por el navegador.
 export const LEAGUE_START = '2026-10-18T21:35:00.000Z';
 const ranks = [
-  {name:'Pañal con caca',minimum:25}, {name:'Cartón mojado',minimum:50},
-  {name:'Madera',minimum:100}, {name:'Cobre',minimum:350},
-  {name:'Hierro oxidado',minimum:1000}, {name:'Acero templado',minimum:2500},
-  {name:'Obsidiana',minimum:6000}, {name:'Leyenda',minimum:15000},
+  {name:'Principiante',division:'III',categoryIndex:0,minimum:25},
+  {name:'Principiante',division:'II',categoryIndex:0,minimum:50},
+  {name:'Principiante',division:'I',categoryIndex:0,minimum:100},
+  {name:'Ascendente',division:'III',categoryIndex:1,minimum:200},
+  {name:'Ascendente',division:'II',categoryIndex:1,minimum:350},
+  {name:'Ascendente',division:'I',categoryIndex:1,minimum:600},
+  {name:'Maestro',division:'III',categoryIndex:2,minimum:1000},
+  {name:'Maestro',division:'II',categoryIndex:2,minimum:2000},
+  {name:'Maestro',division:'I',categoryIndex:2,minimum:3500},
+  {name:'Élite',division:'III',categoryIndex:3,minimum:6000},
+  {name:'Élite',division:'II',categoryIndex:3,minimum:10000},
+  {name:'Élite',division:'I',categoryIndex:3,minimum:15000},
 ];
 
 /** Lectura derivada y sin escrituras: cada torneo cuenta como máximo una vez.

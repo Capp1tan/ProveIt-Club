@@ -61,6 +61,7 @@
 .react-league-teasers { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
 .react-league-teasers figure { margin: 0; text-align: center; }
 .react-league-teasers figure>span { display: block; width: 100%; max-width: 150px; aspect-ratio: 1; margin: auto; background: url('/leagues/symbols.webp') var(--league-x) var(--league-y) / 400% 200% no-repeat; }
+.react-league-teasers figure[data-league="Élite"] figcaption { color: #e8c66a; }
 .react-league-teasers figcaption { font-size: 13px; font-weight: 700; }
 .react-league-teasers small { display: block; margin-top: 6px; font-size: 11px; font-weight: 400; opacity: .6; }
 .react-sponsors { padding: 12px 0 52px; text-align: center; }
