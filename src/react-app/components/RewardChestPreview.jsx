@@ -79,18 +79,26 @@ export default function RewardChestPreview() {
   }, [stage]);
 
   useEffect(() => {
-    if (stage !== 'spinning' || !winner || !winnerRef.current || !windowRef.current) return undefined;
+    if (stage !== 'spinning' || !winner) return undefined;
     let frame = 0;
     let controls;
     let active = true;
-    frame = window.requestAnimationFrame(() => {
+    let fallback;
+    const startWhenMounted = () => {
+      if (!active) return;
+      // AnimatePresence mode="wait" mounts the reel after the chest exits.
+      // Wait for its refs instead of ending this effect before it can start.
+      if (!windowRef.current || !winnerRef.current) {
+        frame = window.requestAnimationFrame(startWhenMounted);
+        return;
+      }
       const viewport = windowRef.current.getBoundingClientRect();
       const selected = winnerRef.current.getBoundingClientRect();
       const destination = viewport.left + viewport.width / 2 - (selected.left + selected.width / 2);
       controls = animate(x, destination, { duration: REEL_DURATION_SECONDS, ease: [0.08, 0.83, 0.16, 1] });
       // Keep the reveal deterministic even if Motion's finished signal is lost
       // (for example after a tab is backgrounded or the animation is interrupted).
-      const fallback = window.setTimeout(() => {
+      fallback = window.setTimeout(() => {
         if (active) setStage('revealed');
       }, REVEAL_FALLBACK_MS);
       controls.finished.then(
@@ -100,8 +108,14 @@ export default function RewardChestPreview() {
         },
         () => { window.clearTimeout(fallback); /* The animation can be cancelled when the dialog closes. */ },
       );
-    });
-    return () => { active = false; window.cancelAnimationFrame(frame); controls?.stop(); };
+    };
+    frame = window.requestAnimationFrame(startWhenMounted);
+    return () => {
+      active = false;
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(fallback);
+      controls?.stop();
+    };
   }, [stage, winner, x]);
 
   return <section className="reward-chest-preview league-panel" aria-labelledby="reward-chest-preview-title">
