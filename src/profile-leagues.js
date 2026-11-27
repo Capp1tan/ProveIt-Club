@@ -31,7 +31,7 @@ function symbol(categoryIndex){
 function messagePanel(title,copy){const card=node('section','','league-panel');card.append(node('h2',title),node('p',copy));return card;}
 
 /** Carga secundaria: un error del progreso no impide ver o editar el perfil.
- * No se calcula XP en el cliente ni se guarda en localStorage. Recargar no suma.
+ * No se calculan PP en el cliente ni se guardan en localStorage. Recargar no suma.
  */
 export function profileProgress(profile,{own=false}={}){
  const root=node('div','','league-progress-root');root.setAttribute('aria-busy','true');
@@ -42,7 +42,7 @@ export function profileProgress(profile,{own=false}={}){
   try{
    const data=await communityAction('PROGRESS',{targetProfileId:profile.id});
    if(data.hidden){root.replaceChildren(messagePanel('Recorrido privado','Este perfil sólo comparte su recorrido con amigos.'));return;}
-   if(!Array.isArray(data.history) || !Array.isArray(data.achievements) || !Number.isFinite(data.xp))throw new Error('La actualización de ligas todavía no está disponible.');
+   if(!Array.isArray(data.history) || !Array.isArray(data.achievements) || !Number.isFinite(data.pp))throw new Error('La actualización de ligas todavía no está disponible.');
    const card=node('section','','league-current league-panel'),identity=node('div','','league-current-identity');
    if(data.rank)identity.append(symbol(data.rank.categoryIndex ?? Math.floor(data.rank.index/3)));
    else{const empty=node('span','◇','league-unranked');empty.setAttribute('aria-hidden','true');identity.append(empty);}
@@ -55,9 +55,9 @@ export function profileProgress(profile,{own=false}={}){
     experience.append(node('p','Competí para desbloquear ligas y recompensas.'),node('small','Completá tu primer torneo válido para obtener tu primera liga. Los logros son la primera recompensa; los premios reales se anunciarán por separado.'));
     const explore=node('a','Buscar torneos ↗','league-action');explore.href=clubPath('/torneos.html');experience.append(explore);
    }else{
-    experience.append(node('h3','Experiencia'));
-    const meter=node('progress');meter.max=data.nextMinimum || Math.max(1,data.xp);meter.value=data.xp;meter.setAttribute('aria-label','Experiencia acumulada');
-    experience.append(meter,node('p',data.nextMinimum?data.xp.toLocaleString('es')+' / '+data.nextMinimum.toLocaleString('es')+' XP':data.xp.toLocaleString('es')+' XP · Élite I · división máxima'),node('small','La experiencia reconoce tu recorrido en el club. No representa un saldo de dinero.'));
+    experience.append(node('h3','PP · ProveIt Points'));
+    const meter=node('progress');meter.max=data.nextMinimum || Math.max(1,data.pp);meter.value=data.pp;meter.setAttribute('aria-label','ProveIt Points acumulados');
+    experience.append(meter,node('p',data.nextMinimum?data.pp.toLocaleString('es')+' / '+data.nextMinimum.toLocaleString('es')+' PP':data.pp.toLocaleString('es')+' PP · Élite I · división máxima'),node('small','Los PP reconocen tu recorrido en el club. No representan un saldo de dinero.'));
    }card.append(experience);
    const columns=node('div','','league-histories'),history=messagePanel('Historial de participaciones',''),achievements=messagePanel('Historial de logros','');
    history.lastElementChild.remove();achievements.lastElementChild.remove();
@@ -86,7 +86,7 @@ export function profileProgress(profile,{own=false}={}){
    if(!data.achievements.length)achievements.append(node('p','Tus primeros logros aparecerán al completar torneos válidos.'));
    else{const list=node('ul','','league-achievements');for(const item of data.achievements){const li=node('li'),mark=node('span',item.kind==='victory'?'★':'✦','league-achievement-mark'),copy=node('div');mark.setAttribute('aria-hidden','true');copy.append(node('strong',item.title),node('small',date(item.date)));li.append(mark,copy);list.append(li);}achievements.append(list);}
    columns.append(history,achievements);
-   const rules=node('details','','league-rules');rules.append(node('summary','Cómo se obtiene experiencia'),node('p','25 XP por torneo completado y 10 XP adicionales por victoria. Sólo cuentan eventos creados y terminados desde el lanzamiento de ligas, con al menos dos participantes confirmados y resultado definitivo. Máximo tres eventos por día UTC y uno por el mismo grupo de rivales al día. Invitaciones pendientes, cancelaciones, pagos revertidos y resultados por sanción no suman. Los torneos anteriores se conservan en el historial sin otorgar XP retroactiva.'));
+   const rules=node('details','','league-rules');rules.append(node('summary','Cómo se obtienen PP'),node('p','25 PP por torneo completado y 10 PP adicionales por victoria. Sólo cuentan eventos creados y terminados desde el lanzamiento de ligas, con al menos dos participantes confirmados y resultado definitivo. Máximo tres eventos por día UTC y uno por el mismo grupo de rivales al día. Invitaciones pendientes, cancelaciones, pagos revertidos y resultados por sanción no suman. Los torneos anteriores se conservan en el historial sin PP retroactivos.'));
    root.replaceChildren(card,columns,rules);
   }catch(error){const retry=messagePanel('No pudimos cargar el recorrido',error.message || 'Intentá otra vez en unos momentos.');const button=node('button','Reintentar','league-action');button.type='button';button.addEventListener('click',()=>{root.replaceChildren(pending);void load();},{once:true});retry.append(button);root.replaceChildren(retry);}
   finally{root.removeAttribute('aria-busy');}

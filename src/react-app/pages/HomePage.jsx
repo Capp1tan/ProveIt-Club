@@ -15,10 +15,10 @@ const slides = [
   { src: '/carousel/cartas-1600.webp', alt: 'Amigos jugando a las cartas junto a un mate.' },
 ];
 const leagues = [
-  { name: 'Principiante', detail: 'Desde 25 XP · 3 divisiones', x: '0%' },
-  { name: 'Ascendente', detail: 'Desde 200 XP · 3 divisiones', x: '33.333%' },
-  { name: 'Maestro', detail: 'Desde 1.000 XP · 3 divisiones', x: '66.666%' },
-  { name: 'Élite', detail: 'Desde 6.000 XP · acceso muy difícil', x: '100%' },
+  { name: 'Principiante', detail: 'Desde 25 PP · 3 divisiones', x: '0%' },
+  { name: 'Ascendente', detail: 'Desde 200 PP · 3 divisiones', x: '33.333%' },
+  { name: 'Maestro', detail: 'Desde 1.000 PP · 3 divisiones', x: '66.666%' },
+  { name: 'Élite', detail: 'Desde 6.000 PP · acceso muy difícil', x: '100%' },
 ];
 
 function Trophy() {
@@ -173,7 +173,7 @@ export default function HomePage() {
 
       <section className="react-reasons" aria-labelledby="reasons-title">
         <div className="react-reasons-heading"><p className="react-eyebrow">QUE TU PRÓXIMA VICTORIA CUENTE</p><h2 id="reasons-title">Competí por algo.<br /><span>Ganate tu lugar.</span></h2><p>Un premio que te motive. Rivales que te exijan. Un recorrido que se vea en tu perfil.</p></div>
-        <div className="react-reasons-grid"><article><span>01 / EL DESAFÍO</span><h3>Algo está en juego.</h3><p>Una cena, un regalo, dinero o lo que acuerden. Cada torneo muestra su premio confirmado y quién lo entrega.</p><Link to="/crear-torneo">Armá tu desafío ↗</Link></article><article><span>02 / TU RECORRIDO</span><h3>No alcanza con decirlo.</h3><p>Empezás sin liga. Completá competencias válidas, sumá experiencia y desbloqueá logros. Llegar arriba exige constancia.</p><Link to="/perfil">Ver mi progreso ↗</Link></article><article><span>03 / EL CLUB</span><h3>Que se reconozca.</h3><p>Tus participaciones, victorias y logros quedan en tu perfil. Las recompensas especiales se anunciarán cuando estén confirmadas.</p></article></div>
+        <div className="react-reasons-grid"><article><span>01 / EL DESAFÍO</span><h3>Algo está en juego.</h3><p>Una cena, un regalo, dinero o lo que acuerden. Cada torneo muestra su premio confirmado y quién lo entrega.</p><Link to="/crear-torneo">Armá tu desafío ↗</Link></article><article><span>02 / TU RECORRIDO</span><h3>No alcanza con decirlo.</h3><p>Empezás sin liga. Completá competencias válidas, sumá PP y desbloqueá logros. Llegar arriba exige constancia.</p><Link to="/perfil">Ver mi progreso ↗</Link></article><article><span>03 / EL CLUB</span><h3>Que se reconozca.</h3><p>Tus participaciones, victorias y logros quedan en tu perfil. Las recompensas especiales se anunciarán cuando estén confirmadas.</p></article></div>
         <div className="react-leagues"><div><p className="react-eyebrow">DE PRINCIPIANTE A ÉLITE</p><h3>Subir cuesta.<br />Llegar se nota.</h3><p>Cuatro ligas con tres divisiones cada una. Alcanzar Élite exige una trayectoria larga.</p></div><div className="react-league-teasers">{leagues.map((league) => <figure key={league.name} data-league={league.name}><span style={{ '--league-x': league.x, '--league-y': '0%' }} /><figcaption>{league.name}<small>{league.detail}</small></figcaption></figure>)}</div></div>
       </section>
 

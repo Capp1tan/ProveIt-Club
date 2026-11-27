@@ -4,8 +4,8 @@ import {roomDeadline,roomIsClosed,historyResult,allEntriesPaid} from '../../shar
 const covers=new S3Client({});
 import {DynamoDBDocumentClient,ScanCommand} from '@aws-sdk/lib-dynamodb';
 
-// Lanzamiento de ligas: los eventos anteriores siguen en el historial, sin XP retroactiva.
-// Los puntos se calculan en el servidor. No hay campos de XP editables por el navegador.
+// Lanzamiento de ligas: los eventos anteriores siguen en el historial, sin PP retroactivos.
+// Los puntos se calculan en el servidor. No hay campos de PP editables por el navegador.
 export const LEAGUE_START = '2026-10-18T21:35:00.000Z';
 const ranks = [
   {name:'Principiante',division:'III',categoryIndex:0,minimum:25},
@@ -48,22 +48,22 @@ export async function leagueProgress(db:DynamoDBDocumentClient,profileId:string)
   t.participantIds.every((_:string,i:number)=>t.rosterStatuses?.[i]==='ACCEPTED') &&
   t.createdAt>=LEAGUE_START && t.decidedAt>=LEAGUE_START && t.resultKind!=='SANCTION')
   .sort((a,b)=>a.decidedAt.localeCompare(b.decidedAt) || a.id.localeCompare(b.id));
- let xp=0;const credited:any[]=[],seen=new Set<string>(),groups=new Set<string>(),days=new Map<string,number>();
+ let pp=0;const credited:any[]=[],seen=new Set<string>(),groups=new Set<string>(),days=new Map<string,number>();
  for(const t of candidates){
   const day=t.decidedAt.slice(0,10),rivals=t.participantIds.filter((id:string)=>id!==profileId).sort();
   const group=day+':'+rivals.join(',');
   if(seen.has(t.id) || groups.has(group) || (days.get(day) || 0)>=3)continue;
   seen.add(t.id);groups.add(group);days.set(day,(days.get(day) || 0)+1);
-  xp+=25+(t.winnerProfileId===profileId?10:0);credited.push(t);
+  pp+=25+(t.winnerProfileId===profileId?10:0);credited.push(t);
  }
- const index=ranks.reduce((result,rank,i)=>xp>=rank.minimum?i:result,-1);
+ const index=ranks.reduce((result,rank,i)=>pp>=rank.minimum?i:result,-1);
  const current=index>=0?ranks[index]:null,next=ranks[index+1];
  const achievements:{title:string;date:string;kind:string}[]=[];
  if(credited.length)achievements.push({title:'Primera participación',date:credited[0].decidedAt,kind:'participation'});
  const win=credited.find(t=>t.winnerProfileId===profileId);
  if(win)achievements.push({title:'Primera victoria',date:win.decidedAt,kind:'victory'});
  for(const count of [5,10,25,50,100])if(credited.length>=count)achievements.push({title:count+' torneos completados',date:credited[count-1].decidedAt,kind:'milestone'});
- return {xp,rank:current?{...current,index}:null,nextMinimum:next?.minimum || null,
+ return {pp,rank:current?{...current,index}:null,nextMinimum:next?.minimum || null,
   seasonStart:LEAGUE_START,creditedEvents:credited.length,
   achievements:achievements.reverse(),
   history:await Promise.all(accepted.sort((a,b)=>(b.decidedAt || b.startsAt || b.createdAt).localeCompare(a.decidedAt || a.startsAt || a.createdAt)).slice(0,20).map(async t=>{
