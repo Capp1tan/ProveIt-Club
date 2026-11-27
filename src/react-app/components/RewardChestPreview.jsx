@@ -3,12 +3,12 @@ import { useEffect, useId, useRef, useState } from 'react';
 import './RewardChestPreview.css';
 
 const tiers = [
-  { id: 'gray', name: 'Común', chance: 44, rewards: ['Descuento 10 %', 'Descuento 25 %'] },
-  { id: 'blue', name: 'Poco común', chance: 25, rewards: ['Descuento 50 %', 'Descuento 75 %', 'Entrada gratis'] },
-  { id: 'violet', name: 'Raro', chance: 15, rewards: ['Escudo anti pérdida de PP'] },
-  { id: 'pink', name: 'Muy raro', chance: 10, rewards: ['Doble PP por victoria', 'Marco de perfil', 'Fondo de perfil', 'Título de perfil'] },
-  { id: 'red', name: 'Legendario', chance: 5, rewards: ['Tarjeta Steam · US$5'] },
-  { id: 'gold', name: 'Épico', chance: 1, rewards: ['Premio sorpresa'] },
+  { id: 'gray', name: 'Común', chance: 48.4523, rewards: ['Descuento 10 %', 'Descuento 25 %'] },
+  { id: 'blue', name: 'Poco común', chance: 27.5297, rewards: ['Descuento 50 %', 'Descuento 75 %', 'Entrada gratis'] },
+  { id: 'violet', name: 'Raro', chance: 16.5179, rewards: ['Escudo anti pérdida de PP'] },
+  { id: 'pink', name: 'Muy raro', chance: 5, rewards: ['Doble PP por victoria', 'Marco de perfil', 'Fondo de perfil', 'Título de perfil'] },
+  { id: 'red', name: 'Legendario', chance: 2.5, rewards: ['Tarjeta Steam · US$5'] },
+  { id: 'gold', name: 'Épico', chance: 0.0001, rewards: ['Premio sorpresa'] },
 ];
 const rewardPool = tiers.flatMap((tier) => tier.rewards.map((label) => ({ ...tier, label })));
 const cardWidth = 160;
@@ -16,6 +16,7 @@ const cardGap = 12;
 const targetIndex = 28;
 const REEL_DURATION_SECONDS = 5.2;
 const REVEAL_FALLBACK_MS = Math.ceil(REEL_DURATION_SECONDS * 1000) + 350;
+const formatChance = (chance) => new Intl.NumberFormat('es-AR', { maximumFractionDigits: 4 }).format(chance);
 
 function drawPreviewReward() {
   let roll = Math.random() * 100;
@@ -144,12 +145,12 @@ export default function RewardChestPreview() {
                 </div>
               </motion.div> : <motion.div className="reward-chest-reveal-stage" key="reward" initial={{ opacity: 0, y: 14, scale: 0.94 }} animate={{ opacity: 1, y: 0, scale: 1 }}>
                 <div className="reward-chest-confetti" aria-hidden="true">{Array.from({ length: 14 }, (_, i) => <i key={i} style={{ '--piece': i }} />)}</div>
-                <div className={`reward-chest-won rarity-${winner?.id}`}><span className="reward-chest-won-icon" aria-hidden="true">{winner?.id === 'red' ? '$' : winner?.id === 'gold' ? '✦' : winner?.id === 'violet' ? '⬡' : winner?.id === 'pink' ? '◇' : winner?.id === 'blue' ? '↗' : '%'}</span><small>{winner?.name} · {winner?.chance}%</small><h3>{winner?.label}</h3></div>
+                <div className={`reward-chest-won rarity-${winner?.id}`}><span className="reward-chest-won-icon" aria-hidden="true">{winner?.id === 'red' ? '$' : winner?.id === 'gold' ? '✦' : winner?.id === 'violet' ? '⬡' : winner?.id === 'pink' ? '◇' : winner?.id === 'blue' ? '↗' : '%'}</span><small>{winner?.name} · {formatChance(winner?.chance)}%</small><h3>{winner?.label}</h3></div>
                 <p className="reward-chest-stage-label">Así se vería tu recompensa en el inventario.</p>
               </motion.div>}
             </AnimatePresence>
           </div>
-          {stage === 'ready' && <div className="reward-chest-odds" aria-label="Probabilidades y posibles recompensas">{tiers.map((tier) => <div className={`rarity-${tier.id}`} key={tier.id}><span><i />{tier.name}<b>{tier.chance}%</b></span><small>{tier.rewards.join(' · ')}</small></div>)}</div>}
+          {stage === 'ready' && <div className="reward-chest-odds" aria-label="Probabilidades y posibles recompensas">{tiers.map((tier) => <div className={`rarity-${tier.id}`} key={tier.id}><span><i />{tier.name}<b>{formatChance(tier.chance)}%</b></span><small>{tier.rewards.join(' · ')}</small></div>)}</div>}
           <div className="reward-chest-dialog-footer"><p>Porcentaje por rareza. Resultado de muestra: no se acredita ni guarda. El sorteo real se validará en el servidor.</p>{stage === 'ready' ? <button className="reward-chest-open-button" type="button" onClick={beginOpen}>Abrir cofre de prueba <span aria-hidden="true">↗</span></button> : stage === 'revealed' ? <button className="reward-chest-open-button" type="button" onClick={resetPreview}>Probar otra apertura</button> : <span className="reward-chest-spinning-note">La animación no cambia la recompensa sorteada.</span>}</div>
         </motion.section>
       </motion.div>}
