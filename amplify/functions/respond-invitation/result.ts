@@ -1,7 +1,7 @@
 import {resolveBracket} from '../../../shared/tournament-bracket';
 import {competitionStart,usesCompetition,attendanceReady,pendingDrawApprovals} from '../../../shared/competition';
 // El resultado 1v1 es definitivo: sólo el árbitro acordado puede registrarlo.
-import { DynamoDBDocumentClient, GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, GetCommand, PutCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { assertActiveTournament } from '../lifecycle';
 import {validatePodium,allEntriesPaid} from '../../../shared/tournament-room';
 export async function recordDuelResult(db: DynamoDBDocumentClient, sub: string, tournamentId: string, winnerProfileId: string,resultReason='',resultKind='NORMAL',runnerUpProfileId?:string,thirdPlaceProfileId?:string,matchId?:string) {
@@ -48,7 +48,7 @@ export async function recordDuelResult(db: DynamoDBDocumentClient, sub: string, 
   const sameResult=(row:any)=>row?.winnerProfileId===winnerProfileId && row.decidedBySub===sub && (row.runnerUpProfileId || null)===podium.runnerUp && (row.thirdPlaceProfileId || null)===podium.thirdPlace;
   // Reintentar la misma decisión es seguro; una distinta nunca pisa la anterior.
   if(t.winnerProfileId) {
-    if(sameResult(t)) return t;
+    if(sameResult(t)) { await awardTournamentChests(db,t); return t; }
     throw new Error('Este duelo ya tiene un resultado definitivo.');
   }
   if(t.status!=='READY' || !t.draw || !Array.isArray(t.rosterStatuses) || !t.rosterStatuses.every((state:string)=>state==='ACCEPTED')) throw new Error('Faltan confirmaciones o el sorteo del duelo.');
@@ -63,13 +63,30 @@ export async function recordDuelResult(db: DynamoDBDocumentClient, sub: string, 
       ConditionExpression:'attribute_not_exists(deletedAt) AND attribute_not_exists(winnerProfileId) AND #status = :ready AND membershipRevision = :revision AND (attribute_not_exists(creationPaymentStatus) OR creationPaymentStatus=:paid OR creationPaymentStatus=:exempt)'+drawGuard,
       ExpressionAttributeNames:{'#status':'status',...drawNames},
       ExpressionAttributeValues:{':ready':'READY',':revision':t.membershipRevision || 0,':paid':'APPROVED',':exempt':'EXEMPT',':now':now,...drawValues,...(intermediate?{}:{':second':podium.runnerUp,':third':podium.thirdPlace,':reason':resultReason.trim(),':kind':resultKind,':winner':winnerProfileId,':name':winnerName,':sub':sub,':label':decidedByLabel,':completed':'COMPLETED'})},ReturnValues:'ALL_NEW'}));
-    return result.Attributes;
+    const saved=result.Attributes;
+    await awardTournamentChests(db,saved);
+    return saved;
   } catch(error) {
     if((error as Error).name!=='ConditionalCheckFailedException') throw error;
     const latest=await read();
     const decision=nextDraw && matchId && latest?.draw?JSON.parse(latest.draw).results?.[matchId]:null;
     if(decision?.winnerId===winnerProfileId && decision.decidedBySub===sub)return latest;
-    if(!nextDraw && sameResult(latest)) return latest;
+    if(!nextDraw && sameResult(latest)) { await awardTournamentChests(db,latest); return latest; }
     throw new Error('El estado del duelo cambió. Actualizá antes de continuar.');
   }
+}
+
+async function awardTournamentChests(db:DynamoDBDocumentClient,t:any){
+ if(t?.status!=='COMPLETED' || t.resultKind==='SANCTION' || !Array.isArray(t.participantIds))return;
+ const profiles=await Promise.all(t.participantIds.map((id:string)=>db.send(new GetCommand({TableName:process.env.PROFILE_TABLE_NAME!,Key:{id},ConsistentRead:true}))));
+ const accountSubs=[...new Set(profiles.map(row=>row.Item?.owner?.split('::')[0]).filter((sub):sub is string=>typeof sub==='string' && sub.length>0))];
+ const activeSubs=(await Promise.all(accountSubs.map(async accountSub=>{
+  const deleted=(await db.send(new GetCommand({TableName:process.env.CLAIM_TABLE_NAME!,Key:{id:'deleted-account:'+accountSub},ConsistentRead:true}))).Item;
+  return deleted?null:accountSub;
+ }))).filter((accountSub):accountSub is string=>Boolean(accountSub));
+ await Promise.all(activeSubs.map(async accountSub=>{
+  try{
+   await db.send(new PutCommand({TableName:process.env.SOCIAL_TABLE_NAME!,Item:{pk:`USER#${accountSub}`,sk:`CHEST#${t.id}`,type:'CHEST',sourceTournamentId:t.id,status:'AVAILABLE',awardedAt:t.decidedAt || new Date().toISOString()},ConditionExpression:'attribute_not_exists(pk)'}));
+  }catch(error){if((error as Error).name!=='ConditionalCheckFailedException')throw error;}
+ }));
 }

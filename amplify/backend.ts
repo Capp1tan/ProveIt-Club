@@ -41,6 +41,13 @@ const socialTable=new Table(backend.data.resources.graphqlApi.stack,'ClubSocial'
   billingMode:BillingMode.PAY_PER_REQUEST,timeToLiveAttribute:'ttl',removalPolicy:RemovalPolicy.RETAIN,
 });
 socialTable.grantReadWriteData(backend.social.resources.lambda);
+// El procesador de resultados sólo administra cofres bajo claves USER#<sub>.
+backend.respondInvitation.resources.lambda.addToRolePolicy(new PolicyStatement({
+  actions: ['dynamodb:GetItem','dynamodb:PutItem','dynamodb:UpdateItem'],
+  resources: [socialTable.tableArn],
+  conditions: { 'ForAllValues:StringLike': { 'dynamodb:LeadingKeys': ['USER#*'] } },
+}));
+backend.respondInvitation.addEnvironment('SOCIAL_TABLE_NAME',socialTable.tableName);
 backend.social.addEnvironment('SOCIAL_TABLE_NAME',socialTable.tableName);
 backend.publicGallery.addEnvironment('SOCIAL_TABLE_NAME', socialTable.tableName);
 backend.publicGallery.addEnvironment('PROFILE_BUCKET_NAME', backend.storage.resources.bucket.bucketName);

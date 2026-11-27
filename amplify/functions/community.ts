@@ -7,10 +7,12 @@ import {getSignedUrl} from '@aws-sdk/s3-request-presigner';
 import {assertActiveAccount,assertActiveTournament,roomDeadline,roomIsClosed} from './lifecycle';
 import {leagueProgress} from './leagues';
 import {coverAction} from './tournament-cover';
+import {drawChestReward} from '../../shared/chest-rewards';
 const s3=new S3Client({requestChecksumCalculation:'WHEN_REQUIRED'});
 const env=(k:string)=>process.env[k]!;
 export async function community(db:DynamoDBDocumentClient,sub:string,a:any){
  await assertActiveAccount(sub);
+ const owner=(p:any)=>p?.owner?.split('::')[0];
  if(['COMMUNITY_COVER_UPLOAD','COMMUNITY_COVER_URL','COMMUNITY_PRIZE_IMAGE_URL'].includes(a.action))return coverAction(db,sub,a);
  const get=async(t:string,id:string)=>(await db.send(new GetCommand({TableName:env(t),Key:{id},ConsistentRead:true}))).Item;
  if(a.action==='COMMUNITY_ROOM'){
@@ -20,6 +22,26 @@ export async function community(db:DynamoDBDocumentClient,sub:string,a:any){
   return roomIsClosed(t,serverNow)?{id:t.id,name:t.name,roomClosed:true,roomClosesAt:roomDeadline(t),serverNow}:{...t,roomClosesAt:roomDeadline(t),serverNow};
  }
  const social=async(pk:string,sk='STATE')=>(await db.send(new GetCommand({TableName:env('SOCIAL_TABLE_NAME'),Key:{pk,sk},ConsistentRead:true}))).Item;
+ if(a.action==='COMMUNITY_CHESTS' || a.action==='COMMUNITY_OPEN_CHEST'){
+  if(typeof a.targetProfileId!=='string' || !/^[\da-f-]{36}$/i.test(a.targetProfileId))throw new Error('Perfil inválido.');
+  const p=await get('PROFILE_TABLE_NAME',a.targetProfileId);
+  if(!p || owner(p)!==sub)throw new Error('Sólo podés consultar tus propios cofres.');
+  const pk='USER#'+sub,table=env('SOCIAL_TABLE_NAME');
+  const readChests=async()=>{const rows:any[]=[];let key;do{const page=await db.send(new QueryCommand({TableName:table,KeyConditionExpression:'pk=:pk AND begins_with(sk,:prefix)',ExpressionAttributeValues:{':pk':pk,':prefix':'CHEST#'},ExclusiveStartKey:key,ConsistentRead:true}));rows.push(...(page.Items || []));key=page.LastEvaluatedKey;}while(key);return rows;};
+  if(a.action==='COMMUNITY_CHESTS'){
+   const rows=await readChests(),opened=rows.filter(row=>row.status==='OPENED').sort((x,y)=>String(x.openedAt).localeCompare(String(y.openedAt)));
+   return {available:rows.filter(row=>row.status==='AVAILABLE').map(row=>({id:row.sourceTournamentId,awardedAt:row.awardedAt})).sort((x,y)=>x.awardedAt.localeCompare(y.awardedAt)),openedCount:opened.length,achievementDate:opened.length>=100?opened[99].openedAt:null,recentRewards:opened.slice(-8).reverse().map(row=>({id:row.sourceTournamentId,label:row.rewardLabel,rarity:row.rewardName,openedAt:row.openedAt}))};
+  }
+  if(typeof a.chestId!=='string' || !/^[\da-f-]{36}$/i.test(a.chestId))throw new Error('Cofre inválido.');
+  const Key={pk,sk:'CHEST#'+a.chestId},existing=(await db.send(new GetCommand({TableName:table,Key,ConsistentRead:true}))).Item;
+  if(!existing || existing.type!=='CHEST')throw new Error('Ese cofre no está en tu inventario.');
+  if(existing.status==='OPENED')return {chestId:a.chestId,reward:{id:existing.rewardId,name:existing.rewardName,chance:existing.rewardChance,label:existing.rewardLabel},openedAt:existing.openedAt};
+  if(existing.status!=='AVAILABLE')throw new Error('Este cofre no se puede abrir.');
+  const reward=drawChestReward(),openedAt=new Date().toISOString();
+  try{await db.send(new UpdateCommand({TableName:table,Key,UpdateExpression:'SET #status=:opened,rewardId=:rid,rewardName=:rname,rewardChance=:chance,rewardLabel=:label,openedAt=:now',ConditionExpression:'#status=:available',ExpressionAttributeNames:{'#status':'status'},ExpressionAttributeValues:{':opened':'OPENED',':available':'AVAILABLE',':rid':reward.id,':rname':reward.name,':chance':reward.chance,':label':reward.label,':now':openedAt}}));}
+  catch(error){if((error as Error).name!=='ConditionalCheckFailedException')throw error;const latest=(await db.send(new GetCommand({TableName:table,Key,ConsistentRead:true}))).Item;if(latest?.status==='OPENED')return {chestId:a.chestId,reward:{id:latest.rewardId,name:latest.rewardName,chance:latest.rewardChance,label:latest.rewardLabel},openedAt:latest.openedAt};throw new Error('El cofre cambió de estado. Actualizá tu inventario.');}
+  return {chestId:a.chestId,reward:{id:reward.id,name:reward.name,chance:reward.chance,label:reward.label},openedAt};
+ }
  if(a.action==='COMMUNITY_NOTIFICATIONS'){
   const [state,announcements]=await Promise.all([social('USER#'+sub),db.send(new QueryCommand({TableName:env('SOCIAL_TABLE_NAME'),KeyConditionExpression:'pk=:pk AND begins_with(sk,:prefix)',ExpressionAttributeValues:{':pk':'CLUB_NOTICES',':prefix':'NOTICE#'},Limit:20,ScanIndexForward:false,ConsistentRead:true}))]);
   const requests=await Promise.all((state?.incoming || []).slice(-20).reverse().map(async(ref:any)=>{
@@ -33,7 +55,6 @@ export async function community(db:DynamoDBDocumentClient,sub:string,a:any){
  }
  const state=await social('USER#'+sub);
  const admin=(await get('CLAIM_TABLE_NAME','creator'))?.accountSub===sub;
- const owner=(p:any)=>p?.owner?.split('::')[0];
  const visible=async(p:any)=>{
   const target=owner(p);if(!target)return false;
   if(target===sub || p.visibility==='PUBLIC')return true;
@@ -76,7 +97,7 @@ export async function community(db:DynamoDBDocumentClient,sub:string,a:any){
   if(!p || await get('CLAIM_TABLE_NAME','deleted-account:'+owner(p)))throw new Error('Perfil no disponible.');
   // El historial y los logros de perfiles privados nunca salen hacia un no amigo.
   if(!await visible(p))return {hidden:true};
-  return leagueProgress(db,p.id);
+  return leagueProgress(db,p.id,owner(p));
  }
  if(a.action==='COMMUNITY_UPLOAD'){
   const types:Record<string,string>={'image/jpeg':'jpg','image/png':'png','image/webp':'webp'};

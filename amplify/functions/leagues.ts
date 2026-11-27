@@ -2,7 +2,7 @@ import {S3Client,GetObjectCommand} from '@aws-sdk/client-s3';
 import {getSignedUrl} from '@aws-sdk/s3-request-presigner';
 import {roomDeadline,roomIsClosed,historyResult,allEntriesPaid} from '../../shared/tournament-room';
 const covers=new S3Client({});
-import {DynamoDBDocumentClient,ScanCommand} from '@aws-sdk/lib-dynamodb';
+import {DynamoDBDocumentClient,QueryCommand,ScanCommand} from '@aws-sdk/lib-dynamodb';
 
 // Lanzamiento de ligas: los eventos anteriores siguen en el historial, sin PP retroactivos.
 // Los puntos se calculan en el servidor. No hay campos de PP editables por el navegador.
@@ -27,7 +27,7 @@ const ranks = [
  * revertido. Máximo tres torneos por día UTC y un evento por grupo de rivales/día.
  * Es una progresión del club, no una calificación oficial de habilidad ni dinero.
  */
-export async function leagueProgress(db:DynamoDBDocumentClient,profileId:string){
+export async function leagueProgress(db:DynamoDBDocumentClient,profileId:string,accountSub?:string){
  const events:any[]=[];let key;
  do{
   const page=await db.send(new ScanCommand({TableName:process.env.TOURNAMENT_TABLE_NAME!,
@@ -63,6 +63,7 @@ export async function leagueProgress(db:DynamoDBDocumentClient,profileId:string)
  const win=credited.find(t=>t.winnerProfileId===profileId);
  if(win)achievements.push({title:'Primera victoria',date:win.decidedAt,kind:'victory'});
  for(const count of [5,10,25,50,100])if(credited.length>=count)achievements.push({title:count+' torneos completados',date:credited[count-1].decidedAt,kind:'milestone'});
+ if(accountSub){const chests:any[]=[];let chestKey;do{const page=await db.send(new QueryCommand({TableName:process.env.SOCIAL_TABLE_NAME!,KeyConditionExpression:'pk=:pk AND begins_with(sk,:prefix)',ExpressionAttributeValues:{':pk':'USER#'+accountSub,':prefix':'CHEST#'},ExclusiveStartKey:chestKey,ConsistentRead:true}));chests.push(...(page.Items || []));chestKey=page.LastEvaluatedKey;}while(chestKey);const opened=chests.filter(row=>row.status==='OPENED').sort((a,b)=>String(a.openedAt).localeCompare(String(b.openedAt)));if(opened.length>=100)achievements.push({title:'100 cofres abiertos',date:opened[99].openedAt,kind:'milestone'});}
  return {pp,rank:current?{...current,index}:null,nextMinimum:next?.minimum || null,
   seasonStart:LEAGUE_START,creditedEvents:credited.length,
   achievements:achievements.reverse(),

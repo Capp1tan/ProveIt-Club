@@ -46,6 +46,11 @@ function Journey({ profile, own }) {
     }).catch((error) => { if (active) setFailure(error.message || 'Intentá otra vez en unos momentos.'); });
     return () => { active = false; };
   }, [profile?.id, profile?.canView, attempt]);
+  useEffect(() => {
+    const refreshAfterChestOpen = () => setAttempt((value) => value + 1);
+    window.addEventListener('proveit:chest-opened', refreshAfterChestOpen);
+    return () => window.removeEventListener('proveit:chest-opened', refreshAfterChestOpen);
+  }, []);
   if (!profile?.canView) return <section className="league-panel"><h2>Recorrido privado</h2><p>Las ligas, participaciones y logros de este perfil sólo están disponibles para sus amigos.</p></section>;
   if (failure) return <section className="league-panel"><h2>No pudimos cargar el recorrido</h2><p>{failure}</p><button className="league-action" type="button" onClick={() => setAttempt((value) => value + 1)}>Reintentar</button></section>;
   if (!data) return <section className="league-panel" aria-busy="true"><h2>Liga y participaciones</h2><p>Cargando tu recorrido en el club…</p></section>;
@@ -217,7 +222,7 @@ export default function ProfilePage() {
           <header className="react-profile-public-top"><Avatar profile={profile} /><div><p className="react-eyebrow">TU PERFIL EN EL CLUB</p><h1>{profile.nickname}</h1><p>{profile.bio || 'Compitiendo en ProveIt Club.'}</p><span className="react-profile-visibility">{profile.visibility === 'PUBLIC' ? 'Perfil público' : 'Perfil privado · solo amistades'}</span></div></header>
           <PublicSocials profile={profile} />
           <Journey profile={profile} own />
-          <RewardChestPreview />
+          <RewardChestPreview profileId={profile.id} />
           {profile.reputation && <Reputation profile={profile} />}
           <div className="react-profile-preview-actions"><Link to="/torneos">Explorar torneos ↗</Link><button className="react-primary" type="button" onClick={() => { setNotice(''); setError(false); setEditing(true); }}>Editar perfil</button></div>
         </>}
