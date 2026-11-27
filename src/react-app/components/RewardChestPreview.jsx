@@ -86,7 +86,10 @@ export default function RewardChestPreview() {
       const selected = winnerRef.current.getBoundingClientRect();
       const destination = viewport.left + viewport.width / 2 - (selected.left + selected.width / 2);
       controls = animate(x, destination, { duration: 5.2, ease: [0.08, 0.83, 0.16, 1] });
-      controls.then(() => { if (active) setStage('revealed'); });
+      controls.finished.then(
+        () => { if (active) setStage('revealed'); },
+        () => { /* The animation can be cancelled when the dialog closes. */ },
+      );
     });
     return () => { active = false; window.cancelAnimationFrame(frame); controls?.stop(); };
   }, [stage, winner, x]);
