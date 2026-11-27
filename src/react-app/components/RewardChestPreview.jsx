@@ -14,6 +14,8 @@ const rewardPool = tiers.flatMap((tier) => tier.rewards.map((label) => ({ ...tie
 const cardWidth = 160;
 const cardGap = 12;
 const targetIndex = 28;
+const REEL_DURATION_SECONDS = 5.2;
+const REVEAL_FALLBACK_MS = Math.ceil(REEL_DURATION_SECONDS * 1000) + 350;
 
 function drawPreviewReward() {
   let roll = Math.random() * 100;
@@ -85,10 +87,18 @@ export default function RewardChestPreview() {
       const viewport = windowRef.current.getBoundingClientRect();
       const selected = winnerRef.current.getBoundingClientRect();
       const destination = viewport.left + viewport.width / 2 - (selected.left + selected.width / 2);
-      controls = animate(x, destination, { duration: 5.2, ease: [0.08, 0.83, 0.16, 1] });
+      controls = animate(x, destination, { duration: REEL_DURATION_SECONDS, ease: [0.08, 0.83, 0.16, 1] });
+      // Keep the reveal deterministic even if Motion's finished signal is lost
+      // (for example after a tab is backgrounded or the animation is interrupted).
+      const fallback = window.setTimeout(() => {
+        if (active) setStage('revealed');
+      }, REVEAL_FALLBACK_MS);
       controls.finished.then(
-        () => { if (active) setStage('revealed'); },
-        () => { /* The animation can be cancelled when the dialog closes. */ },
+        () => {
+          window.clearTimeout(fallback);
+          if (active) setStage('revealed');
+        },
+        () => { window.clearTimeout(fallback); /* The animation can be cancelled when the dialog closes. */ },
       );
     });
     return () => { active = false; window.cancelAnimationFrame(frame); controls?.stop(); };
