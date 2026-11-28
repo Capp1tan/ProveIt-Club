@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useEffect, useId, useRef, useState } from 'react';
 
 const emptyPhotos = [];
-const secondsPerPhoto = 8;
+const secondsPerPhoto = 6.4;
 
 const spring = { type: 'spring', stiffness: 135, damping: 24, mass: 1.25 };
 const openingStartSeconds = 1.05;
