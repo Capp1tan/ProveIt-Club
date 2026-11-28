@@ -2,6 +2,55 @@
 <html lang="es" data-app-loading>
   <head>
     <script src="/theme-init.js"></script>
+    <script>
+      (() => {
+        let pending = 0;
+        const signal = () => window.dispatchEvent(new Event('proveit:boot-network-change'));
+        if (typeof window.fetch === 'function') {
+          const originalFetch = window.fetch.bind(window);
+          window.fetch = (...args) => {
+            pending += 1; signal();
+            let request;
+            try { request = originalFetch(...args); }
+            catch (error) { pending = Math.max(0, pending - 1); signal(); throw error; }
+            return Promise.resolve(request).finally(() => { pending = Math.max(0, pending - 1); signal(); });
+          };
+        }
+        window.__proveitBootNetwork = {
+          get pending() { return pending; },
+          waitForIdle(quietMs = 900, maxWaitMs = 18000) {
+            return new Promise((resolve) => {
+              let quietTimer, deadlineTimer, finished = false;
+              const finish = (timedOut) => {
+                if (finished) return;
+                finished = true;
+                clearTimeout(quietTimer); clearTimeout(deadlineTimer);
+                window.removeEventListener('proveit:boot-network-change', check);
+                resolve({ idle: !timedOut, pending });
+              };
+              const check = () => {
+                clearTimeout(quietTimer);
+                if (pending === 0) quietTimer = window.setTimeout(() => pending === 0 ? finish(false) : check(), quietMs);
+              };
+              window.addEventListener('proveit:boot-network-change', check);
+              deadlineTimer = window.setTimeout(() => finish(true), maxWaitMs);
+              check();
+            });
+          },
+        };
+        window.__proveitFinishBoot = () => {
+          if (!document.documentElement.hasAttribute('data-app-loading')) return;
+          clearTimeout(window.__proveitBootFallback);
+          document.getElementById('root')?.removeAttribute('aria-hidden');
+          document.documentElement.removeAttribute('data-app-loading');
+          const screen = document.getElementById('proveit-boot');
+          screen?.classList.add('is-hidden');
+          window.setTimeout(() => screen?.remove(), 380);
+        };
+        // Safety net for stalled connections; normal startup reveals much sooner.
+        window.__proveitBootFallback = window.setTimeout(() => window.__proveitFinishBoot(), 45000);
+      })();
+    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#111521" />
@@ -30,18 +79,18 @@
       #proveit-boot .boot-mark { display: grid; width: 42px; height: 42px; place-items: center; border-radius: 13px; background: linear-gradient(140deg, #9298ff, #555df0); color: #fff; font-size: 21px; }
       #proveit-boot .boot-brand small { display: block; margin-top: 5px; color: #a5a9ff; font-size: 8px; letter-spacing: 4px; text-align: right; }
       #proveit-boot .boot-status { margin: 0; color: #b9c1d4; font: 500 14px/1.4 system-ui, sans-serif; }
-      #proveit-boot .boot-progress { width: min(220px, 52vw); height: 3px; overflow: hidden; border-radius: 10px; background: #ffffff18; }
-      #proveit-boot .boot-progress::after { content: ""; display: block; width: 42%; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #6e76ff, #b0b5ff); animation: proveit-boot-progress 1.2s cubic-bezier(.45,0,.55,1) infinite; }
-      @keyframes proveit-boot-progress { from { transform: translateX(-110%); } to { transform: translateX(250%); } }
+      #proveit-boot .boot-progress { width: min(240px, 58vw); height: 4px; overflow: hidden; border-radius: 10px; background: #ffffff18; }
+      #proveit-boot .boot-progress-fill { display: block; width: 8%; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #6e76ff, #b0b5ff); transition: width 420ms cubic-bezier(.2,.75,.25,1); }
+      #proveit-boot .boot-status { min-width: 230px; text-align: center; }
       html[data-theme="light"] #proveit-boot { background: radial-gradient(ellipse at 50% 42%, #f4f6ff 0%, #e9edf6 55%, #dfe5f0 100%); color: #17243b; }
       html[data-theme="light"] #proveit-boot .boot-status { color: #53627b; }
       html[data-theme="light"] #proveit-boot .boot-progress { background: #18233a18; }
-      @media (prefers-reduced-motion: reduce) { #proveit-boot, #proveit-boot .boot-progress::after { transition: none; animation: none; } #proveit-boot .boot-progress::after { width: 100%; transform: none; } }
+      @media (prefers-reduced-motion: reduce) { #proveit-boot, #proveit-boot .boot-progress-fill { transition: none; } }
     </style>
   </head>
   <body>
     <div id="proveit-boot" role="status" aria-live="polite" aria-label="Cargando ProveIt Club">
-      <div class="boot-panel"><div class="boot-brand"><span class="boot-mark" aria-hidden="true">P</span><span>prove.it<small>CLUB</small></span></div><p class="boot-status">Preparando ProveIt…</p><div class="boot-progress" aria-hidden="true"></div></div>
+      <div class="boot-panel"><div class="boot-brand"><span class="boot-mark" aria-hidden="true">P</span><span>prove.it<small>CLUB</small></span></div><p class="boot-status">Preparando ProveIt…</p><div class="boot-progress" role="progressbar" aria-label="Carga inicial de ProveIt Club" aria-valuemin="0" aria-valuemax="100" aria-valuenow="8"><span class="boot-progress-fill"></span></div></div>
     </div>
     <div id="root" aria-hidden="true"></div>
     <script type="module" src="/src/react-app/main.jsx"></script>

@@ -173,49 +173,70 @@ function AppLayout() {
 }
 
 function InitialPageReady() {
+  const { status } = useAuth();
   useEffect(() => {
-    let cancelled = false;
-    let timeoutId;
+    const screen = document.getElementById('proveit-boot');
+    if (!screen || !document.documentElement.hasAttribute('data-app-loading') || status === 'checking') return undefined;
+    let cancelled = false, minimumTimer;
+    let progress = 8;
+    const label = screen.querySelector('.boot-status');
+    const fill = screen.querySelector('.boot-progress-fill');
+    const bar = screen.querySelector('[role="progressbar"]');
+    const setProgress = (value, message) => {
+      progress = Math.max(progress, Math.min(100, Math.round(value)));
+      if (fill) fill.style.width = `${progress}%`;
+      bar?.setAttribute('aria-valuenow', String(progress));
+      if (label && label.textContent !== message) label.textContent = message;
+    };
+    const wait = (ms) => new Promise((resolve) => { window.setTimeout(resolve, ms); });
     const waitForWindowLoad = document.readyState === 'complete'
       ? Promise.resolve()
-      : new Promise((resolve) => window.addEventListener('load', resolve, { once: true }));
-    const waitForVisibleImages = () => {
-      const images = Array.from(document.querySelectorAll('#root img:not([loading="lazy"])'));
-      return Promise.all(images.map((image) => {
-        if (image.complete) return image.decode?.().catch(() => undefined);
-        return new Promise((resolve) => {
-          image.addEventListener('load', resolve, { once: true });
-          image.addEventListener('error', resolve, { once: true });
-        });
-      }));
+      : Promise.race([new Promise((resolve) => window.addEventListener('load', resolve, { once: true })), wait(8000)]);
+    const visibleImages = () => Array.from(document.querySelectorAll('#root img')).filter((image) => {
+      const rect = image.getBoundingClientRect();
+      const style = getComputedStyle(image);
+      return style.display !== 'none' && rect.width > 0 && rect.height > 0 &&
+        rect.bottom > 0 && rect.right > 0 && rect.top < window.innerHeight && rect.left < window.innerWidth;
+    });
+    const waitForImageCoverage = async () => {
+      const deadline = performance.now() + 8000;
+      let coverage = 1;
+      while (!cancelled && performance.now() < deadline) {
+        const images = visibleImages();
+        if (!images.length) return 1;
+        const settled = images.filter((image) => image.complete).length;
+        coverage = settled / images.length;
+        setProgress(70 + coverage * 20, 'Cargando imágenes visibles…');
+        if (coverage >= 0.9) return coverage;
+        await wait(140);
+      }
+      return coverage;
     };
     const reveal = async () => {
       const startedAt = performance.now();
-      const ready = Promise.all([
-        waitForWindowLoad,
-        document.fonts?.ready?.catch(() => undefined),
-        waitForVisibleImages(),
-      ]);
-      let timeout;
-      await Promise.race([ready, new Promise((resolve) => { timeout = window.setTimeout(resolve, 12000); })]);
-      window.clearTimeout(timeout);
-      await new Promise((resolve) => window.requestAnimationFrame(() => window.requestAnimationFrame(resolve)));
-      const remaining = Math.max(0, 420 - (performance.now() - startedAt));
-      if (remaining) await new Promise((resolve) => { timeoutId = window.setTimeout(resolve, remaining); });
+      setProgress(18, 'Cargando la aplicación…');
+      await waitForWindowLoad;
       if (cancelled) return;
-      const root = document.getElementById('root');
-      const screen = document.getElementById('proveit-boot');
-      root?.removeAttribute('aria-hidden');
-      document.documentElement.removeAttribute('data-app-loading');
-      screen?.classList.add('is-hidden');
-      window.setTimeout(() => screen?.remove(), 380);
+      await Promise.race([document.fonts?.ready?.catch(() => undefined) || Promise.resolve(), wait(5000)]);
+      setProgress(45, 'Preparando tu cuenta…');
+      await (window.__proveitBootNetwork?.waitForIdle(900, 18000) || Promise.resolve());
+      if (cancelled) return;
+      setProgress(70, 'Cargando el contenido principal…');
+      const coverage = await waitForImageCoverage();
+      if (cancelled) return;
+      if (coverage >= 0.9) setProgress(94, 'Casi listo…');
+      await new Promise((resolve) => window.requestAnimationFrame(() => window.requestAnimationFrame(resolve)));
+      const remaining = Math.max(0, 650 - (performance.now() - startedAt));
+      if (remaining) await new Promise((resolve) => { minimumTimer = window.setTimeout(resolve, remaining); });
+      if (cancelled) return;
+      setProgress(100, 'ProveIt está listo.');
+      window.__proveitFinishBoot?.();
     };
     void reveal();
     return () => {
-      cancelled = true;
-      window.clearTimeout(timeoutId);
+      cancelled = true; window.clearTimeout(minimumTimer);
     };
-  }, []);
+  }, [status]);
   return null;
 }
 
