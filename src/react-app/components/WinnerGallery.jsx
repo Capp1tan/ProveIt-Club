@@ -101,8 +101,8 @@ export default function WinnerGallery({ photos: galleryPhotos = emptyPhotos }) {
       zIndex: 10 - depth,
     };
   }) : [];
-  const cardWidth = Math.min(190, Math.max(118, galleryWidth * 0.32));
-  const step = Math.min(76, Math.max(54, galleryHeight * 0.19));
+  const cardWidth = Math.min(320, Math.max(180, galleryWidth * 0.42));
+  const step = Math.min(86, Math.max(62, galleryHeight * 0.22));
 
   useAnimationFrame((_, delta) => {
     if (isOpen || isDragging || reduceMotion || document.hidden || photos.length < 2) return;

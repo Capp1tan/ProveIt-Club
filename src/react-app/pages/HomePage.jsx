@@ -160,7 +160,7 @@ export default function HomePage() {
         <h2 className="react-hall-heading"><Trophy /> Salón de la fama</h2>
         {champion ? <article className="react-champion-card has-feature">
           <div className="react-champion-copy">
-            <div className="react-champion-label">Último campeón <Trophy /></div>
+            <div className="react-champion-label">Último campeón</div>
             <Link className="react-champion-name" to={`/perfil/${encodeURIComponent(champion.winnerProfileId)}`}><span className={championAvatar ? 'has-photo' : ''}>{championAvatar ? <img src={championAvatar} alt="" /> : Array.from(champion.winnerName)[0]}</span><strong>{champion.winnerName}</strong></Link>
             <p>Ganó <b>{champion.name}</b>{champion.decidedAt && <> · {new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(champion.decidedAt))}</>}</p>
           </div>
