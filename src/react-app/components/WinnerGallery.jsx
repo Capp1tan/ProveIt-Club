@@ -101,7 +101,7 @@ export default function WinnerGallery({ photos: galleryPhotos = emptyPhotos }) {
       zIndex: 10 - depth,
     };
   }) : [];
-  const cardWidth = Math.min(320, Math.max(180, galleryWidth * 0.42));
+  const cardWidth = Math.min(360, Math.max(240, galleryHeight * 0.9, galleryWidth * 0.42));
   const step = Math.min(86, Math.max(62, galleryHeight * 0.22));
 
   useAnimationFrame((_, delta) => {
@@ -298,7 +298,7 @@ export default function WinnerGallery({ photos: galleryPhotos = emptyPhotos }) {
   }
 
   return (
-    <div className="react-winner-gallery-root">
+    <div className="react-winner-gallery-root" style={{ '--winner-card-width': `${cardWidth}px` }}>
       <div
         className={`${photos.length ? 'react-winner-gallery' : 'react-winner-gallery-empty'}${isDragging ? ' is-dragging' : ''}`}
         ref={photos.length ? galleryRef : undefined}
